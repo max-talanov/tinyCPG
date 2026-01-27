@@ -1,18 +1,23 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-2_stdp_izhi_nest.py (v3)
+2_stdp_izhi_nest.py (v4)
 
-Requests implemented:
-1) rge->me and rgf->mf weight means moved to a separate figure.
-2) BS drive made counter-phase (E active while F silent, and vice versa).
-3) Activation proxy follows counter-phase (computed from motor spikes).
-4) Force proxy follows counter-phase.
-5) Length proxy follows counter-phase (via force; extensor also stretched by CUT).
-6) Ia generator kept as before.
+New changes vs v3:
+A) Ia phase fix:
+   - Ia "almost sinusoidal" modulation is now COUNTER-PHASE (E uses +sin, F uses -sin).
+   - This prevents the shared sinus term from synchronizing Ia-E and Ia-F.
 
-Run:
-  python 2_stdp_izhi_nest.py
+B) Reciprocal inhibition between RG centers (single leg):
+   - Added RG-E -> RG-F inhibitory coupling
+   - Added RG-F -> RG-E inhibitory coupling
+   This matches the reciprocal inhibition idea in your diagram (for ONE leg).
+
+Everything else kept from v3:
+- BS counter-phase drive
+- Two muscle groups (E has CUT, F no CUT), both with Ia
+- Force/activation/length proxies and plots
+- Motor synapse means on separate plot
 """
 
 import nest
@@ -53,10 +58,7 @@ CUT_RATE_OFF_HZ = 0.0
 # Brainstem drive (counter-phase ~1 Hz)
 # ============================
 BS_OSC_HZ = 1.0
-
-# Keep base low so the "inactive" side is really quiet.
-# If you want co-contraction, raise BS_RATE_BASE_HZ a bit.
-BS_RATE_BASE_HZ = 0.0
+BS_RATE_BASE_HZ = 0.0     # keep inactive side quiet
 BS_RATE_AMP_HZ = 300.0
 BS_RATE_MIN_HZ = 0.0
 
@@ -66,6 +68,11 @@ BS_RATE_MIN_HZ = 0.0
 P_IN_STDP = 0.5
 P_RG_REC = 0.12
 DELAY_MS = 1.0
+
+# NEW: reciprocal inhibition between RG-E and RG-F (one leg)
+P_RG_RECIP = 0.20
+W_RG_RECIP = -18.0        # negative weight => inhibitory current for izhikevich
+DELAY_RECIP_MS = 1.0
 
 # Small baseline RG drive (insurance)
 BASE_DRIVE_HZ = 10.0
@@ -89,7 +96,6 @@ MU_PLUS = 0.0
 MU_MINUS = 0.0
 WMAX = 120.0
 
-# Initial weights
 W0_IN = 22.0
 W0_RM = 30.0
 
@@ -105,7 +111,6 @@ izh_params = {
     "V_min": -120.0,
 }
 
-# Mild tonic bias
 I_E_RG = 1.0
 I_E_MOTOR = 1.0
 
@@ -144,11 +149,7 @@ def clamp(x: float, lo: float, hi: float) -> float:
 
 
 def bs_rates_counterphase(t_ms: float) -> tuple[float, float]:
-    """
-    Counter-phase BS:
-      E gets rectified +sin
-      F gets rectified -sin
-    """
+    """Counter-phase BS: E gets +sin half-wave, F gets -sin half-wave."""
     t_s = t_ms / 1000.0
     s = np.sin(2.0 * np.pi * BS_OSC_HZ * t_s)
     e = max(0.0, s)
@@ -297,7 +298,7 @@ def main():
         syn_spec={"synapse_model": "stdp_rgf_mf", "weight": W0_RM, "delay": DELAY_MS},
     )
 
-    # Local RG recurrence (static)
+    # Local RG recurrence (static; within-pop)
     nest.Connect(
         rg_e, rg_e,
         conn_spec={"rule": "pairwise_bernoulli", "p": P_RG_REC},
@@ -307,6 +308,18 @@ def main():
         rg_f, rg_f,
         conn_spec={"rule": "pairwise_bernoulli", "p": P_RG_REC},
         syn_spec={"synapse_model": "static_synapse", "weight": 8.0, "delay": DELAY_MS},
+    )
+
+    # NEW: Reciprocal inhibition RG-E <-> RG-F (one leg)
+    nest.Connect(
+        rg_e, rg_f,
+        conn_spec={"rule": "pairwise_bernoulli", "p": P_RG_RECIP},
+        syn_spec={"synapse_model": "static_synapse", "weight": W_RG_RECIP, "delay": DELAY_RECIP_MS},
+    )
+    nest.Connect(
+        rg_f, rg_e,
+        conn_spec={"rule": "pairwise_bernoulli", "p": P_RG_RECIP},
+        syn_spec={"synapse_model": "static_synapse", "weight": W_RG_RECIP, "delay": DELAY_RECIP_MS},
     )
 
     # Ia -> RG feedback (static excitatory)
@@ -385,7 +398,7 @@ def main():
         nonlocal act_e, act_f, force_e, force_f, len_e, len_f, last_me_len, last_mf_len
         dt_s = SAMPLE_DT_MS / 1000.0
 
-        # Counter-phase BS update (main change)
+        # Counter-phase BS update
         r_bs_e, r_bs_f = bs_rates_counterphase(t_ms)
         nest.SetStatus(bs_pg_e, {"rate": r_bs_e})
         nest.SetStatus(bs_pg_f, {"rate": r_bs_f})
@@ -436,19 +449,25 @@ def main():
         len_e = clamp(len_e, L_MIN, L_MAX)
         len_f = clamp(len_f, L_MIN, L_MAX)
 
-        # Ia rates
+        # Ia rates (counter-phase sinus modulation FIX)
         stretch_e = max(0.0, len_e - L0)
         stretch_f = max(0.0, len_f - L0)
+
         t_s = t_ms / 1000.0
-        sin_mod = 0.5 * (1.0 + np.sin(2.0 * np.pi * IA_SIN_MOD_HZ * t_s))
+        s = np.sin(2.0 * np.pi * IA_SIN_MOD_HZ * t_s)
+        sin_mod_e = 0.5 * (1.0 + s)   # E in-phase
+        sin_mod_f = 0.5 * (1.0 - s)   # F anti-phase
+
         depth_e = IA_SIN_MAX_DEPTH * (force_e / FORCE_MAX)
         depth_f = IA_SIN_MAX_DEPTH * (force_f / FORCE_MAX)
-        amp_e = (1.0 - depth_e) + depth_e * sin_mod
-        amp_f = (1.0 - depth_f) + depth_f * sin_mod
+        amp_e = (1.0 - depth_e) + depth_e * sin_mod_e
+        amp_f = (1.0 - depth_f) + depth_f * sin_mod_f
+
         rate_e = (IA_BASE_HZ + IA_K_FORCE * force_e + IA_K_STRETCH * stretch_e) * amp_e
         rate_f = (IA_BASE_HZ + IA_K_FORCE * force_f + IA_K_STRETCH * stretch_f) * amp_f
         rate_e = clamp(rate_e, 0.0, IA_RATE_MAX_HZ)
         rate_f = clamp(rate_f, 0.0, IA_RATE_MAX_HZ)
+
         nest.SetStatus(ia_pg_e, {"rate": rate_e})
         nest.SetStatus(ia_pg_f, {"rate": rate_f})
 
@@ -513,7 +532,7 @@ def main():
     plt.tight_layout()
     plt.show()
 
-    # Inputs learning (together)
+    # Inputs learning
     plt.figure(figsize=(14, 7))
     for key, color in [
         ("cut->rge", "tab:blue"),
@@ -531,7 +550,7 @@ def main():
     plt.tight_layout()
     plt.show()
 
-    # (1) Motor synapses means on separate graph
+    # Motor synapses means on separate plot
     plt.figure(figsize=(14, 6))
     plt.plot(times_arr, np.asarray(mean_std["rge->me"][0]), label="rge->me mean")
     plt.plot(times_arr, np.asarray(mean_std["rgf->mf"][0]), label="rgf->mf mean")
@@ -542,7 +561,6 @@ def main():
     plt.tight_layout()
     plt.show()
 
-    # Motor rates
     plt.figure(figsize=(14, 5))
     plt.plot(times_arr, mot_rate_e, label="M-E rate (Hz/neuron)")
     plt.plot(times_arr, mot_rate_f, label="M-F rate (Hz/neuron)")
@@ -553,7 +571,6 @@ def main():
     plt.tight_layout()
     plt.show()
 
-    # Activation
     plt.figure(figsize=(14, 5))
     plt.plot(times_arr, act_trace_e, label="Activation E")
     plt.plot(times_arr, act_trace_f, label="Activation F")
@@ -564,7 +581,6 @@ def main():
     plt.tight_layout()
     plt.show()
 
-    # Force
     plt.figure(figsize=(14, 5))
     plt.plot(times_arr, force_trace_e, label="Force E")
     plt.plot(times_arr, force_trace_f, label="Force F")
@@ -575,7 +591,6 @@ def main():
     plt.tight_layout()
     plt.show()
 
-    # Length
     plt.figure(figsize=(14, 5))
     plt.plot(times_arr, len_trace_e, label="Length E")
     plt.plot(times_arr, len_trace_f, label="Length F")
@@ -587,13 +602,12 @@ def main():
     plt.tight_layout()
     plt.show()
 
-    # Ia
     plt.figure(figsize=(14, 5))
     plt.plot(times_arr, ia_rate_e, label="Ia-E rate (Hz)")
     plt.plot(times_arr, ia_rate_f, label="Ia-F rate (Hz)")
     plt.xlabel("time (ms)")
     plt.ylabel("Hz")
-    plt.title("Ia generator rates (force + length dependent)")
+    plt.title("Ia generator rates (counter-phase modulation)")
     plt.legend()
     plt.tight_layout()
     plt.show()
