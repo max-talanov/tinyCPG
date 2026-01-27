@@ -1,24 +1,20 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-2_stdp_izhi_nest.py (v5) — two legs + Ia driven by muscles (no sinus modulation)
+2_stdp_izhi_nest.py (v6) — two legs, Ia driven by muscles, per-leg plots, progress + counts, 10 threads.
 
-Changes vs v4:
-1) Removed sinusoidal modulation of Ia entirely.
-2) Added explicit MUSCLE relay populations (parrot_neuron) for each muscle group:
-      M-E -> mus-E
-      M-F -> mus-F
-   Force/length proxies are computed from MUS spikes (not motor spikes),
-   so Ia is now “connected to the proper muscles”.
-3) Extended the model to TWO LEGS (Left + Right) with the same per-leg architecture.
-4) Right leg BS drive is phase-shifted by pi relative to Left leg (diagonal alternation).
-5) Kept reciprocal inhibition inside each leg (RG-E <-> RG-F).
-6) Optional mild commissural diagonal inhibition between legs (enabled by default).
+Changes vs v5:
+1) Separate graphs for each leg (L and R) — no mixed-leg plots.
+2) Add simulation progress logging: "Step X / Total_steps" (prints every N steps).
+3) Increase simulation duration to 10_000 ms.
+4) Log number of neurons and synapses (per leg + totals).
+5) Start using MPI / 10 threads:
+   - Script sets NEST local threads to 10 via KernelStatus.
+   - For MPI, run with mpirun/mpiexec (NEST must be built with MPI):
+       mpirun -np 2 python 2_stdp_izhi_nest.py
+     Each MPI process will use local_num_threads=10.
 
 NEST: 3.9.0
-
-Run:
-  python 2_stdp_izhi_nest.py
 """
 
 import nest
@@ -27,7 +23,7 @@ import matplotlib.pyplot as plt
 
 
 # ============================
-# Sizes (your constraints + extension)
+# Sizes
 # ============================
 N_CUT = 100
 N_BS = 100
@@ -51,8 +47,11 @@ LEGS = ("L", "R")
 # ============================
 # Simulation timing
 # ============================
-SIM_MS = 6000.0
+SIM_MS = 10_000.0
 SAMPLE_DT_MS = 10.0
+
+# Progress print cadence (avoid terminal spam)
+PROGRESS_EVERY_STEPS = 50  # prints every 50 steps => every 500 ms with dt=10 ms
 
 
 # ============================
@@ -68,12 +67,11 @@ CUT_RATE_OFF_HZ = 0.0
 # Brainstem drive
 # ============================
 BS_OSC_HZ = 1.0
-BS_RATE_BASE_HZ = 0.0     # keep inactive side quiet
+BS_RATE_BASE_HZ = 0.0
 BS_RATE_AMP_HZ = 300.0
 BS_RATE_MIN_HZ = 0.0
 
-# Left/right phase shift for BS:
-# Right is shifted by pi -> diagonal alternation (Left extensor ~ Right flexor)
+# Left/right phase shift (diagonal alternation)
 BS_PHASE = {"L": 0.0, "R": np.pi}
 
 
@@ -93,7 +91,7 @@ DELAY_RECIP_MS = 1.0
 W_M2MUS = 1.0
 P_M2MUS = 0.8
 
-# Muscle afferents -> RG feedback synapses (static excitatory)
+# Ia -> RG feedback synapses (static excitatory)
 IA2RG_P = 0.4
 IA2RG_W = 12.0
 
@@ -111,15 +109,12 @@ W_STATIC_RM = 35.0
 
 
 # ============================
-# Commissural (between legs) — mild stabilizer
+# Commissural (between legs) — optional stabilizer
 # ============================
 ENABLE_COMMISSURAL = True
 P_COMM = 0.08
 W_COMM_INH = -10.0
 DELAY_COMM_MS = 1.0
-# Diagonal inhibition:
-# RG-E(L) inhibits RG-F(R) and RG-E(R) inhibits RG-F(L),
-# RG-F(L) inhibits RG-E(R) and RG-F(R) inhibits RG-E(L)
 
 
 # ============================
@@ -172,7 +167,7 @@ STRETCH_GAIN = 0.35  # extensor-only stretch from CUT fraction
 
 
 # ============================
-# Ia generator model (NO SINUS MODULATION)
+# Ia generator model (NO sinus modulation)
 # ============================
 IA_BASE_HZ = 10.0
 IA_K_FORCE = 6.0
@@ -186,7 +181,7 @@ def clamp(x: float, lo: float, hi: float) -> float:
 
 def bs_rates_counterphase(t_ms: float, leg: str) -> tuple[float, float]:
     """
-    Counter-phase BS within a leg, with optional leg phase shift.
+    Counter-phase BS within a leg, phase-shift between legs.
       E gets +sin half-wave
       F gets -sin half-wave
     """
@@ -208,22 +203,40 @@ def make_weight_recorder_safe():
         return None
 
 
+def count_conns(**kwargs) -> int:
+    """Safe connection counter."""
+    try:
+        return len(nest.GetConnections(**kwargs))
+    except Exception:
+        return -1
+
+
 def main():
+    # ---- Kernel setup: 10 threads
     nest.ResetKernel()
-    nest.SetKernelStatus({"resolution": 0.1})
+    nest.SetKernelStatus({
+        "resolution": 0.1,
+        "local_num_threads": 10,
+        "print_time": False,
+    })
+
+    rank = getattr(nest, "Rank", lambda: 0)()
+    nproc = getattr(nest, "NumProcesses", lambda: 1)()
+    if rank == 0:
+        print(f"[NEST] MPI processes: {nproc} | local_num_threads: {nest.GetKernelStatus('local_num_threads')}")
 
     # ----------------------------
     # Build per-leg structures
     # ----------------------------
     leg = {}
     for side in LEGS:
-        # CUT input (per leg)
+        # CUT
         cut_pg = nest.Create("poisson_generator", N_CUT)
         cut_in = nest.Create("parrot_neuron", N_CUT)
         nest.Connect(cut_pg, cut_in, conn_spec={"rule": "one_to_one"})
         nest.SetStatus(cut_pg, {"rate": CUT_RATE_OFF_HZ})
 
-        # BS inputs (per leg; separate E and F)
+        # BS inputs
         bs_pg_e = nest.Create("poisson_generator", N_BS)
         bs_in_e = nest.Create("parrot_neuron", N_BS)
         nest.Connect(bs_pg_e, bs_in_e, conn_spec={"rule": "one_to_one"})
@@ -263,11 +276,11 @@ def main():
         nest.SetStatus(m_e,  {"V_m": -65.0, "U_m": 0.2 * (-65.0), "I_e": I_E_MOTOR})
         nest.SetStatus(m_f,  {"V_m": -65.0, "U_m": 0.2 * (-65.0), "I_e": I_E_MOTOR})
 
-        # MUSCLE relays
+        # Muscle relays
         mus_e = nest.Create("parrot_neuron", N_MUS_E)
         mus_f = nest.Create("parrot_neuron", N_MUS_F)
 
-        # Recorders
+        # Recorders: muscle only
         rec_muse = nest.Create("spike_recorder")
         rec_musf = nest.Create("spike_recorder")
         nest.Connect(mus_e, rec_muse)
@@ -287,7 +300,7 @@ def main():
         )
 
     # ----------------------------
-    # Synapse models with weight recorders (optional)
+    # STDP synapse models (+ optional weight recorders)
     # ----------------------------
     stdp_defaults = {
         "tau_plus": TAU_PLUS,
@@ -318,129 +331,89 @@ def main():
         copy(f"stdp_rgf_mf_{side}", wr_rgf_mf)
 
     # ----------------------------
-    # Connect everything per leg
+    # Connect per-leg
     # ----------------------------
     for side in LEGS:
         L = leg[side]
 
         # CUT -> RG-E
-        nest.Connect(
-            L["cut_in"], L["rg_e"],
-            conn_spec={"rule": "pairwise_bernoulli", "p": P_IN_STDP},
-            syn_spec={"synapse_model": f"stdp_cut_rge_{side}", "weight": W0_IN, "delay": DELAY_MS},
-        )
+        nest.Connect(L["cut_in"], L["rg_e"],
+                     conn_spec={"rule": "pairwise_bernoulli", "p": P_IN_STDP},
+                     syn_spec={"synapse_model": f"stdp_cut_rge_{side}", "weight": W0_IN, "delay": DELAY_MS})
 
         # BS -> RG-E / RG-F
-        nest.Connect(
-            L["bs_in_e"], L["rg_e"],
-            conn_spec={"rule": "pairwise_bernoulli", "p": P_IN_STDP},
-            syn_spec={"synapse_model": f"stdp_bs_rge_{side}", "weight": W0_IN, "delay": DELAY_MS},
-        )
-        nest.Connect(
-            L["bs_in_f"], L["rg_f"],
-            conn_spec={"rule": "pairwise_bernoulli", "p": P_IN_STDP},
-            syn_spec={"synapse_model": f"stdp_bs_rgf_{side}", "weight": W0_IN, "delay": DELAY_MS},
-        )
+        nest.Connect(L["bs_in_e"], L["rg_e"],
+                     conn_spec={"rule": "pairwise_bernoulli", "p": P_IN_STDP},
+                     syn_spec={"synapse_model": f"stdp_bs_rge_{side}", "weight": W0_IN, "delay": DELAY_MS})
+        nest.Connect(L["bs_in_f"], L["rg_f"],
+                     conn_spec={"rule": "pairwise_bernoulli", "p": P_IN_STDP},
+                     syn_spec={"synapse_model": f"stdp_bs_rgf_{side}", "weight": W0_IN, "delay": DELAY_MS})
 
         # Baseline drive -> RG
-        nest.Connect(
-            L["base_in"], L["rg_e"],
-            conn_spec={"rule": "pairwise_bernoulli", "p": BASE_DRIVE_P},
-            syn_spec={"synapse_model": "static_synapse", "weight": BASE_DRIVE_W, "delay": DELAY_MS},
-        )
-        nest.Connect(
-            L["base_in"], L["rg_f"],
-            conn_spec={"rule": "pairwise_bernoulli", "p": BASE_DRIVE_P},
-            syn_spec={"synapse_model": "static_synapse", "weight": BASE_DRIVE_W, "delay": DELAY_MS},
-        )
+        nest.Connect(L["base_in"], L["rg_e"],
+                     conn_spec={"rule": "pairwise_bernoulli", "p": BASE_DRIVE_P},
+                     syn_spec={"synapse_model": "static_synapse", "weight": BASE_DRIVE_W, "delay": DELAY_MS})
+        nest.Connect(L["base_in"], L["rg_f"],
+                     conn_spec={"rule": "pairwise_bernoulli", "p": BASE_DRIVE_P},
+                     syn_spec={"synapse_model": "static_synapse", "weight": BASE_DRIVE_W, "delay": DELAY_MS})
 
-        # RG -> motor
-        nest.Connect(
-            L["rg_e"], L["m_e"],
-            conn_spec={"rule": "pairwise_bernoulli", "p": P_IN_STDP},
-            syn_spec={"synapse_model": f"stdp_rge_me_{side}", "weight": W0_RM, "delay": DELAY_MS},
-        )
-        nest.Connect(
-            L["rg_f"], L["m_f"],
-            conn_spec={"rule": "pairwise_bernoulli", "p": P_IN_STDP},
-            syn_spec={"synapse_model": f"stdp_rgf_mf_{side}", "weight": W0_RM, "delay": DELAY_MS},
-        )
+        # RG -> motor (STDP)
+        nest.Connect(L["rg_e"], L["m_e"],
+                     conn_spec={"rule": "pairwise_bernoulli", "p": P_IN_STDP},
+                     syn_spec={"synapse_model": f"stdp_rge_me_{side}", "weight": W0_RM, "delay": DELAY_MS})
+        nest.Connect(L["rg_f"], L["m_f"],
+                     conn_spec={"rule": "pairwise_bernoulli", "p": P_IN_STDP},
+                     syn_spec={"synapse_model": f"stdp_rgf_mf_{side}", "weight": W0_RM, "delay": DELAY_MS})
 
-        # Motor -> muscle relay
-        nest.Connect(
-            L["m_e"], L["mus_e"],
-            conn_spec={"rule": "pairwise_bernoulli", "p": P_M2MUS},
-            syn_spec={"synapse_model": "static_synapse", "weight": W_M2MUS, "delay": DELAY_MS},
-        )
-        nest.Connect(
-            L["m_f"], L["mus_f"],
-            conn_spec={"rule": "pairwise_bernoulli", "p": P_M2MUS},
-            syn_spec={"synapse_model": "static_synapse", "weight": W_M2MUS, "delay": DELAY_MS},
-        )
+        # Motor -> muscle relay (static)
+        nest.Connect(L["m_e"], L["mus_e"],
+                     conn_spec={"rule": "pairwise_bernoulli", "p": P_M2MUS},
+                     syn_spec={"synapse_model": "static_synapse", "weight": W_M2MUS, "delay": DELAY_MS})
+        nest.Connect(L["m_f"], L["mus_f"],
+                     conn_spec={"rule": "pairwise_bernoulli", "p": P_M2MUS},
+                     syn_spec={"synapse_model": "static_synapse", "weight": W_M2MUS, "delay": DELAY_MS})
 
         # Local RG recurrence
-        nest.Connect(
-            L["rg_e"], L["rg_e"],
-            conn_spec={"rule": "pairwise_bernoulli", "p": P_RG_REC},
-            syn_spec={"synapse_model": "static_synapse", "weight": 8.0, "delay": DELAY_MS},
-        )
-        nest.Connect(
-            L["rg_f"], L["rg_f"],
-            conn_spec={"rule": "pairwise_bernoulli", "p": P_RG_REC},
-            syn_spec={"synapse_model": "static_synapse", "weight": 8.0, "delay": DELAY_MS},
-        )
+        nest.Connect(L["rg_e"], L["rg_e"],
+                     conn_spec={"rule": "pairwise_bernoulli", "p": P_RG_REC},
+                     syn_spec={"synapse_model": "static_synapse", "weight": 8.0, "delay": DELAY_MS})
+        nest.Connect(L["rg_f"], L["rg_f"],
+                     conn_spec={"rule": "pairwise_bernoulli", "p": P_RG_REC},
+                     syn_spec={"synapse_model": "static_synapse", "weight": 8.0, "delay": DELAY_MS})
 
         # Reciprocal inhibition inside leg
-        nest.Connect(
-            L["rg_e"], L["rg_f"],
-            conn_spec={"rule": "pairwise_bernoulli", "p": P_RG_RECIP},
-            syn_spec={"synapse_model": "static_synapse", "weight": W_RG_RECIP, "delay": DELAY_RECIP_MS},
-        )
-        nest.Connect(
-            L["rg_f"], L["rg_e"],
-            conn_spec={"rule": "pairwise_bernoulli", "p": P_RG_RECIP},
-            syn_spec={"synapse_model": "static_synapse", "weight": W_RG_RECIP, "delay": DELAY_RECIP_MS},
-        )
+        nest.Connect(L["rg_e"], L["rg_f"],
+                     conn_spec={"rule": "pairwise_bernoulli", "p": P_RG_RECIP},
+                     syn_spec={"synapse_model": "static_synapse", "weight": W_RG_RECIP, "delay": DELAY_RECIP_MS})
+        nest.Connect(L["rg_f"], L["rg_e"],
+                     conn_spec={"rule": "pairwise_bernoulli", "p": P_RG_RECIP},
+                     syn_spec={"synapse_model": "static_synapse", "weight": W_RG_RECIP, "delay": DELAY_RECIP_MS})
 
         # Ia -> RG feedback
-        nest.Connect(
-            L["ia_in_e"], L["rg_e"],
-            conn_spec={"rule": "pairwise_bernoulli", "p": IA2RG_P},
-            syn_spec={"synapse_model": "static_synapse", "weight": IA2RG_W, "delay": DELAY_MS},
-        )
-        nest.Connect(
-            L["ia_in_f"], L["rg_f"],
-            conn_spec={"rule": "pairwise_bernoulli", "p": IA2RG_P},
-            syn_spec={"synapse_model": "static_synapse", "weight": IA2RG_W, "delay": DELAY_MS},
-        )
+        nest.Connect(L["ia_in_e"], L["rg_e"],
+                     conn_spec={"rule": "pairwise_bernoulli", "p": IA2RG_P},
+                     syn_spec={"synapse_model": "static_synapse", "weight": IA2RG_W, "delay": DELAY_MS})
+        nest.Connect(L["ia_in_f"], L["rg_f"],
+                     conn_spec={"rule": "pairwise_bernoulli", "p": IA2RG_P},
+                     syn_spec={"synapse_model": "static_synapse", "weight": IA2RG_W, "delay": DELAY_MS})
 
         # Optional static parallel paths
         if USE_STATIC_PARALLEL:
-            nest.Connect(
-                L["bs_in_e"], L["rg_e"],
-                conn_spec={"rule": "pairwise_bernoulli", "p": P_STATIC_IN},
-                syn_spec={"synapse_model": "static_synapse", "weight": W_STATIC_IN, "delay": DELAY_MS},
-            )
-            nest.Connect(
-                L["bs_in_f"], L["rg_f"],
-                conn_spec={"rule": "pairwise_bernoulli", "p": P_STATIC_IN},
-                syn_spec={"synapse_model": "static_synapse", "weight": W_STATIC_IN, "delay": DELAY_MS},
-            )
-            nest.Connect(
-                L["cut_in"], L["rg_e"],
-                conn_spec={"rule": "pairwise_bernoulli", "p": P_STATIC_IN},
-                syn_spec={"synapse_model": "static_synapse", "weight": W_STATIC_IN, "delay": DELAY_MS},
-            )
-            nest.Connect(
-                L["rg_e"], L["m_e"],
-                conn_spec={"rule": "pairwise_bernoulli", "p": P_STATIC_RM},
-                syn_spec={"synapse_model": "static_synapse", "weight": W_STATIC_RM, "delay": DELAY_MS},
-            )
-            nest.Connect(
-                L["rg_f"], L["m_f"],
-                conn_spec={"rule": "pairwise_bernoulli", "p": P_STATIC_RM},
-                syn_spec={"synapse_model": "static_synapse", "weight": W_STATIC_RM, "delay": DELAY_MS},
-            )
+            nest.Connect(L["bs_in_e"], L["rg_e"],
+                         conn_spec={"rule": "pairwise_bernoulli", "p": P_STATIC_IN},
+                         syn_spec={"synapse_model": "static_synapse", "weight": W_STATIC_IN, "delay": DELAY_MS})
+            nest.Connect(L["bs_in_f"], L["rg_f"],
+                         conn_spec={"rule": "pairwise_bernoulli", "p": P_STATIC_IN},
+                         syn_spec={"synapse_model": "static_synapse", "weight": W_STATIC_IN, "delay": DELAY_MS})
+            nest.Connect(L["cut_in"], L["rg_e"],
+                         conn_spec={"rule": "pairwise_bernoulli", "p": P_STATIC_IN},
+                         syn_spec={"synapse_model": "static_synapse", "weight": W_STATIC_IN, "delay": DELAY_MS})
+            nest.Connect(L["rg_e"], L["m_e"],
+                         conn_spec={"rule": "pairwise_bernoulli", "p": P_STATIC_RM},
+                         syn_spec={"synapse_model": "static_synapse", "weight": W_STATIC_RM, "delay": DELAY_MS})
+            nest.Connect(L["rg_f"], L["m_f"],
+                         conn_spec={"rule": "pairwise_bernoulli", "p": P_STATIC_RM},
+                         syn_spec={"synapse_model": "static_synapse", "weight": W_STATIC_RM, "delay": DELAY_MS})
 
     # ----------------------------
     # Commissural coupling (between legs)
@@ -462,6 +435,27 @@ def main():
                      syn_spec={"synapse_model": "static_synapse", "weight": W_COMM_INH, "delay": DELAY_COMM_MS})
 
     # ----------------------------
+    # Log neurons & synapses
+    # ----------------------------
+    if rank == 0:
+        per_leg_neurons = (N_CUT + N_BS * 2 + N_BS + N_IA_E + N_IA_F +
+                           N_RG_E + N_RG_F + N_MOTOR_E + N_MOTOR_F + N_MUS_E + N_MUS_F)
+        total_neurons = per_leg_neurons * len(LEGS)
+        print(f"[Counts] Neurons per leg ≈ {per_leg_neurons} | Total ≈ {total_neurons}")
+
+        for side in LEGS:
+            print(f"[Counts] Synapses leg {side}: "
+                  f"stdp_cut_rge={count_conns(synapse_model=f'stdp_cut_rge_{side}')}, "
+                  f"stdp_bs_rge={count_conns(synapse_model=f'stdp_bs_rge_{side}')}, "
+                  f"stdp_bs_rgf={count_conns(synapse_model=f'stdp_bs_rgf_{side}')}, "
+                  f"stdp_rge_me={count_conns(synapse_model=f'stdp_rge_me_{side}')}, "
+                  f"stdp_rgf_mf={count_conns(synapse_model=f'stdp_rgf_mf_{side}')}"
+                  )
+
+        print(f"[Counts] Total static_synapse connections (all legs + commissural): "
+              f"{count_conns(synapse_model='static_synapse')}")
+
+    # ----------------------------
     # Weight sampling helper
     # ----------------------------
     def sample_w(model_name: str) -> np.ndarray:
@@ -471,32 +465,20 @@ def main():
         return np.asarray(nest.GetStatus(conns, "weight"), dtype=float)
 
     # ----------------------------
-    # Closed-loop states per leg + logs
+    # Closed-loop state + logs
     # ----------------------------
-    state = {}
-    for side in LEGS:
-        state[side] = dict(
-            act_e=0.0, act_f=0.0,
-            force_e=0.0, force_f=0.0,
-            len_e=L0, len_f=L0,
-            last_muse=0, last_musf=0,
-        )
+    state = {side: dict(
+        act_e=0.0, act_f=0.0,
+        force_e=0.0, force_f=0.0,
+        len_e=L0, len_f=L0,
+        last_muse=0, last_musf=0,
+    ) for side in LEGS}
 
     times = []
     wstats = {side: {k: ([], []) for k in ["cut->rge", "bs->rge", "bs->rgf", "rge->me", "rgf->mf"]} for side in LEGS}
-
-    bs_rate_e = {side: [] for side in LEGS}
-    bs_rate_f = {side: [] for side in LEGS}
-    mus_rate_e = {side: [] for side in LEGS}
-    mus_rate_f = {side: [] for side in LEGS}
-    act_e_tr = {side: [] for side in LEGS}
-    act_f_tr = {side: [] for side in LEGS}
-    force_e_tr = {side: [] for side in LEGS}
-    force_f_tr = {side: [] for side in LEGS}
-    len_e_tr = {side: [] for side in LEGS}
-    len_f_tr = {side: [] for side in LEGS}
-    ia_e_tr = {side: [] for side in LEGS}
-    ia_f_tr = {side: [] for side in LEGS}
+    logs = {side: dict(bs_e=[], bs_f=[], mus_e=[], mus_f=[],
+                      act_e=[], act_f=[], force_e=[], force_f=[],
+                      len_e=[], len_f=[], ia_e=[], ia_f=[]) for side in LEGS}
 
     def new_spikes(rec, last_len):
         ev = nest.GetStatus(rec, "events")[0]
@@ -507,36 +489,35 @@ def main():
         dt_s = SAMPLE_DT_MS / 1000.0
         L = leg[side]
         S = state[side]
+        P = logs[side]
 
         # BS rates
         r_e, r_f = bs_rates_counterphase(t_ms, side)
         nest.SetStatus(L["bs_pg_e"], {"rate": r_e})
         nest.SetStatus(L["bs_pg_f"], {"rate": r_f})
-        bs_rate_e[side].append(r_e)
-        bs_rate_f[side].append(r_f)
+        P["bs_e"].append(r_e)
+        P["bs_f"].append(r_f)
 
-        # Muscle spikes -> rates
+        # muscle spikes -> rates
         sp_e, cur_e = new_spikes(L["rec_muse"], S["last_muse"])
         sp_f, cur_f = new_spikes(L["rec_musf"], S["last_musf"])
         S["last_muse"] = cur_e
         S["last_musf"] = cur_f
-
         r_muse = (sp_e / max(1, N_MUS_E)) / dt_s
         r_musf = (sp_f / max(1, N_MUS_F)) / dt_s
-        mus_rate_e[side].append(r_muse)
-        mus_rate_f[side].append(r_musf)
+        P["mus_e"].append(r_muse)
+        P["mus_f"].append(r_musf)
 
-        # Activation LPF (from muscle relays)
+        # activation
         tauA_s = TAU_ACT_MS / 1000.0
         target_ae = clamp(ACT_GAIN * r_muse, 0.0, ACT_MAX)
         target_af = clamp(ACT_GAIN * r_musf, 0.0, ACT_MAX)
         S["act_e"] += (dt_s / tauA_s) * (target_ae - S["act_e"])
         S["act_f"] += (dt_s / tauA_s) * (target_af - S["act_f"])
 
-        # Force
+        # force
         target_fe = FORCE_MAX * (1.0 - np.exp(-FORCE_SAT_K * S["act_e"]))
         target_ff = FORCE_MAX * (1.0 - np.exp(-FORCE_SAT_K * S["act_f"]))
-
         tau_rise_s = TAU_FORCE_RISE_MS / 1000.0
         tau_decay_s = TAU_FORCE_DECAY_MS / 1000.0
 
@@ -544,7 +525,6 @@ def main():
             S["force_e"] += (dt_s / tau_rise_s) * (target_fe - S["force_e"])
         else:
             S["force_e"] += (dt_s / tau_decay_s) * (target_fe - S["force_e"])
-
         if target_ff > S["force_f"]:
             S["force_f"] += (dt_s / tau_rise_s) * (target_ff - S["force_f"])
         else:
@@ -553,41 +533,36 @@ def main():
         S["force_e"] = clamp(S["force_e"], 0.0, FORCE_MAX)
         S["force_f"] = clamp(S["force_f"], 0.0, FORCE_MAX)
 
-        # Length
+        # length
         tauL_s = TAU_LENGTH_MS / 1000.0
         S["len_e"] += (dt_s / tauL_s) * (L0 - S["len_e"])
         S["len_f"] += (dt_s / tauL_s) * (L0 - S["len_f"])
-
         S["len_e"] -= SHORTEN_GAIN * S["force_e"] * dt_s
         S["len_f"] -= SHORTEN_GAIN * S["force_f"] * dt_s
-
         if cut_active_frac > 0.0:
             S["len_e"] += STRETCH_GAIN * cut_active_frac * dt_s
-
         S["len_e"] = clamp(S["len_e"], L_MIN, L_MAX)
         S["len_f"] = clamp(S["len_f"], L_MIN, L_MAX)
 
-        # Ia rates (NO SINUS)
+        # Ia rates: force + stretch only
         stretch_e = max(0.0, S["len_e"] - L0)
         stretch_f = max(0.0, S["len_f"] - L0)
-
         ia_e = IA_BASE_HZ + IA_K_FORCE * S["force_e"] + IA_K_STRETCH * stretch_e
         ia_f = IA_BASE_HZ + IA_K_FORCE * S["force_f"] + IA_K_STRETCH * stretch_f
         ia_e = clamp(ia_e, 0.0, IA_RATE_MAX_HZ)
         ia_f = clamp(ia_f, 0.0, IA_RATE_MAX_HZ)
-
         nest.SetStatus(L["ia_pg_e"], {"rate": ia_e})
         nest.SetStatus(L["ia_pg_f"], {"rate": ia_f})
 
-        # logs
-        act_e_tr[side].append(S["act_e"])
-        act_f_tr[side].append(S["act_f"])
-        force_e_tr[side].append(S["force_e"])
-        force_f_tr[side].append(S["force_f"])
-        len_e_tr[side].append(S["len_e"])
-        len_f_tr[side].append(S["len_f"])
-        ia_e_tr[side].append(ia_e)
-        ia_f_tr[side].append(ia_f)
+        # store logs
+        P["act_e"].append(S["act_e"])
+        P["act_f"].append(S["act_f"])
+        P["force_e"].append(S["force_e"])
+        P["force_f"].append(S["force_f"])
+        P["len_e"].append(S["len_e"])
+        P["len_f"].append(S["len_f"])
+        P["ia_e"].append(ia_e)
+        P["ia_f"].append(ia_f)
 
     def log_weights(t_ms: float):
         times.append(t_ms)
@@ -607,14 +582,21 @@ def main():
             push(f"stdp_rgf_mf_{side}", "rgf->mf")
 
     # ----------------------------
-    # Run: chunked CUT phases (applied to BOTH legs)
+    # Run loop with progress logging
     # ----------------------------
+    total_steps = int(SIM_MS / SAMPLE_DT_MS)
+    done_steps = 0
+
     chunk = max(1, int(N_CUT / N_PHASES))
     t = 0.0
+
+    if rank == 0:
+        print(f"[Sim] dt={SAMPLE_DT_MS} ms | total_steps={total_steps} | phases={N_PHASES} | phase_ms={PHASE_MS:.2f}")
 
     for phase in range(N_PHASES):
         for side in LEGS:
             nest.SetStatus(leg[side]["cut_pg"], {"rate": CUT_RATE_OFF_HZ})
+
         start = phase * chunk
         end = min(N_CUT, (phase + 1) * chunk)
         for side in LEGS:
@@ -626,33 +608,40 @@ def main():
         for _ in range(n_steps):
             nest.Simulate(SAMPLE_DT_MS)
             t += SAMPLE_DT_MS
+            done_steps += 1
+
             for side in LEGS:
                 update_leg(side, t, cut_active_frac)
             log_weights(t)
 
+            if rank == 0 and (done_steps % PROGRESS_EVERY_STEPS == 0 or done_steps == total_steps):
+                print(f"[Sim] Step {done_steps} / {total_steps}  (t={t:.1f} ms)")
+
     times_arr = np.asarray(times)
 
     # ----------------------------
-    # Plots
+    # Plots (SEPARATE per leg)
     # ----------------------------
-    plt.figure(figsize=(14, 5))
-    plt.plot(times_arr, bs_rate_e["L"], label="BS E (L)")
-    plt.plot(times_arr, bs_rate_f["L"], label="BS F (L)")
-    plt.plot(times_arr, bs_rate_e["R"], label="BS E (R)")
-    plt.plot(times_arr, bs_rate_f["R"], label="BS F (R)")
-    plt.xlabel("time (ms)")
-    plt.ylabel("Hz")
-    plt.title("Brainstem drive (counter-phase within legs, phase-shift between legs)")
-    plt.legend()
-    plt.tight_layout()
-    plt.show()
-
     for side in LEGS:
+        P = logs[side]
+
+        # BS
+        plt.figure(figsize=(14, 5))
+        plt.plot(times_arr, P["bs_e"], label=f"BS E ({side})")
+        plt.plot(times_arr, P["bs_f"], label=f"BS F ({side})")
+        plt.xlabel("time (ms)")
+        plt.ylabel("Hz")
+        plt.title(f"Brainstem drive — leg {side}")
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
+
+        # Input synapses learning
         plt.figure(figsize=(14, 7))
         for key in ["cut->rge", "bs->rge", "bs->rgf"]:
             m = np.asarray(wstats[side][key][0])
             s = np.asarray(wstats[side][key][1])
-            plt.plot(times_arr, m, label=f"{key} mean ({side})")
+            plt.plot(times_arr, m, label=f"{key} mean")
             plt.fill_between(times_arr, m - s, m + s, alpha=0.15)
         plt.xlabel("time (ms)")
         plt.ylabel("weight (pA)")
@@ -661,78 +650,72 @@ def main():
         plt.tight_layout()
         plt.show()
 
-    plt.figure(figsize=(14, 6))
-    plt.plot(times_arr, np.asarray(wstats["L"]["rge->me"][0]), label="L rge->me mean")
-    plt.plot(times_arr, np.asarray(wstats["L"]["rgf->mf"][0]), label="L rgf->mf mean")
-    plt.plot(times_arr, np.asarray(wstats["R"]["rge->me"][0]), label="R rge->me mean")
-    plt.plot(times_arr, np.asarray(wstats["R"]["rgf->mf"][0]), label="R rgf->mf mean")
-    plt.xlabel("time (ms)")
-    plt.ylabel("weight (pA)")
-    plt.title("STDP learning — motor synapses (means)")
-    plt.legend()
-    plt.tight_layout()
-    plt.show()
+        # Motor synapses means
+        plt.figure(figsize=(14, 6))
+        plt.plot(times_arr, np.asarray(wstats[side]["rge->me"][0]), label="rge->me mean")
+        plt.plot(times_arr, np.asarray(wstats[side]["rgf->mf"][0]), label="rgf->mf mean")
+        plt.xlabel("time (ms)")
+        plt.ylabel("weight (pA)")
+        plt.title(f"STDP learning — motor synapses (leg {side}) means")
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
 
-    plt.figure(figsize=(14, 5))
-    plt.plot(times_arr, mus_rate_e["L"], label="mus-E rate L")
-    plt.plot(times_arr, mus_rate_f["L"], label="mus-F rate L")
-    plt.plot(times_arr, mus_rate_e["R"], label="mus-E rate R")
-    plt.plot(times_arr, mus_rate_f["R"], label="mus-F rate R")
-    plt.xlabel("time (ms)")
-    plt.ylabel("Hz/neuron")
-    plt.title("Muscle relay rates (from motor spikes)")
-    plt.legend()
-    plt.tight_layout()
-    plt.show()
+        # Muscle rates
+        plt.figure(figsize=(14, 5))
+        plt.plot(times_arr, P["mus_e"], label="mus-E rate")
+        plt.plot(times_arr, P["mus_f"], label="mus-F rate")
+        plt.xlabel("time (ms)")
+        plt.ylabel("Hz/neuron")
+        plt.title(f"Muscle relay rates — leg {side}")
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
 
-    plt.figure(figsize=(14, 5))
-    plt.plot(times_arr, act_e_tr["L"], label="Act E L")
-    plt.plot(times_arr, act_f_tr["L"], label="Act F L")
-    plt.plot(times_arr, act_e_tr["R"], label="Act E R")
-    plt.plot(times_arr, act_f_tr["R"], label="Act F R")
-    plt.xlabel("time (ms)")
-    plt.ylabel("a.u.")
-    plt.title("Activation proxies (from muscle relays)")
-    plt.legend()
-    plt.tight_layout()
-    plt.show()
+        # Activation
+        plt.figure(figsize=(14, 5))
+        plt.plot(times_arr, P["act_e"], label="Activation E")
+        plt.plot(times_arr, P["act_f"], label="Activation F")
+        plt.xlabel("time (ms)")
+        plt.ylabel("a.u.")
+        plt.title(f"Activation proxy — leg {side}")
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
 
-    plt.figure(figsize=(14, 5))
-    plt.plot(times_arr, force_e_tr["L"], label="Force E L")
-    plt.plot(times_arr, force_f_tr["L"], label="Force F L")
-    plt.plot(times_arr, force_e_tr["R"], label="Force E R")
-    plt.plot(times_arr, force_f_tr["R"], label="Force F R")
-    plt.xlabel("time (ms)")
-    plt.ylabel("force (a.u.)")
-    plt.title("Force proxies")
-    plt.legend()
-    plt.tight_layout()
-    plt.show()
+        # Force
+        plt.figure(figsize=(14, 5))
+        plt.plot(times_arr, P["force_e"], label="Force E")
+        plt.plot(times_arr, P["force_f"], label="Force F")
+        plt.xlabel("time (ms)")
+        plt.ylabel("force (a.u.)")
+        plt.title(f"Force proxy — leg {side}")
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
 
-    plt.figure(figsize=(14, 5))
-    plt.plot(times_arr, len_e_tr["L"], label="Len E L")
-    plt.plot(times_arr, len_f_tr["L"], label="Len F L")
-    plt.plot(times_arr, len_e_tr["R"], label="Len E R")
-    plt.plot(times_arr, len_f_tr["R"], label="Len F R")
-    plt.axhline(L0, linestyle="--", linewidth=1)
-    plt.xlabel("time (ms)")
-    plt.ylabel("length (a.u.)")
-    plt.title("Length proxies (E also stretched by CUT)")
-    plt.legend()
-    plt.tight_layout()
-    plt.show()
+        # Length
+        plt.figure(figsize=(14, 5))
+        plt.plot(times_arr, P["len_e"], label="Length E")
+        plt.plot(times_arr, P["len_f"], label="Length F")
+        plt.axhline(L0, linestyle="--", linewidth=1)
+        plt.xlabel("time (ms)")
+        plt.ylabel("length (a.u.)")
+        plt.title(f"Length proxy — leg {side} (E also stretched by CUT)")
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
 
-    plt.figure(figsize=(14, 5))
-    plt.plot(times_arr, ia_e_tr["L"], label="Ia-E L")
-    plt.plot(times_arr, ia_f_tr["L"], label="Ia-F L")
-    plt.plot(times_arr, ia_e_tr["R"], label="Ia-E R")
-    plt.plot(times_arr, ia_f_tr["R"], label="Ia-F R")
-    plt.xlabel("time (ms)")
-    plt.ylabel("Hz")
-    plt.title("Ia generator rates (no sinus; force + length only)")
-    plt.legend()
-    plt.tight_layout()
-    plt.show()
+        # Ia
+        plt.figure(figsize=(14, 5))
+        plt.plot(times_arr, P["ia_e"], label="Ia-E rate")
+        plt.plot(times_arr, P["ia_f"], label="Ia-F rate")
+        plt.xlabel("time (ms)")
+        plt.ylabel("Hz")
+        plt.title(f"Ia generator rates — leg {side} (force + stretch)")
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
 
 
 if __name__ == "__main__":
