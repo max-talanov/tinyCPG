@@ -1,37 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-2_stdp_izhi_nest.py (v2)
+2_stdp_izhi_nest.py (v3)
 
-NEST 3.9.0 spinal-cord toy model (fore-left) with TWO muscle groups:
-
-  Extensor (E): RG-E -> M-E
-    - receives CUT + BS
-    - has Ia-E feedback
-
-  Flexor (F): RG-F -> M-F
-    - receives BS only (NO CUT)
-    - has Ia-F feedback
-
-Fixes/Extensions:
-1) Force proxy was 0 -> fixed by ensuring cyclic motor bursts:
-   - oscillatory brainstem drive (half-wave rectified sine) updated online
-   - small baseline RG drive + mild tonic bias currents
-2) Two muscle groups implemented (E with cutaneous input; F without)
-3) Length proxy implemented and used in Ia rate
-
-Muscle proxy:
-- motor spikes -> motor rate r(t) -> activation A(t) (low-pass)
-- activation -> force F(t) (saturating + rise/decay dynamics -> plateau-ish cycles)
-- length L(t): relax to L0, shorten with force; extensor length increases with CUT stretch
-
-Ia generators:
-  Ia_rate(t) = IA_BASE + IA_K_FORCE*F(t) + IA_K_STRETCH*max(0, L(t)-L0)
-plus optional "almost sinusoidal" modulation, depth scales with force.
-
-Plots:
-- STDP mean±std for: CUT->RG-E, BS->RG-E, BS->RG-F, RG-E->M-E, RG-F->M-F
-- BS rate, motor rates, activation, force, length, Ia rates (E and F)
+Requests implemented:
+1) rge->me and rgf->mf weight means moved to a separate figure.
+2) BS drive made counter-phase (E active while F silent, and vice versa).
+3) Activation proxy follows counter-phase (computed from motor spikes).
+4) Force proxy follows counter-phase.
+5) Length proxy follows counter-phase (via force; extensor also stretched by CUT).
+6) Ia generator kept as before.
 
 Run:
   python 2_stdp_izhi_nest.py
@@ -40,7 +18,6 @@ Run:
 import nest
 import numpy as np
 import matplotlib.pyplot as plt
-
 
 # ============================
 # Sizes (your constraints)
@@ -58,13 +35,11 @@ N_MOTOR_F = 100
 N_IA_E = 100
 N_IA_F = 100
 
-
 # ============================
 # Simulation timing
 # ============================
 SIM_MS = 6000.0
 SAMPLE_DT_MS = 10.0
-
 
 # ============================
 # CUT stimulation (extensor only)
@@ -74,15 +49,16 @@ PHASE_MS = SIM_MS / N_PHASES
 CUT_RATE_ON_HZ = 200.0
 CUT_RATE_OFF_HZ = 0.0
 
-
 # ============================
-# Brainstem drive (cyclic ~1 Hz)
+# Brainstem drive (counter-phase ~1 Hz)
 # ============================
 BS_OSC_HZ = 1.0
-BS_RATE_BASE_HZ = 80.0
-BS_RATE_AMP_HZ = 220.0          # peak ~300 Hz
-BS_RATE_MIN_HZ = 0.0
 
+# Keep base low so the "inactive" side is really quiet.
+# If you want co-contraction, raise BS_RATE_BASE_HZ a bit.
+BS_RATE_BASE_HZ = 0.0
+BS_RATE_AMP_HZ = 300.0
+BS_RATE_MIN_HZ = 0.0
 
 # ============================
 # Connectivity
@@ -92,9 +68,9 @@ P_RG_REC = 0.12
 DELAY_MS = 1.0
 
 # Small baseline RG drive (insurance)
-BASE_DRIVE_HZ = 15.0
-BASE_DRIVE_W = 20.0
-BASE_DRIVE_P = 0.10
+BASE_DRIVE_HZ = 10.0
+BASE_DRIVE_W = 18.0
+BASE_DRIVE_P = 0.08
 
 # Optional static parallel paths (insurance)
 USE_STATIC_PARALLEL = True
@@ -102,7 +78,6 @@ P_STATIC_IN = 0.03
 P_STATIC_RM = 0.03
 W_STATIC_IN = 22.0
 W_STATIC_RM = 35.0
-
 
 # ============================
 # STDP params (plain, no DA)
@@ -114,10 +89,9 @@ MU_PLUS = 0.0
 MU_MINUS = 0.0
 WMAX = 120.0
 
-# Initial weights (strong enough to drive motor)
+# Initial weights
 W0_IN = 22.0
 W0_RM = 30.0
-
 
 # ============================
 # Izhikevich neurons
@@ -131,29 +105,27 @@ izh_params = {
     "V_min": -120.0,
 }
 
-# Mild tonic bias (avoid total silence)
+# Mild tonic bias
 I_E_RG = 1.0
 I_E_MOTOR = 1.0
-
 
 # ============================
 # Muscle proxy: activation/force/length
 # ============================
 TAU_ACT_MS = 80.0
-ACT_GAIN = 0.03        # Hz/neuron -> activation
+ACT_GAIN = 0.03
 ACT_MAX = 1.2
 
 TAU_FORCE_RISE_MS = 140.0
 TAU_FORCE_DECAY_MS = 60.0
 FORCE_MAX = 25.0
-FORCE_SAT_K = 2.5      # higher -> earlier saturation/plateau
+FORCE_SAT_K = 2.5
 
 TAU_LENGTH_MS = 260.0
 L0 = 1.0
 L_MIN, L_MAX = 0.5, 2.0
-SHORTEN_GAIN = 0.010   # force -> shortening
-STRETCH_GAIN = 0.35    # extensor stretch from CUT fraction
-
+SHORTEN_GAIN = 0.010
+STRETCH_GAIN = 0.35  # extensor-only stretch from CUT fraction
 
 # ============================
 # Ia generator model
@@ -171,22 +143,28 @@ def clamp(x: float, lo: float, hi: float) -> float:
     return float(max(lo, min(hi, x)))
 
 
-def brainstem_rate(t_ms: float) -> float:
-    """Half-wave rectified sinusoid: makes bursty cycles."""
+def bs_rates_counterphase(t_ms: float) -> tuple[float, float]:
+    """
+    Counter-phase BS:
+      E gets rectified +sin
+      F gets rectified -sin
+    """
     t_s = t_ms / 1000.0
-    x = np.sin(2.0 * np.pi * BS_OSC_HZ * t_s)
-    x = max(0.0, x)  # rectify
-    rate = BS_RATE_BASE_HZ + BS_RATE_AMP_HZ * x
-    return clamp(rate, BS_RATE_MIN_HZ, BS_RATE_BASE_HZ + BS_RATE_AMP_HZ)
+    s = np.sin(2.0 * np.pi * BS_OSC_HZ * t_s)
+    e = max(0.0, s)
+    f = max(0.0, -s)
+    r_e = BS_RATE_BASE_HZ + BS_RATE_AMP_HZ * e
+    r_f = BS_RATE_BASE_HZ + BS_RATE_AMP_HZ * f
+    r_e = clamp(r_e, BS_RATE_MIN_HZ, BS_RATE_BASE_HZ + BS_RATE_AMP_HZ)
+    r_f = clamp(r_f, BS_RATE_MIN_HZ, BS_RATE_BASE_HZ + BS_RATE_AMP_HZ)
+    return r_e, r_f
 
 
 def main():
     nest.ResetKernel()
     nest.SetKernelStatus({"resolution": 0.1})
 
-    # ----------------------------
     # Inputs: Poisson -> parrot
-    # ----------------------------
     cut_pg = nest.Create("poisson_generator", N_CUT)
     cut_in = nest.Create("parrot_neuron", N_CUT)
     nest.Connect(cut_pg, cut_in, conn_spec={"rule": "one_to_one"})
@@ -224,9 +202,7 @@ def main():
     nest.SetStatus(ia_pg_e, {"rate": IA_BASE_HZ})
     nest.SetStatus(ia_pg_f, {"rate": IA_BASE_HZ})
 
-    # ----------------------------
     # Neurons
-    # ----------------------------
     rg_e = nest.Create("izhikevich", N_RG_E)
     rg_f = nest.Create("izhikevich", N_RG_F)
     m_e = nest.Create("izhikevich", N_MOTOR_E)
@@ -240,17 +216,13 @@ def main():
     nest.SetStatus(m_e,  {"V_m": -65.0, "U_m": 0.2 * (-65.0), "I_e": I_E_MOTOR})
     nest.SetStatus(m_f,  {"V_m": -65.0, "U_m": 0.2 * (-65.0), "I_e": I_E_MOTOR})
 
-    # ----------------------------
     # Spike recorders (motor only)
-    # ----------------------------
     rec_me = nest.Create("spike_recorder")
     rec_mf = nest.Create("spike_recorder")
     nest.Connect(m_e, rec_me)
     nest.Connect(m_f, rec_mf)
 
-    # ----------------------------
     # Weight recorders (optional)
-    # ----------------------------
     HAVE_WR = True
     try:
         wr_cut_rge = nest.Create("weight_recorder")
@@ -283,17 +255,13 @@ def main():
     copy_stdp("stdp_rge_me", wr_rge_me)
     copy_stdp("stdp_rgf_mf", wr_rgf_mf)
 
-    # ----------------------------
     # Connections
-    # ----------------------------
-    # CUT -> RG-E only
     nest.Connect(
         cut_in, rg_e,
         conn_spec={"rule": "pairwise_bernoulli", "p": P_IN_STDP},
         syn_spec={"synapse_model": "stdp_cut_rge", "weight": W0_IN, "delay": DELAY_MS},
     )
 
-    # BS -> RG-E and BS -> RG-F
     nest.Connect(
         bs_in_e, rg_e,
         conn_spec={"rule": "pairwise_bernoulli", "p": P_IN_STDP},
@@ -383,18 +351,14 @@ def main():
             syn_spec={"synapse_model": "static_synapse", "weight": W_STATIC_RM, "delay": DELAY_MS},
         )
 
-    # ----------------------------
-    # Helpers: weights
-    # ----------------------------
+    # Weight sampling helper
     def sample_w(model_name: str) -> np.ndarray:
         conns = nest.GetConnections(synapse_model=model_name)
         if len(conns) == 0:
             return np.array([], dtype=float)
         return np.asarray(nest.GetStatus(conns, "weight"), dtype=float)
 
-    # ----------------------------
-    # Closed-loop states + logs
-    # ----------------------------
+    # Closed-loop state
     act_e, act_f = 0.0, 0.0
     force_e, force_f = 0.0, 0.0
     len_e, len_f = L0, L0
@@ -405,7 +369,7 @@ def main():
     times = []
     mean_std = {k: ([], []) for k in ["cut->rge", "bs->rge", "bs->rgf", "rge->me", "rgf->mf"]}
 
-    bs_rate_trace = []
+    bs_rate_e_trace, bs_rate_f_trace = [], []
     mot_rate_e, mot_rate_f = [], []
     act_trace_e, act_trace_f = [], []
     force_trace_e, force_trace_f = [], []
@@ -419,22 +383,21 @@ def main():
 
     def update_force_length_ia(t_ms: float, cut_active_frac: float):
         nonlocal act_e, act_f, force_e, force_f, len_e, len_f, last_me_len, last_mf_len
-
         dt_s = SAMPLE_DT_MS / 1000.0
 
-        # Update BS drive online (creates cyclic bursts -> non-zero force)
-        r_bs = brainstem_rate(t_ms)
-        nest.SetStatus(bs_pg_e, {"rate": r_bs})
-        nest.SetStatus(bs_pg_f, {"rate": r_bs})
-        bs_rate_trace.append(r_bs)
+        # Counter-phase BS update (main change)
+        r_bs_e, r_bs_f = bs_rates_counterphase(t_ms)
+        nest.SetStatus(bs_pg_e, {"rate": r_bs_e})
+        nest.SetStatus(bs_pg_f, {"rate": r_bs_f})
+        bs_rate_e_trace.append(r_bs_e)
+        bs_rate_f_trace.append(r_bs_f)
 
-        # Motor rates from spikes
+        # Motor spikes -> rates
         sp_me, last_me_len2 = new_spikes(rec_me, last_me_len)
         sp_mf, last_mf_len2 = new_spikes(rec_mf, last_mf_len)
         last_me_len = last_me_len2
         last_mf_len = last_mf_len2
-
-        r_me = (sp_me / max(1, N_MOTOR_E)) / dt_s  # Hz/neuron
+        r_me = (sp_me / max(1, N_MOTOR_E)) / dt_s
         r_mf = (sp_mf / max(1, N_MOTOR_F)) / dt_s
 
         # Activation LPF
@@ -444,18 +407,16 @@ def main():
         act_e += (dt_s / tauA_s) * (target_ae - act_e)
         act_f += (dt_s / tauA_s) * (target_af - act_f)
 
-        # Force target: saturating in activation (plateau-ish)
+        # Force target: saturating
         target_fe = FORCE_MAX * (1.0 - np.exp(-FORCE_SAT_K * act_e))
         target_ff = FORCE_MAX * (1.0 - np.exp(-FORCE_SAT_K * act_f))
 
         tau_rise_s = TAU_FORCE_RISE_MS / 1000.0
         tau_decay_s = TAU_FORCE_DECAY_MS / 1000.0
-
         if target_fe > force_e:
             force_e += (dt_s / tau_rise_s) * (target_fe - force_e)
         else:
             force_e += (dt_s / tau_decay_s) * (target_fe - force_e)
-
         if target_ff > force_f:
             force_f += (dt_s / tau_rise_s) * (target_ff - force_f)
         else:
@@ -464,36 +425,30 @@ def main():
         force_e = clamp(force_e, 0.0, FORCE_MAX)
         force_f = clamp(force_f, 0.0, FORCE_MAX)
 
-        # Length: relax + shorten with force + extensor stretch from CUT
+        # Length dynamics
         tauL_s = TAU_LENGTH_MS / 1000.0
         len_e += (dt_s / tauL_s) * (L0 - len_e)
         len_f += (dt_s / tauL_s) * (L0 - len_f)
-
         len_e -= SHORTEN_GAIN * force_e * dt_s
         len_f -= SHORTEN_GAIN * force_f * dt_s
-
         if cut_active_frac > 0.0:
             len_e += STRETCH_GAIN * cut_active_frac * dt_s
-
         len_e = clamp(len_e, L_MIN, L_MAX)
         len_f = clamp(len_f, L_MIN, L_MAX)
 
-        # Ia rates from force + positive stretch
+        # Ia rates
         stretch_e = max(0.0, len_e - L0)
         stretch_f = max(0.0, len_f - L0)
-
         t_s = t_ms / 1000.0
         sin_mod = 0.5 * (1.0 + np.sin(2.0 * np.pi * IA_SIN_MOD_HZ * t_s))
         depth_e = IA_SIN_MAX_DEPTH * (force_e / FORCE_MAX)
         depth_f = IA_SIN_MAX_DEPTH * (force_f / FORCE_MAX)
         amp_e = (1.0 - depth_e) + depth_e * sin_mod
         amp_f = (1.0 - depth_f) + depth_f * sin_mod
-
         rate_e = (IA_BASE_HZ + IA_K_FORCE * force_e + IA_K_STRETCH * stretch_e) * amp_e
         rate_f = (IA_BASE_HZ + IA_K_FORCE * force_f + IA_K_STRETCH * stretch_f) * amp_f
         rate_e = clamp(rate_e, 0.0, IA_RATE_MAX_HZ)
         rate_f = clamp(rate_f, 0.0, IA_RATE_MAX_HZ)
-
         nest.SetStatus(ia_pg_e, {"rate": rate_e})
         nest.SetStatus(ia_pg_f, {"rate": rate_f})
 
@@ -527,14 +482,11 @@ def main():
         push("stdp_rge_me", "rge->me")
         push("stdp_rgf_mf", "rgf->mf")
 
-    # ----------------------------
     # Run: chunked CUT phases
-    # ----------------------------
     chunk = max(1, int(N_CUT / N_PHASES))
     t = 0.0
 
     for phase in range(N_PHASES):
-        # activate a chunk of CUT fibers (extensor only)
         nest.SetStatus(cut_pg, {"rate": CUT_RATE_OFF_HZ})
         start = phase * chunk
         end = min(N_CUT, (phase + 1) * chunk)
@@ -550,25 +502,23 @@ def main():
 
     times_arr = np.asarray(times)
 
-    # ----------------------------
     # Plots
-    # ----------------------------
     plt.figure(figsize=(14, 5))
-    plt.plot(times_arr, bs_rate_trace, label="BS rate (Hz)")
+    plt.plot(times_arr, bs_rate_e_trace, label="BS rate E (Hz)")
+    plt.plot(times_arr, bs_rate_f_trace, label="BS rate F (Hz)")
     plt.xlabel("time (ms)")
     plt.ylabel("Hz")
-    plt.title("Oscillatory brainstem drive (half-wave rectified sine)")
+    plt.title("Brainstem drive (counter-phase)")
     plt.legend()
     plt.tight_layout()
     plt.show()
 
+    # Inputs learning (together)
     plt.figure(figsize=(14, 7))
     for key, color in [
         ("cut->rge", "tab:blue"),
         ("bs->rge", "tab:orange"),
         ("bs->rgf", "tab:purple"),
-        ("rge->me", "tab:green"),
-        ("rgf->mf", "tab:red"),
     ]:
         m = np.asarray(mean_std[key][0])
         s = np.asarray(mean_std[key][1])
@@ -576,52 +526,68 @@ def main():
         plt.fill_between(times_arr, m - s, m + s, color=color, alpha=0.15)
     plt.xlabel("time (ms)")
     plt.ylabel("weight (pA)")
-    plt.title("STDP learning curves (mean ± std)")
+    plt.title("STDP learning curves — inputs (mean ± std)")
     plt.legend()
     plt.tight_layout()
     plt.show()
 
+    # (1) Motor synapses means on separate graph
+    plt.figure(figsize=(14, 6))
+    plt.plot(times_arr, np.asarray(mean_std["rge->me"][0]), label="rge->me mean")
+    plt.plot(times_arr, np.asarray(mean_std["rgf->mf"][0]), label="rgf->mf mean")
+    plt.xlabel("time (ms)")
+    plt.ylabel("weight (pA)")
+    plt.title("STDP learning curves — motor synapses (means)")
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+    # Motor rates
     plt.figure(figsize=(14, 5))
     plt.plot(times_arr, mot_rate_e, label="M-E rate (Hz/neuron)")
     plt.plot(times_arr, mot_rate_f, label="M-F rate (Hz/neuron)")
     plt.xlabel("time (ms)")
     plt.ylabel("Hz/neuron")
-    plt.title("Motor population rates (windowed)")
+    plt.title("Motor population rates (counter-phase expected)")
     plt.legend()
     plt.tight_layout()
     plt.show()
 
+    # Activation
     plt.figure(figsize=(14, 5))
     plt.plot(times_arr, act_trace_e, label="Activation E")
     plt.plot(times_arr, act_trace_f, label="Activation F")
     plt.xlabel("time (ms)")
     plt.ylabel("a.u.")
-    plt.title("Activation proxy (low-pass of motor rate)")
+    plt.title("Activation proxy (counter-phase expected)")
     plt.legend()
     plt.tight_layout()
     plt.show()
 
+    # Force
     plt.figure(figsize=(14, 5))
     plt.plot(times_arr, force_trace_e, label="Force E")
     plt.plot(times_arr, force_trace_f, label="Force F")
     plt.xlabel("time (ms)")
     plt.ylabel("force (a.u.)")
-    plt.title("Force proxy (plateau-ish cycles expected)")
+    plt.title("Force proxy (counter-phase expected)")
     plt.legend()
     plt.tight_layout()
     plt.show()
 
+    # Length
     plt.figure(figsize=(14, 5))
     plt.plot(times_arr, len_trace_e, label="Length E")
     plt.plot(times_arr, len_trace_f, label="Length F")
     plt.axhline(L0, linestyle="--", linewidth=1)
     plt.xlabel("time (ms)")
     plt.ylabel("length (a.u.)")
-    plt.title("Length proxy (E stretched by CUT; both shortened by force)")
+    plt.title("Length proxy (E has CUT stretch; both shorten with force)")
     plt.legend()
     plt.tight_layout()
     plt.show()
 
+    # Ia
     plt.figure(figsize=(14, 5))
     plt.plot(times_arr, ia_rate_e, label="Ia-E rate (Hz)")
     plt.plot(times_arr, ia_rate_f, label="Ia-F rate (Hz)")
