@@ -22,157 +22,35 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-# ============================
-# Sizes
-# ============================
-N_CUT = 100
-N_BS = 100
-
-N_RG_TOTAL = 200
-N_RG_E = N_RG_TOTAL // 2
-N_RG_F = N_RG_TOTAL - N_RG_E
-
-N_MOTOR_E = 100
-N_MOTOR_F = 100
-
-N_MUS_E = 100
-N_MUS_F = 100
-
-N_IA_E = 100
-N_IA_F = 100
-
-LEGS = ("L", "R")
 
 
-# ============================
-# Simulation timing
-# ============================
-SIM_MS = 10_000.0
-SAMPLE_DT_MS = 10.0
+def _fill_nans_forward(x: np.ndarray) -> np.ndarray:
+    """Cheap NaN handling for trend plots: forward-fill, then back-fill ends."""
+    x = np.asarray(x, dtype=float).copy()
+    if not np.isnan(x).any():
+        return x
+    idx = np.where(~np.isnan(x))[0]
+    if idx.size == 0:
+        return x
+    # back-fill start
+    x[:idx[0]] = x[idx[0]]
+    # forward-fill gaps
+    for i in range(idx.size - 1):
+        a, b = idx[i], idx[i + 1]
+        if b > a + 1:
+            x[a + 1:b] = x[a]
+    # forward-fill end
+    x[idx[-1] + 1:] = x[idx[-1]]
+    return x
 
-# Progress print cadence (avoid terminal spam)
-PROGRESS_EVERY_STEPS = 50  # prints every 50 steps => every 500 ms with dt=10 ms
-
-
-# ============================
-# CUT stimulation (extensor only)
-# ============================
-N_PHASES = 6
-PHASE_MS = SIM_MS / N_PHASES
-CUT_RATE_ON_HZ = 200.0
-CUT_RATE_OFF_HZ = 0.0
-
-
-# ============================
-# Brainstem drive
-# ============================
-BS_OSC_HZ = 1.0
-BS_RATE_BASE_HZ = 0.0
-BS_RATE_AMP_HZ = 300.0
-BS_RATE_MIN_HZ = 0.0
-
-# Left/right phase shift (diagonal alternation)
-BS_PHASE = {"L": 0.0, "R": np.pi}
-
-
-# ============================
-# Connectivity
-# ============================
-P_IN_STDP = 0.5
-P_RG_REC = 0.12
-DELAY_MS = 1.0
-
-# Reciprocal inhibition inside leg (RG-E <-> RG-F)
-P_RG_RECIP = 0.20
-W_RG_RECIP = -18.0
-DELAY_RECIP_MS = 1.0
-
-# Motor -> muscle relay synapses (static)
-W_M2MUS = 1.0
-P_M2MUS = 0.8
-
-# Ia -> RG feedback synapses (static excitatory)
-IA2RG_P = 0.4
-IA2RG_W = 12.0
-
-# Baseline RG drive (insurance)
-BASE_DRIVE_HZ = 10.0
-BASE_DRIVE_W = 18.0
-BASE_DRIVE_P = 0.08
-
-# Optional static parallel paths (insurance)
-USE_STATIC_PARALLEL = True
-P_STATIC_IN = 0.03
-P_STATIC_RM = 0.03
-W_STATIC_IN = 22.0
-W_STATIC_RM = 35.0
-
-
-# ============================
-# Commissural (between legs) — optional stabilizer
-# ============================
-ENABLE_COMMISSURAL = True
-P_COMM = 0.08
-W_COMM_INH = -10.0
-DELAY_COMM_MS = 1.0
-
-
-# ============================
-# STDP params (plain, no DA)
-# ============================
-TAU_PLUS = 20.0
-LAMBDA = 0.002
-ALPHA = 1.05
-MU_PLUS = 0.0
-MU_MINUS = 0.0
-WMAX = 120.0
-
-W0_IN = 22.0
-W0_RM = 30.0
-
-
-# ============================
-# Izhikevich neurons
-# ============================
-izh_params = {
-    "a": 0.02,
-    "b": 0.2,
-    "c": -65.0,
-    "d": 8.0,
-    "V_th": 30.0,
-    "V_min": -120.0,
-}
-
-I_E_RG = 1.0
-I_E_MOTOR = 1.0
-
-
-# ============================
-# Muscle proxy: activation/force/length
-# ============================
-TAU_ACT_MS = 80.0
-ACT_GAIN = 0.03
-ACT_MAX = 1.2
-
-TAU_FORCE_RISE_MS = 140.0
-TAU_FORCE_DECAY_MS = 60.0
-FORCE_MAX = 25.0
-FORCE_SAT_K = 2.5
-
-TAU_LENGTH_MS = 260.0
-L0 = 1.0
-L_MIN, L_MAX = 0.5, 2.0
-SHORTEN_GAIN = 0.010
-STRETCH_GAIN = 0.35  # extensor-only stretch from CUT fraction
-
-
-# ============================
-# Ia generator model (NO sinus modulation)
-# ============================
-IA_BASE_HZ = 10.0
-IA_K_FORCE = 6.0
-IA_K_STRETCH = 250.0
-IA_RATE_MAX_HZ = 500.0
+def moving_average(x, win: int):
+    """Centered moving average for smooth 1s trends."""
+    x = _fill_nans_forward(np.asarray(x, dtype=float))
+    win = int(max(1, win))
+    if win <= 1:
+        return x
+    kernel = np.ones(win, dtype=float) / win
+    return np.convolve(x, kernel, mode="same")
 
 
 def clamp(x: float, lo: float, hi: float) -> float:
@@ -614,6 +492,13 @@ def main():
                 update_leg(side, t, cut_active_frac)
             log_weights(t)
 
+            if (done_steps % PRINT_EVERY == 0) or (done_steps == total_steps):
+                print(
+                    f"[Sim] Phase {phase + 1}/{N_PHASES} | "
+                    f"step {done_steps}/{total_steps} | "
+                    f"t={t:.1f} ms"
+                )
+
             if rank == 0 and (done_steps % PROGRESS_EVERY_STEPS == 0 or done_steps == total_steps):
                 print(f"[Sim] Step {done_steps} / {total_steps}  (t={t:.1f} ms)")
 
@@ -652,11 +537,15 @@ def main():
 
         # Motor synapses means
         plt.figure(figsize=(14, 6))
-        plt.plot(times_arr, np.asarray(wstats[side]["rge->me"][0]), label="rge->me mean")
-        plt.plot(times_arr, np.asarray(wstats[side]["rgf->mf"][0]), label="rgf->mf mean")
+        m1 = moving_average(np.asarray(wstats[side]["rge->me"][0]), WIN_1S)
+        m2 = moving_average(np.asarray(wstats[side]["rgf->mf"][0]), WIN_1S)
+
+        plt.plot(times_arr, m1, label="rge->me mean (1s MA)")
+        plt.plot(times_arr, m2, label="rgf->mf mean (1s MA)")
+
         plt.xlabel("time (ms)")
         plt.ylabel("weight (pA)")
-        plt.title(f"STDP learning — motor synapses (leg {side}) means")
+        plt.title(f"STDP learning — motor synapses trend (leg {side}, 1s moving average)")
         plt.legend()
         plt.tight_layout()
         plt.show()
@@ -716,6 +605,165 @@ def main():
         plt.legend()
         plt.tight_layout()
         plt.show()
+
+
+
+# ============================
+# Sizes
+# ============================
+N_CUT = 100
+N_BS = 100
+
+N_RG_TOTAL = 200
+N_RG_E = N_RG_TOTAL // 2
+N_RG_F = N_RG_TOTAL - N_RG_E
+
+N_MOTOR_E = 100
+N_MOTOR_F = 100
+
+N_MUS_E = 100
+N_MUS_F = 100
+
+N_IA_E = 100
+N_IA_F = 100
+
+LEGS = ("L", "R")
+
+
+# ============================
+# Simulation timing
+# ============================
+SIM_MS = 10_000.0
+SAMPLE_DT_MS = 10.0
+
+# Progress print cadence (avoid terminal spam)
+PROGRESS_EVERY_STEPS = 50  # prints every 50 steps => every 500 ms with dt=10 ms
+
+
+# ============================
+# CUT stimulation (extensor only)
+# ============================
+N_PHASES = 6
+PHASE_MS = SIM_MS / N_PHASES
+CUT_RATE_ON_HZ = 200.0
+CUT_RATE_OFF_HZ = 0.0
+
+
+# ============================
+# Brainstem drive
+# ============================
+BS_OSC_HZ = 1.0
+BS_RATE_BASE_HZ = 0.0
+BS_RATE_AMP_HZ = 300.0
+BS_RATE_MIN_HZ = 0.0
+
+# Left/right phase shift (diagonal alternation)
+BS_PHASE = {"L": 0.0, "R": np.pi}
+
+
+# ============================
+# Connectivity
+# ============================
+P_IN_STDP = 0.5
+P_RG_REC = 0.12
+DELAY_MS = 1.0
+
+# Reciprocal inhibition inside leg (RG-E <-> RG-F)
+P_RG_RECIP = 0.20
+W_RG_RECIP = -18.0
+DELAY_RECIP_MS = 1.0
+
+# Motor -> muscle relay synapses (static)
+W_M2MUS = 1.0
+P_M2MUS = 0.8
+
+# Ia -> RG feedback synapses (static excitatory)
+IA2RG_P = 0.4
+IA2RG_W = 12.0
+
+# Baseline RG drive (insurance)
+BASE_DRIVE_HZ = 10.0
+BASE_DRIVE_W = 18.0
+BASE_DRIVE_P = 0.08
+
+# Optional static parallel paths (insurance)
+USE_STATIC_PARALLEL = True
+P_STATIC_IN = 0.03
+P_STATIC_RM = 0.03
+W_STATIC_IN = 22.0
+W_STATIC_RM = 35.0
+
+
+# ============================
+# Commissural (between legs) — optional stabilizer
+# ============================
+ENABLE_COMMISSURAL = True
+P_COMM = 0.08
+W_COMM_INH = -10.0
+DELAY_COMM_MS = 1.0
+
+
+# ============================
+# STDP params (plain, no DA)
+# ============================
+TAU_PLUS = 20.0
+LAMBDA = 0.002
+ALPHA = 1.05
+MU_PLUS = 0.0
+MU_MINUS = 0.0
+WMAX = 120.0
+
+W0_IN = 22.0
+W0_RM = 30.0
+
+
+# ============================
+# Izhikevich neurons
+# ============================
+izh_params = {
+    "a": 0.02,
+    "b": 0.2,
+    "c": -65.0,
+    "d": 8.0,
+    "V_th": 30.0,
+    "V_min": -120.0,
+}
+
+I_E_RG = 1.0
+I_E_MOTOR = 1.0
+
+
+# ============================
+# Muscle proxy: activation/force/length
+# ============================
+TAU_ACT_MS = 80.0
+ACT_GAIN = 0.03
+ACT_MAX = 1.2
+
+TAU_FORCE_RISE_MS = 140.0
+TAU_FORCE_DECAY_MS = 60.0
+FORCE_MAX = 25.0
+FORCE_SAT_K = 2.5
+
+TAU_LENGTH_MS = 260.0
+L0 = 1.0
+L_MIN, L_MAX = 0.5, 2.0
+SHORTEN_GAIN = 0.010
+STRETCH_GAIN = 0.35  # extensor-only stretch from CUT fraction
+
+
+# ============================
+# Ia generator model (NO sinus modulation)
+# ============================
+IA_BASE_HZ = 10.0
+IA_K_FORCE = 6.0
+IA_K_STRETCH = 250.0
+IA_RATE_MAX_HZ = 500.0
+
+total_steps = int(SIM_MS / SAMPLE_DT_MS)
+done_steps = 0
+PRINT_EVERY = 50  # every 50 steps = every 500 ms for dt=10 ms
+WIN_1S = max(1, int(1000.0 / SAMPLE_DT_MS))  # e.g. 100 samples if dt=10 ms
 
 
 if __name__ == "__main__":
