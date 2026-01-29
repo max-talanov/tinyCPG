@@ -2,10 +2,10 @@
 #SBATCH --job-name=Nest_processing
 #SBATCH --output=Nest_processing.slurmout
 #SBATCH --error=Nest_processing.slurmerr
-#SBATCH --ntasks-per-node=100
 #SBATCH --nodes=1
-#SBATCH --ntasks=20
-#SBATCH --cpus-per-task=5
+#SBATCH --ntasks=50
+#SBATCH --ntasks-per-node=50
+#SBATCH --cpus-per-task=1
 
 # Strongly recommended on HPC: ensure UTF-8 output + unbuffered python prints
 export LANG=${LANG:-C.UTF-8}

@@ -262,7 +262,15 @@ def main():
         )
 
     # ---- STDP models ----
-    stdp_defaults = dict(tau_plus=TAU_PLUS, lambda=LAMBDA, alpha=ALPHA, mu_plus=MU_PLUS, mu_minus=MU_MINUS, Wmax=WMAX)
+    stdp_defaults = {
+        "tau_plus": TAU_PLUS,
+        "lambda": LAMBDA,  # <-- key is a string, so it's fine
+        "alpha": ALPHA,
+        "mu_plus": MU_PLUS,
+        "mu_minus": MU_MINUS,
+        "Wmax": WMAX,
+    }
+
     for side in LEGS:
         def copy(name, wr):
             if wr is not None:
