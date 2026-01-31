@@ -7,9 +7,6 @@
 #SBATCH --cpus-per-task=16
 #SBATCH --time=03:00:00
 
-module load miniforge
-source activate neuron
-
 export LANG=${LANG:-C.UTF-8}
 export LC_ALL=${LC_ALL:-C.UTF-8}
 export PYTHONIOENCODING=utf-8
