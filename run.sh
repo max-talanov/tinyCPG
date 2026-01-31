@@ -25,7 +25,7 @@ python3 -c "import nest; print('nest', nest.__version__)"
 
 # Bind tasks to cores (this matters a lot)
 srun --cpu-bind=cores --distribution=block:block \
-  python3 -u cpg_2legs_nest_to_hdf5_fast_v2.py \
+  python3 -u cpg_2legs_nest_to_hdf5_fast.py \
     --out cpg_${SLURM_JOB_ID}.h5 \
     --sim-ms 10000 \
     --dt-ms 10 \
