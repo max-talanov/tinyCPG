@@ -120,6 +120,11 @@ IA_K_FORCE = 6.0
 IA_K_STRETCH = 250.0
 IA_RATE_MAX_HZ = 500.0
 
+# Defaults to be defined as arguments
+SIM_MS = float(10000.00)
+DT_MS = float(10.00)
+PHASE_MS = SIM_MS / int(N_PHASES)
+
 
 def clamp(x: float, lo: float, hi: float) -> float:
     return float(max(lo, min(hi, x)))
