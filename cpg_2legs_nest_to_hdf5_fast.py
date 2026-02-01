@@ -96,6 +96,13 @@ W0_RM = 30.0
 # ---------- Izhikevich ----------
 izh_params = dict(a=0.02, b=0.2, c=-65.0, d=8.0, V_th=30.0, V_min=-120.0)
 I_E_RG = 1.0
+
+# Izhikevich "chattering" (bursting-like) parameters for RG-F excitatory neurons
+# (Izhikevich 2003/2004 canonical set)
+RGF_A = 0.02
+RGF_B = 0.2
+RGF_C = -50.0
+RGF_D = 2.0
 I_E_MOTOR = 1.0
 
 # ---------- muscle proxies ----------
@@ -279,7 +286,8 @@ def main():
         for pop in (rg_e, rg_f, m_e, m_f):
             nest.SetStatus(pop, izh_params)
         nest.SetStatus(rg_e, {"V_m": -65.0, "U_m": 0.2 * (-65.0), "I_e": I_E_RG})
-        nest.SetStatus(rg_f, {"V_m": -65.0, "U_m": 0.2 * (-65.0), "I_e": I_E_RG})
+        nest.SetStatus(rg_f, {"a": RGF_A, "b": RGF_B, "c": RGF_C, "d": RGF_D,
+                              "V_m": -65.0, "U_m": RGF_B * (-65.0), "I_e": I_E_RG})
         nest.SetStatus(m_e, {"V_m": -65.0, "U_m": 0.2 * (-65.0), "I_e": I_E_MOTOR})
         nest.SetStatus(m_f, {"V_m": -65.0, "U_m": 0.2 * (-65.0), "I_e": I_E_MOTOR})
 
