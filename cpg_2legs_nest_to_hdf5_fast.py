@@ -199,6 +199,20 @@ def main():
 
     # We will call nest.Simulate() in larger chunks to reduce overhead.
     CHUNK_MS = float(args.simulate_chunk_ms)
+    RES_MS = float(args.resolution_ms)
+
+    def q_ms(x: float) -> float:
+        """Quantize time to an integer multiple of the NEST resolution."""
+        if RES_MS <= 0.0:
+            return float(x)
+        steps = int(round(float(x) / RES_MS))
+        return steps * RES_MS
+
+    # Ensure chunk is a clean multiple of resolution
+    CHUNK_MS = q_ms(CHUNK_MS)
+    if CHUNK_MS <= 0.0:
+        raise ValueError(f"--simulate-chunk-ms quantized to {CHUNK_MS}, choose a larger value.")
+
     if CHUNK_MS < DT_MS:
         raise ValueError(f"--simulate-chunk-ms ({CHUNK_MS}) must be >= --dt-ms ({DT_MS}).")
 
@@ -549,11 +563,12 @@ def main():
 
         # Simulate in larger chunks to reduce Python <-> NEST overhead.
         n_chunks = int(PHASE_MS // CHUNK_MS)
-        tail_ms = PHASE_MS - n_chunks * CHUNK_MS
+        tail_ms = q_ms(PHASE_MS - n_chunks * CHUNK_MS)
         n_chunks_total = n_chunks + (1 if tail_ms > 1e-9 else 0)
 
         for local_chunk in range(n_chunks_total):
             cur_chunk_ms = CHUNK_MS if local_chunk < n_chunks else tail_ms
+            cur_chunk_ms = q_ms(cur_chunk_ms)
             if cur_chunk_ms <= 0.0:
                 continue
 
