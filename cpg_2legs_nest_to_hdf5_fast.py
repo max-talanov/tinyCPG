@@ -187,17 +187,28 @@ def main():
                     help="How often to sample STDP weights (ms). Larger = faster.")
     ap.add_argument("--rate-update-ms", type=float, default=20.0,
                     help="How often to push updated rates to poisson_generators (ms). Larger = faster.")
+    ap.add_argument("--resolution-ms", type=float, default=0.2,
+                    help="NEST kernel resolution (ms). Larger = faster, but less precise. Try 0.2, 0.5, 1.0.")
+    ap.add_argument("--simulate-chunk-ms", type=float, default=50.0,
+                    help="Simulate in larger chunks to reduce Python<->NEST call overhead (ms). Must be >= dt-ms. Try 50 or 100.")
     args = ap.parse_args()
 
     SIM_MS = float(args.sim_ms)
     DT_MS = float(args.dt_ms)
     PHASE_MS = SIM_MS / int(N_PHASES)
 
-    weight_every = max(1, int(round(float(args.weight_sample_ms) / DT_MS)))
-    rate_every = max(1, int(round(float(args.rate_update_ms) / DT_MS)))
+    # We will call nest.Simulate() in larger chunks to reduce overhead.
+    CHUNK_MS = float(args.simulate_chunk_ms)
+    if CHUNK_MS < DT_MS:
+        raise ValueError(f"--simulate-chunk-ms ({CHUNK_MS}) must be >= --dt-ms ({DT_MS}).")
+
+    # Convert sampling cadences (ms) into "chunk steps"
+    weight_every = max(1, int(round(float(args.weight_sample_ms) / CHUNK_MS)))
+    rate_every = max(1, int(round(float(args.rate_update_ms) / CHUNK_MS)))
 
     nest.ResetKernel()
-    nest.SetKernelStatus({"resolution": 0.1, "local_num_threads": int(args.threads), "print_time": False})
+    nest.SetKernelStatus(
+        {"resolution": float(args.resolution_ms), "local_num_threads": int(args.threads), "print_time": False})
 
     # Robust rank/proc detection:
     # - under Slurm, SLURM_PROCID/SLURM_NTASKS are the most reliable
@@ -211,7 +222,8 @@ def main():
 
     if rank == 0:
         print(f"[NEST] processes={nproc} | local_threads={nest.GetKernelStatus('local_num_threads')}")
-        print(f"[Run] sim_ms={SIM_MS} dt_ms={DT_MS} phases={N_PHASES} phase_ms={PHASE_MS:.2f}")
+        print(
+            f"[Run] sim_ms={SIM_MS} dt_ms={DT_MS} chunk_ms={CHUNK_MS} resolution_ms={float(args.resolution_ms)} phases={N_PHASES} phase_ms={PHASE_MS:.2f}")
 
     # ---- build per-leg ----
     leg = {}
@@ -417,8 +429,8 @@ def main():
         cur = int(nest.GetStatus(rec, "n_events")[0])
         return cur - last_n, cur
 
-    def update_leg(side: str, t_ms: float, cut_active_frac: float, do_rate_update: bool):
-        dt_s = DT_MS / 1000.0
+    def update_leg(side: str, t_ms: float, dt_ms_actual: float, cut_active_frac: float, do_rate_update: bool):
+        dt_s = float(dt_ms_actual) / 1000.0
         L = leg[side]
         S = state[side]
         P = logs[side]
@@ -517,12 +529,14 @@ def main():
                 wstats[side][key][0].append(mval)
                 wstats[side][key][1].append(sval)
 
-    total_steps = int(SIM_MS / DT_MS)
+    total_steps = int(np.ceil(SIM_MS / CHUNK_MS))
     done_steps = 0
     chunk = max(1, int(N_CUT / N_PHASES))
     t_ms = 0.0
 
     t0 = time.time()
+    sim_accum = 0.0
+    book_accum = 0.0
     for phase in range(N_PHASES):
         for side in LEGS:
             nest.SetStatus(leg[side]["cut_pg"], {"rate": CUT_RATE_OFF_HZ})
@@ -533,24 +547,41 @@ def main():
             nest.SetStatus(leg[side]["cut_pg"][start:end], {"rate": CUT_RATE_ON_HZ})
         cut_active_frac = float(end - start) / float(N_CUT)
 
-        n_steps = int(PHASE_MS / DT_MS)
-        for local_step in range(n_steps):
-            nest.Simulate(DT_MS)
-            t_ms += DT_MS
-            done_steps += 1
+        # Simulate in larger chunks to reduce Python <-> NEST overhead.
+        n_chunks = int(PHASE_MS // CHUNK_MS)
+        tail_ms = PHASE_MS - n_chunks * CHUNK_MS
+        n_chunks_total = n_chunks + (1 if tail_ms > 1e-9 else 0)
 
+        for local_chunk in range(n_chunks_total):
+            cur_chunk_ms = CHUNK_MS if local_chunk < n_chunks else tail_ms
+            if cur_chunk_ms <= 0.0:
+                continue
+
+            t_sim0 = time.perf_counter()
+            nest.Simulate(cur_chunk_ms)
+            sim_accum += (time.perf_counter() - t_sim0)
+
+            t_ms += cur_chunk_ms
+            done_steps += 1  # now counts "chunks"
+
+            t_book0 = time.perf_counter()
             do_rate_update = (done_steps % rate_every == 0)
             for side in LEGS:
-                update_leg(side, t_ms, cut_active_frac, do_rate_update)
+                update_leg(side, t_ms, cur_chunk_ms, cut_active_frac, do_rate_update)
             log_weights(t_ms, done_steps)
+            book_accum += (time.perf_counter() - t_book0)
 
             if rank == 0 and (
-                    (done_steps % int(args.print_every) == 0) or (done_steps == total_steps) or (local_step == 0)):
-                print(f"[Sim] Phase {phase + 1}/{N_PHASES} | step {done_steps}/{total_steps} | "
-                      f"phase_step {local_step + 1}/{n_steps} | t={t_ms:.1f} ms")
+                    (done_steps % int(args.print_every) == 0) or (done_steps == total_steps) or (local_chunk == 0)):
+                print(f"[Sim] Phase {phase + 1}/{N_PHASES} | chunk {done_steps}/{total_steps} | "
+                      f"phase_chunk {local_chunk + 1}/{n_chunks_total} | t={t_ms:.1f} ms | chunk_ms={cur_chunk_ms:.1f}")
 
     if rank == 0:
-        print(f"[Done] wall={time.time() - t0:.1f}s, out={args.out}")
+        wall = time.time() - t0
+        print(f"[Done] wall={wall:.1f}s, out={args.out}")
+        tot = max(1e-9, (sim_accum + book_accum))
+        print(
+            f"[Timing] nest.Simulate: {sim_accum:.1f}s ({100.0 * sim_accum / tot:.1f}%) | bookkeeping: {book_accum:.1f}s ({100.0 * book_accum / tot:.1f}%)")
 
     # ---- write HDF5 (rank 0 only) ----
     if rank != 0:
@@ -562,7 +593,9 @@ def main():
         h5.attrs["created_utc"] = datetime.utcnow().isoformat() + "Z"
         h5.attrs["nest_version"] = str(nest.__version__)
         h5.attrs["sim_ms"] = SIM_MS
-        h5.attrs["dt_ms"] = DT_MS
+        h5.attrs["dt_ms"] = CHUNK_MS
+        h5.attrs["inner_dt_ms"] = DT_MS
+        h5.attrs["resolution_ms"] = float(args.resolution_ms)
         h5.attrs["phases"] = int(N_PHASES)
         h5.attrs["bs_osc_hz"] = float(BS_OSC_HZ)
         h5.attrs["local_threads"] = int(args.threads)

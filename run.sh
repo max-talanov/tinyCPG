@@ -29,4 +29,6 @@ srun --cpu-bind=cores --distribution=block:block \
     --threads $SLURM_CPUS_PER_TASK \
     --weight-sample-ms 200 \
     --rate-update-ms 50 \
-    --print-every 50
+    --resolution-ms 0.2 \
+    --simulate-chunk-ms 50 \
+    --print-every 10
