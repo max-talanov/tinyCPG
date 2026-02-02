@@ -31,14 +31,26 @@ N_RG_TOTAL = 200
 N_RG_E = N_RG_TOTAL // 2
 N_RG_F = N_RG_TOTAL - N_RG_E
 
-N_MOTOR_E = 200
-N_MOTOR_F = 200
+N_MOTOR_E = 100
+N_MOTOR_F = 100
 
 N_MUS_E = 100
 N_MUS_F = 100
 
 N_IA_E = 100
 N_IA_F = 100
+
+# Interneurons (per leg) to match physiological motifs in the schematic  # UPDATED_v7
+N_IA_INT = 50  # inhibitory interneurons driven by Ia afferents  # UPDATED_v7
+N_INE = 50  # inhibitory interneurons mediating RG-E -> RG-F inhibition  # UPDATED_v7
+N_INF = 50  # inhibitory interneurons mediating RG-F -> RG-E inhibition  # UPDATED_v7
+
+# Synaptic weights (tune as needed)
+W_IA_IN2INT = 6.0  # Ia parrot -> Ia inhibitory interneuron (excitatory synapse)  # UPDATED_v7
+W_IA_INT2ANT = -10.0  # Ia inhibitory interneuron -> antagonist motor pool (inhibitory synapse)  # UPDATED_v7
+
+W_RG2IN = 8.0  # RG -> inhibitory interneuron (excitatory synapse)  # UPDATED_v7
+W_IN2RG = -18.0  # inhibitory interneuron -> RG partner (inhibitory synapse)  # UPDATED_v7
 
 # ---------- CUT training ----------
 N_PHASES = 6
@@ -67,11 +79,11 @@ P_M2MUS = 0.8
 IA2RG_P = 0.4
 IA2RG_W = 12.0
 
-BASE_DRIVE_HZ = 10.0
-BASE_DRIVE_W = 18.0
-BASE_DRIVE_P = 0.08
+BASE_DRIVE_HZ = 2.0  # UPDATED_v7
+BASE_DRIVE_W = 1.0  # UPDATED_v7
+BASE_DRIVE_P = 0.10  # UPDATED_v7
 
-USE_STATIC_PARALLEL = False
+USE_STATIC_PARALLEL = False  # UPDATED_v7
 P_STATIC_IN = 0.03
 P_STATIC_RM = 0.03
 W_STATIC_IN = 22.0
@@ -95,6 +107,8 @@ W0_RM = 30.0
 
 # ---------- Izhikevich ----------
 izh_params = dict(a=0.02, b=0.2, c=-65.0, d=8.0, V_th=30.0, V_min=-120.0)
+# Fast-spiking inhibitory interneurons (Izhikevich canonical)  # UPDATED_v7
+izh_inh_params = dict(a=0.1, b=0.2, c=-65.0, d=2.0, V_th=30.0, V_min=-120.0)  # UPDATED_v7
 I_E_RG = 1.0
 
 # Izhikevich "chattering" (bursting-like) parameters for RG-F excitatory neurons
@@ -283,8 +297,15 @@ def main():
         rg_f = nest.Create("izhikevich", N_RG_F)
         m_e = nest.Create("izhikevich", N_MOTOR_E)
         m_f = nest.Create("izhikevich", N_MOTOR_F)
+        # Interneurons  # UPDATED_v7
+        ia_int_e = nest.Create("izhikevich", N_IA_INT)  # inhibitory  # UPDATED_v7
+        ia_int_f = nest.Create("izhikevich", N_IA_INT)  # inhibitory  # UPDATED_v7
+        in_e = nest.Create("izhikevich", N_INE)  # inhibitory  # UPDATED_v7
+        in_f = nest.Create("izhikevich", N_INF)  # inhibitory  # UPDATED_v7
         for pop in (rg_e, rg_f, m_e, m_f):
             nest.SetStatus(pop, izh_params)
+        for pop in (ia_int_e, ia_int_f, in_e, in_f):  # UPDATED_v7
+            nest.SetStatus(pop, izh_inh_params)  # UPDATED_v7
         nest.SetStatus(rg_e, {"V_m": -65.0, "U_m": 0.2 * (-65.0), "I_e": I_E_RG})
         nest.SetStatus(rg_f, {"a": RGF_A, "b": RGF_B, "c": RGF_C, "d": RGF_D,
                               "V_m": -65.0, "U_m": RGF_B * (-65.0), "I_e": I_E_RG})
@@ -298,7 +319,7 @@ def main():
         nest.Connect(mus_e, rec_muse)
         nest.Connect(mus_f, rec_musf)
 
-        leg[side] = dict(
+        leg[side] = dict(  # UPDATED_v7
             cut_pg=cut_pg, cut_in=cut_in,
             bs_pg_e=bs_pg_e, bs_in_e=bs_in_e,
             bs_pg_f=bs_pg_f, bs_in_f=bs_in_f,
@@ -306,6 +327,7 @@ def main():
             ia_pg_e=ia_pg_e, ia_in_e=ia_in_e,
             ia_pg_f=ia_pg_f, ia_in_f=ia_in_f,
             rg_e=rg_e, rg_f=rg_f, m_e=m_e, m_f=m_f,
+            ia_int_e=ia_int_e, ia_int_f=ia_int_f, in_e=in_e, in_f=in_f,  # UPDATED_v7
             mus_e=mus_e, mus_f=mus_f,
             rec_muse=rec_muse, rec_musf=rec_musf
         )
@@ -330,12 +352,10 @@ def main():
         copy(f"stdp_cut_rge_{side}", make_weight_recorder_safe())
         copy(f"stdp_bs_rge_{side}", make_weight_recorder_safe())
         copy(f"stdp_bs_rgf_{side}", make_weight_recorder_safe())
-        copy(f"stdp_rge_me_{side}", make_weight_recorder_safe())
-        copy(f"stdp_rgf_mf_{side}", make_weight_recorder_safe())
 
     # ---- connect per leg ----
     for side in LEGS:
-        L = leg[side]
+        L = leg[side]  # UPDATED_v7
 
         nest.Connect(L["cut_in"], L["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_IN_STDP},
                      syn_spec={"synapse_model": f"stdp_cut_rge_{side}", "weight": W0_IN, "delay": DELAY_MS})
@@ -351,29 +371,43 @@ def main():
                      syn_spec={"synapse_model": "static_synapse", "weight": BASE_DRIVE_W, "delay": DELAY_MS})
 
         nest.Connect(L["rg_e"], L["m_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_IN_STDP},
-                     syn_spec={"synapse_model": f"stdp_rge_me_{side}", "weight": W0_RM, "delay": DELAY_MS})
+                     syn_spec={"synapse_model": "static_synapse", "weight": W0_RM, "delay": DELAY_MS})
         nest.Connect(L["rg_f"], L["m_f"], conn_spec={"rule": "pairwise_bernoulli", "p": P_IN_STDP},
-                     syn_spec={"synapse_model": f"stdp_rgf_mf_{side}", "weight": W0_RM, "delay": DELAY_MS})
+                     syn_spec={"synapse_model": "static_synapse", "weight": W0_RM, "delay": DELAY_MS})
 
         nest.Connect(L["m_e"], L["mus_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_M2MUS},
                      syn_spec={"synapse_model": "static_synapse", "weight": W_M2MUS, "delay": DELAY_MS})
         nest.Connect(L["m_f"], L["mus_f"], conn_spec={"rule": "pairwise_bernoulli", "p": P_M2MUS},
                      syn_spec={"synapse_model": "static_synapse", "weight": W_M2MUS, "delay": DELAY_MS})
 
+        # Ia afferent pathways via inhibitory interneurons:  # UPDATED_v7
+        # - Ia from extensor inhibits flexor motor pool
+        # - Ia from flexor inhibits extensor motor pool
+        nest.Connect(L["ia_in_e"], L["ia_int_e"], conn_spec={"rule": "pairwise_bernoulli", "p": IA2RG_P},  # UPDATED_v7
+                     syn_spec={"synapse_model": "static_synapse", "weight": W_IA_IN2INT, "delay": DELAY_MS})
+        nest.Connect(L["ia_int_e"], L["m_f"], conn_spec={"rule": "pairwise_bernoulli", "p": IA2RG_P},  # UPDATED_v7
+                     syn_spec={"synapse_model": "static_synapse", "weight": W_IA_INT2ANT, "delay": DELAY_MS})
+
+        nest.Connect(L["ia_in_f"], L["ia_int_f"], conn_spec={"rule": "pairwise_bernoulli", "p": IA2RG_P},  # UPDATED_v7
+                     syn_spec={"synapse_model": "static_synapse", "weight": W_IA_IN2INT, "delay": DELAY_MS})
+        nest.Connect(L["ia_int_f"], L["m_e"], conn_spec={"rule": "pairwise_bernoulli", "p": IA2RG_P},  # UPDATED_v7
+                     syn_spec={"synapse_model": "static_synapse", "weight": W_IA_INT2ANT, "delay": DELAY_MS})
+
         nest.Connect(L["rg_e"], L["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_RG_REC},
                      syn_spec={"synapse_model": "static_synapse", "weight": 8.0, "delay": DELAY_MS})
         nest.Connect(L["rg_f"], L["rg_f"], conn_spec={"rule": "pairwise_bernoulli", "p": P_RG_REC},
                      syn_spec={"synapse_model": "static_synapse", "weight": 8.0, "delay": DELAY_MS})
 
-        nest.Connect(L["rg_e"], L["rg_f"], conn_spec={"rule": "pairwise_bernoulli", "p": P_RG_RECIP},
-                     syn_spec={"synapse_model": "static_synapse", "weight": W_RG_RECIP, "delay": DELAY_RECIP_MS})
-        nest.Connect(L["rg_f"], L["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_RG_RECIP},
-                     syn_spec={"synapse_model": "static_synapse", "weight": W_RG_RECIP, "delay": DELAY_RECIP_MS})
+        # Reciprocal inhibition mediated by inhibitory interneurons (InE, InF)  # UPDATED_v7
+        nest.Connect(L["rg_e"], L["in_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_RG_RECIP},  # UPDATED_v7
+                     syn_spec={"synapse_model": "static_synapse", "weight": W_RG2IN, "delay": DELAY_RECIP_MS})
+        nest.Connect(L["in_e"], L["rg_f"], conn_spec={"rule": "pairwise_bernoulli", "p": P_RG_RECIP},  # UPDATED_v7
+                     syn_spec={"synapse_model": "static_synapse", "weight": W_IN2RG, "delay": DELAY_RECIP_MS})
 
-        nest.Connect(L["ia_in_e"], L["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": IA2RG_P},
-                     syn_spec={"synapse_model": "static_synapse", "weight": IA2RG_W, "delay": DELAY_MS})
-        nest.Connect(L["ia_in_f"], L["rg_f"], conn_spec={"rule": "pairwise_bernoulli", "p": IA2RG_P},
-                     syn_spec={"synapse_model": "static_synapse", "weight": IA2RG_W, "delay": DELAY_MS})
+        nest.Connect(L["rg_f"], L["in_f"], conn_spec={"rule": "pairwise_bernoulli", "p": P_RG_RECIP},  # UPDATED_v7
+                     syn_spec={"synapse_model": "static_synapse", "weight": W_RG2IN, "delay": DELAY_RECIP_MS})
+        nest.Connect(L["in_f"], L["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_RG_RECIP},  # UPDATED_v7
+                     syn_spec={"synapse_model": "static_synapse", "weight": W_IN2RG, "delay": DELAY_RECIP_MS})
 
         if USE_STATIC_PARALLEL:
             nest.Connect(L["bs_in_e"], L["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_STATIC_IN},
@@ -387,20 +421,18 @@ def main():
             nest.Connect(L["rg_f"], L["m_f"], conn_spec={"rule": "pairwise_bernoulli", "p": P_STATIC_RM},
                          syn_spec={"synapse_model": "static_synapse", "weight": W_STATIC_RM, "delay": DELAY_MS})
 
-    # ---- commissural ----
+        # ---- commissural ----  # UPDATED_v7
     if ENABLE_COMMISSURAL:
         LL = leg["L"];
         RR = leg["R"]
-        nest.Connect(LL["rg_e"], RR["rg_f"], conn_spec={"rule": "pairwise_bernoulli", "p": P_COMM},
+        # Physiological simplification: flexor rhythm generators mutually inhibit across the midline  # UPDATED_v7
+        nest.Connect(LL["rg_f"], RR["rg_f"], conn_spec={"rule": "pairwise_bernoulli", "p": P_COMM},  # UPDATED_v7
                      syn_spec={"synapse_model": "static_synapse", "weight": W_COMM_INH, "delay": DELAY_COMM_MS})
-        nest.Connect(RR["rg_e"], LL["rg_f"], conn_spec={"rule": "pairwise_bernoulli", "p": P_COMM},
-                     syn_spec={"synapse_model": "static_synapse", "weight": W_COMM_INH, "delay": DELAY_COMM_MS})
-        nest.Connect(LL["rg_f"], RR["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_COMM},
-                     syn_spec={"synapse_model": "static_synapse", "weight": W_COMM_INH, "delay": DELAY_COMM_MS})
-        nest.Connect(RR["rg_f"], LL["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_COMM},
+        nest.Connect(RR["rg_f"], LL["rg_f"], conn_spec={"rule": "pairwise_bernoulli", "p": P_COMM},  # UPDATED_v7
                      syn_spec={"synapse_model": "static_synapse", "weight": W_COMM_INH, "delay": DELAY_COMM_MS})
 
     # ---- stats (pre-sim) ----
+
     stats_nodes = node_model_counts(
         ["izhikevich", "parrot_neuron", "poisson_generator", "spike_recorder", "weight_recorder"])
     stats_syn_sign = synapse_sign_stats()
@@ -421,22 +453,31 @@ def main():
         print("[Stats] node_models:", stats_nodes)
         print("[Stats] syn_sign:", stats_syn_sign)
         print("[Stats] syn_models:", stats_syn_models)
-
-    # ---- cache connection collections for faster weight sampling ----
-    # NOTE: in MPI runs, each rank sees (and caches) its local connections.
+    # ---- cache connection collections for faster weight sampling ----  # UPDATED_v7
+    # NOTE: in MPI runs, each rank sees (and caches) its local connections.  # UPDATED_v7
     conns_cache = {side: {} for side in LEGS}
     for side in LEGS:
+        L = leg[side]  # UPDATED_v7
+        # Plastic (STDP) connections cached by synapse model  # UPDATED_v7
         for key, model in [
             ("cut->rge", f"stdp_cut_rge_{side}"),
             ("bs->rge", f"stdp_bs_rge_{side}"),
             ("bs->rgf", f"stdp_bs_rgf_{side}"),
-            ("rge->me", f"stdp_rge_me_{side}"),
-            ("rgf->mf", f"stdp_rgf_mf_{side}"),
         ]:
             try:
                 conns_cache[side][key] = nest.GetConnections(synapse_model=model)
             except Exception:
                 conns_cache[side][key] = []
+
+        # Static RG -> Motor connections cached by source/target  # UPDATED_v7
+        try:
+            conns_cache[side]["rge->me"] = nest.GetConnections(L["rg_e"], L["m_e"])  # UPDATED_v7
+        except Exception:
+            conns_cache[side]["rge->me"] = []
+        try:
+            conns_cache[side]["rgf->mf"] = nest.GetConnections(L["rg_f"], L["m_f"])  # UPDATED_v7
+        except Exception:
+            conns_cache[side]["rgf->mf"] = []
     # ---- storage ----
     times = []
     wstats = {side: {k: ([], []) for k in ["cut->rge", "bs->rge", "bs->rgf", "rge->me", "rgf->mf"]} for side in LEGS}
@@ -453,7 +494,7 @@ def main():
 
     def update_leg(side: str, t_ms: float, dt_ms_actual: float, cut_active_frac: float, do_rate_update: bool):
         dt_s = float(dt_ms_actual) / 1000.0
-        L = leg[side]
+        L = leg[side]  # UPDATED_v7
         S = state[side]
         P = logs[side]
 
