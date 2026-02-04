@@ -3,8 +3,8 @@
 #SBATCH --output=Nest_processing_%j.slurmout
 #SBATCH --error=Nest_processing_%j.slurmerr
 #SBATCH --nodes=1
-#SBATCH --ntasks=2
-#SBATCH --cpus-per-task=16
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=64
 #SBATCH --time=03:00:00
 
 export LANG=${LANG:-C.UTF-8}
@@ -18,17 +18,15 @@ export OMP_PLACES=cores
 export OMP_PROC_BIND=close
 
 echo "[Slurm] ntasks=$SLURM_NTASKS cpus-per-task=$SLURM_CPUS_PER_TASK OMP_NUM_THREADS=$OMP_NUM_THREADS"
-python3 -c "import nest; print('nest', nest.__version__)"
+python3 -c "import nest; print('nest', nest.__version__); print('kernel', nest.GetKernelStatus(['mpi_num_processes','local_num_threads']))"
 
-# Bind tasks to cores (this matters a lot)
+# Use long-run 'trend' mode to avoid HDF5 + weight-sampling overhead dominating walltime
 srun --cpu-bind=cores --distribution=block:block \
-  python3 -u cpg_2legs_nest_to_hdf5_fast.py \
+  python3 -u cpg_2legs_nest_to_hdf5_fast_v8_longrun.py \
     --out cpg_${SLURM_JOB_ID}.h5 \
     --sim-ms 60000 \
     --dt-ms 10 \
     --threads $SLURM_CPUS_PER_TASK \
-    --weight-sample-ms 200 \
-    --rate-update-ms 50 \
-    --resolution-ms 0.2 \
-    --simulate-chunk-ms 50 \
-    --print-every 10
+    --long-run \
+    --nest-verbosity M_ERROR \
+    --max-weight-conns 2000
