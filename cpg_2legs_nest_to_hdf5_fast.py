@@ -21,6 +21,15 @@ import numpy as np
 import h5py
 import nest
 
+
+def get_kernel_parallel_status(nest_mod):
+    """Return (mpi_procs, local_threads) without assuming specific kernel keys."""
+    ks = nest_mod.GetKernelStatus()
+    mpi_procs = ks.get("mpi_num_processes", ks.get("num_processes", ks.get("total_num_processes", 1)))
+    local_threads = ks.get("local_num_threads", ks.get("num_threads", ks.get("threads", 1)))
+    return int(mpi_procs), int(local_threads)
+
+
 LEGS = ("L", "R")
 
 # ---------- sizes ----------
@@ -108,8 +117,6 @@ W0_RM = 30.0
 # ---------- Izhikevich ----------
 izh_params = dict(a=0.02, b=0.2, c=-65.0, d=8.0, V_th=30.0, V_min=-120.0)
 I_E_RG = 1.0
-izh_inh_params = dict(a=0.1, b=0.2, c=-65.0, d=2.0, V_th=30.0, V_min=-120.0)  # UPDATED_v7
-
 
 # Izhikevich "chattering" (bursting-like) parameters for RG-F excitatory neurons
 # (Izhikevich 2003/2004 canonical set)

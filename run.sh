@@ -6,23 +6,25 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=64
 #SBATCH --time=03:00:00
+#SBATCH --partition=acc
 
 export LANG=${LANG:-C.UTF-8}
 export LC_ALL=${LC_ALL:-C.UTF-8}
 export PYTHONIOENCODING=utf-8
 export PYTHONUNBUFFERED=1
 
-# OpenMP setup (crucial for NEST)
-export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
-export OMP_PLACES=cores
-export OMP_PROC_BIND=close
+echo "[Slurm] ntasks=$SLURM_NTASKS cpus-per-task=$SLURM_CPUS_PER_TASK"
 
-echo "[Slurm] ntasks=$SLURM_NTASKS cpus-per-task=$SLURM_CPUS_PER_TASK OMP_NUM_THREADS=$OMP_NUM_THREADS"
-python3 -c "import nest; print('nest', nest.__version__); print('kernel', nest.GetKernelStatus(['mpi_num_processes','local_num_threads']))"
+python3 - <<'PY'
+import nest
+ks = nest.GetKernelStatus()
+mpi = ks.get("mpi_num_processes", ks.get("num_processes", ks.get("total_num_processes", 1)))
+thr = ks.get("local_num_threads", ks.get("num_threads", ks.get("threads", 1)))
+print("nest", nest.__version__, "mpi_procs", mpi, "local_threads", thr)
+PY
 
-# Use long-run 'trend' mode to avoid HDF5 + weight-sampling overhead dominating walltime
 srun --cpu-bind=cores --distribution=block:block \
-  python3 -u cpg_2legs_nest_to_hdf5_fast_v8_longrun.py \
+  python3 -u cpg_2legs_nest_to_hdf5_fast_v8_longrun_safe.py \
     --out cpg_${SLURM_JOB_ID}.h5 \
     --sim-ms 60000 \
     --dt-ms 10 \
