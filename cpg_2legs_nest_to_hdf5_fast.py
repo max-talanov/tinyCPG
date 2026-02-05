@@ -116,6 +116,7 @@ W0_RM = 30.0
 
 # ---------- Izhikevich ----------
 izh_params = dict(a=0.02, b=0.2, c=-65.0, d=8.0, V_th=30.0, V_min=-120.0)
+izh_inh_params = dict(a=0.1, b=0.2, c=-65.0, d=2.0, V_th=30.0, V_min=-120.0)  # UPDATED_v7
 I_E_RG = 1.0
 
 # Izhikevich "chattering" (bursting-like) parameters for RG-F excitatory neurons
