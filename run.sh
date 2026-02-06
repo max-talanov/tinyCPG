@@ -24,7 +24,7 @@ print("nest", nest.__version__, "mpi_procs", mpi, "local_threads", thr)
 PY
 
 srun --cpu-bind=cores --distribution=block:block \
-  python3 -u cpg_2legs_nest_to_hdf5_fast.py \
+  python3 -u cpg_2legs.py \
     --out cpg_${SLURM_JOB_ID}.h5 \
     --sim-ms 10000 \
     --dt-ms 10 \

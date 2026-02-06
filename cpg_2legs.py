@@ -71,7 +71,7 @@ BASE_DRIVE_HZ = 10.0
 BASE_DRIVE_W = 18.0
 BASE_DRIVE_P = 0.08
 
-USE_STATIC_PARALLEL = True
+USE_STATIC_PARALLEL = False
 P_STATIC_IN = 0.03
 P_STATIC_RM = 0.03
 W_STATIC_IN = 22.0
@@ -183,7 +183,7 @@ def main():
     ap.add_argument("--dt-ms", type=float, default=10.0)
     ap.add_argument("--threads", type=int, default=10)
     ap.add_argument("--print-every", type=int, default=50, help="progress cadence in steps")
-    ap.add_argument("--weight-sample-ms", type=float, default=1000.0, help="How often to sample STDP weights (ms). (1s recommended for trend plots)")
+    ap.add_argument("--weight-sample-ms", type=float, default=100.0, help="How often to sample STDP weights (ms). Larger = faster.")
     ap.add_argument("--rate-update-ms", type=float, default=20.0, help="How often to push updated rates to poisson_generators (ms). Larger = faster.")
     args = ap.parse_args()
 
@@ -257,7 +257,6 @@ def main():
 
         mus_e = nest.Create("parrot_neuron", N_MUS_E)
         mus_f = nest.Create("parrot_neuron", N_MUS_F)
-        # Record to memory (portable across NEST builds; we write HDF5 ourselves)
         rec_muse = nest.Create("spike_recorder", params={"record_to": "memory"})
         rec_musf = nest.Create("spike_recorder", params={"record_to": "memory"})
         nest.Connect(mus_e, rec_muse)
@@ -301,6 +300,7 @@ def main():
     # ---- connect per leg ----
     for side in LEGS:
         L = leg[side]
+
         nest.Connect(L["cut_in"], L["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_IN_STDP},
                      syn_spec={"synapse_model": f"stdp_cut_rge_{side}", "weight": W0_IN, "delay": DELAY_MS})
 
@@ -387,34 +387,14 @@ def main():
     # ---- cache connection collections for faster weight sampling ----
     # NOTE: in MPI runs, each rank sees (and caches) its local connections.
     conns_cache = {side: {} for side in LEGS}
-
     for side in LEGS:
-        L = leg[side]
-        # Cache by source/target rather than synapse_model name (robust across builds / CopyModel naming)
-        try:
-            conns_cache[side]["cut->rge"] = nest.GetConnections(L["cut_in"], L["rg_e"])
-        except Exception:
-            conns_cache[side]["cut->rge"] = []
-        try:
-            conns_cache[side]["bs->rge"]  = nest.GetConnections(L["bs_in_e"], L["rg_e"])
-        except Exception:
-            conns_cache[side]["bs->rge"] = []
-        try:
-            conns_cache[side]["bs->rgf"]  = nest.GetConnections(L["bs_in_f"], L["rg_f"])
-        except Exception:
-            conns_cache[side]["bs->rgf"] = []
+        conns_cache[side]["cut->rge"] = nest.GetConnections(synapse_model=f"stdp_cut_rge_{side}")
+        conns_cache[side]["bs->rge"]  = nest.GetConnections(synapse_model=f"stdp_bs_rge_{side}")
+        conns_cache[side]["bs->rgf"]  = nest.GetConnections(synapse_model=f"stdp_bs_rgf_{side}")
+        conns_cache[side]["rge->me"]  = nest.GetConnections(synapse_model=f"stdp_rge_me_{side}")
+        conns_cache[side]["rgf->mf"]  = nest.GetConnections(synapse_model=f"stdp_rgf_mf_{side}")
 
-        # Static RG -> Motor connections
-        try:
-            conns_cache[side]["rge->me"]  = nest.GetConnections(L["rg_e"], L["m_e"])
-        except Exception:
-            conns_cache[side]["rge->me"] = []
-        try:
-            conns_cache[side]["rgf->mf"]  = nest.GetConnections(L["rg_f"], L["m_f"])
-        except Exception:
-            conns_cache[side]["rgf->mf"] = []
     # ---- storage ----
-
     times = []
     wstats = {side: {k: ([], []) for k in ["cut->rge", "bs->rge", "bs->rgf", "rge->me", "rgf->mf"]} for side in LEGS}
     logs = {side: dict(bs_e=[], bs_f=[], mus_e=[], mus_f=[],
@@ -451,33 +431,30 @@ def main():
         tauA_s = TAU_ACT_MS / 1000.0
         target_ae = clamp(ACT_GAIN * r_muse, 0.0, ACT_MAX)
         target_af = clamp(ACT_GAIN * r_musf, 0.0, ACT_MAX)
-        # Stable exponential smoothing (works even if DT_MS >> tau)
-        alphaA = 1.0 - float(np.exp(-dt_s / max(1e-6, tauA_s)))
-        S["act_e"] += alphaA * (target_ae - S["act_e"])
-        S["act_f"] += alphaA * (target_af - S["act_f"])
+        S["act_e"] += (dt_s / tauA_s) * (target_ae - S["act_e"])
+        S["act_f"] += (dt_s / tauA_s) * (target_af - S["act_f"])
 
         target_fe = FORCE_MAX * (1.0 - np.exp(-FORCE_SAT_K * S["act_e"]))
         target_ff = FORCE_MAX * (1.0 - np.exp(-FORCE_SAT_K * S["act_f"]))
         tau_rise_s = TAU_FORCE_RISE_MS / 1000.0
         tau_decay_s = TAU_FORCE_DECAY_MS / 1000.0
 
-        # Stable rise/decay smoothing (alpha = 1 - exp(-dt/tau))
-        tau_e = tau_rise_s if (target_fe > S["force_e"]) else tau_decay_s
-        tau_f = tau_rise_s if (target_ff > S["force_f"]) else tau_decay_s
-        alphaFe = 1.0 - float(np.exp(-dt_s / max(1e-6, tau_e)))
-        alphaFf = 1.0 - float(np.exp(-dt_s / max(1e-6, tau_f)))
-        S["force_e"] += alphaFe * (target_fe - S["force_e"])
-        S["force_f"] += alphaFf * (target_ff - S["force_f"])
+        if target_fe > S["force_e"]:
+            S["force_e"] += (dt_s / tau_rise_s) * (target_fe - S["force_e"])
+        else:
+            S["force_e"] += (dt_s / tau_decay_s) * (target_fe - S["force_e"])
+
+        if target_ff > S["force_f"]:
+            S["force_f"] += (dt_s / tau_rise_s) * (target_ff - S["force_f"])
+        else:
+            S["force_f"] += (dt_s / tau_decay_s) * (target_ff - S["force_f"])
 
         S["force_e"] = clamp(S["force_e"], 0.0, FORCE_MAX)
         S["force_f"] = clamp(S["force_f"], 0.0, FORCE_MAX)
 
         tauL_s = TAU_LENGTH_MS / 1000.0
-        alphaL = 1.0 - float(np.exp(-dt_s / max(1e-6, tauL_s)))
-        # Relax toward rest length (stable)
-        S["len_e"] += alphaL * (L0 - S["len_e"])
-        S["len_f"] += alphaL * (L0 - S["len_f"])
-        # Shortening proportional to force (explicit term)
+        S["len_e"] += (dt_s / tauL_s) * (L0 - S["len_e"])
+        S["len_f"] += (dt_s / tauL_s) * (L0 - S["len_f"])
         S["len_e"] -= SHORTEN_GAIN * S["force_e"] * dt_s
         S["len_f"] -= SHORTEN_GAIN * S["force_f"] * dt_s
         if cut_active_frac > 0.0:
@@ -500,51 +477,39 @@ def main():
         P["len_e"].append(S["len_e"]); P["len_f"].append(S["len_f"])
         P["ia_e"].append(ia_e); P["ia_f"].append(ia_f)
 
-    # ---- weight storage (trend + full snapshots) ----
-    w_times = []
-    weight_keys = ["cut->rge", "bs->rge", "bs->rgf"]
+    # Keep last sampled mean/std so we can append smoothly without resampling every step
+    last_wstats = {side: {k: (np.nan, np.nan) for k in ["cut->rge", "bs->rge", "bs->rgf", "rge->me", "rgf->mf"]} for side in LEGS}
 
-    # Mean/std trends per second (or weight-sample-ms)
-    wstats = {side: {k: ([], []) for k in weight_keys} for side in LEGS}
-
-    # Full snapshots of all weights per sample time (ragged arrays)
-    w_all = {side: {k: [] for k in weight_keys} for side in LEGS}
-
-    def log_weights(t_ms: float, step_idx: int) -> None:
-        """Store full weight snapshots (once per weight_every) and also mean/std trends."""
-        if step_idx % weight_every != 0:
-            return
-
-        w_times.append(float(t_ms))
+    def log_weights(t_ms: float, step_idx: int):
+        """Append weight mean/std time series.
+        To accelerate, only sample actual weights every `weight_every` steps, and reuse last values otherwise.
+        """
+        times.append(t_ms)
+        do_sample = (step_idx % weight_every == 0)
 
         for side in LEGS:
-            for key in weight_keys:
-                conns = conns_cache[side][key]
-                if len(conns) == 0:
-                    w = np.asarray([], dtype=np.float32)
-                    mval, sval = np.nan, np.nan
-                else:
-                    w = np.asarray(nest.GetStatus(conns, "weight"), dtype=np.float32)
-                    mval, sval = float(w.mean()), float(w.std())
-
-                w_all[side][key].append(w)
+            for key in ["cut->rge", "bs->rge", "bs->rgf", "rge->me", "rgf->mf"]:
+                if do_sample:
+                    conns = conns_cache[side][key]
+                    if len(conns) == 0:
+                        last_wstats[side][key] = (np.nan, np.nan)
+                    else:
+                        w = np.asarray(nest.GetStatus(conns, "weight"), dtype=float)
+                        last_wstats[side][key] = (float(w.mean()), float(w.std()))
+                mval, sval = last_wstats[side][key]
                 wstats[side][key][0].append(mval)
                 wstats[side][key][1].append(sval)
 
-    # ---- main simulation loop ----
     total_steps = int(SIM_MS / DT_MS)
     done_steps = 0
     chunk = max(1, int(N_CUT / N_PHASES))
     t_ms = 0.0
 
     t0 = time.time()
-
     for phase in range(N_PHASES):
-        # Reset CUT rates
         for side in LEGS:
             nest.SetStatus(leg[side]["cut_pg"], {"rate": CUT_RATE_OFF_HZ})
 
-        # Activate a moving CUT subset for this phase
         start = phase * chunk
         end = min(N_CUT, (phase + 1) * chunk)
         for side in LEGS:
@@ -557,22 +522,14 @@ def main():
             t_ms += DT_MS
             done_steps += 1
 
-            # record time axis for per-step logs
-            times.append(float(t_ms))
-
-            # update proxies + update generator rates at a coarser cadence
-            do_rate_update = (done_steps % rate_every == 0)
             for side in LEGS:
+                do_rate_update = (done_steps % rate_every == 0)
                 update_leg(side, t_ms, cut_active_frac, do_rate_update)
-
-            # weight sampling at 1 Hz (or weight-sample-ms)
             log_weights(t_ms, done_steps)
 
             if rank == 0 and ((done_steps % int(args.print_every) == 0) or (done_steps == total_steps) or (local_step == 0)):
-                print(
-                    f"[Sim] Phase {phase+1}/{N_PHASES} | step {done_steps}/{total_steps} | "
-                    f"phase_step {local_step+1}/{n_steps} | t={t_ms:.1f} ms"
-                )
+                print(f"[Sim] Phase {phase+1}/{N_PHASES} | step {done_steps}/{total_steps} | "
+                      f"phase_step {local_step+1}/{n_steps} | t={t_ms:.1f} ms")
 
     if rank == 0:
         print(f"[Done] wall={time.time()-t0:.1f}s, out={args.out}")
@@ -602,7 +559,6 @@ def main():
             gstats.attrs[k] = int(v)
 
         h5.create_dataset("times_ms", data=times_arr, compression="gzip")
-        h5.create_dataset("weights_times_ms", data=np.asarray(w_times, dtype=np.float32), compression="gzip")
 
         for side in LEGS:
             g = h5.create_group(f"leg_{side}")
@@ -610,16 +566,9 @@ def main():
                 g.create_dataset(key, data=np.asarray(arr, dtype=np.float32), compression="gzip")
 
             gw = g.create_group("weights")
-            vlen_f32 = h5py.vlen_dtype(np.dtype("float32"))
-            for key in weight_keys:
+            for key in ["cut->rge", "bs->rge", "bs->rgf", "rge->me", "rgf->mf"]:
                 gw.create_dataset(f"{key}_mean", data=np.asarray(wstats[side][key][0], dtype=np.float32), compression="gzip")
                 gw.create_dataset(f"{key}_std", data=np.asarray(wstats[side][key][1], dtype=np.float32), compression="gzip")
-                gw.create_dataset(
-                    f"{key}_all",
-                    data=np.asarray(w_all[side][key], dtype=object),
-                    dtype=vlen_f32,
-                    compression="gzip",
-                )
 
     print(f"[HDF5] saved {args.out}")
 
