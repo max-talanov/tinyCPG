@@ -578,39 +578,45 @@ def main():
         S["last_muse"] = cur_e;
         S["last_musf"] = cur_f
 
+        # NOTE: muscle parrot neurons amplify spikes because each muscle cell can receive many motor spikes.
+        # Normalize by expected motor->muscle fan-in so proxy activation doesn't saturate in both phases.
         dt_s_safe = max(1e-9, dt_s)
-        r_muse = (sp_e / max(1, N_MUS_E)) / dt_s_safe
-        r_musf = (sp_f / max(1, N_MUS_F)) / dt_s_safe
-        P["mus_e"].append(r_muse);
+        fanin_e = max(1.0, float(N_MOTOR_E) * float(P_M2MUS))
+        fanin_f = max(1.0, float(N_MOTOR_F) * float(P_M2MUS))
+
+        r_muse = ((sp_e / max(1, N_MUS_E)) / dt_s_safe) / fanin_e
+        r_musf = ((sp_f / max(1, N_MUS_F)) / dt_s_safe) / fanin_f
+        P["mus_e"].append(r_muse)
         P["mus_f"].append(r_musf)
 
+        # Stable low-pass update even when dt > tau (avoids overshoot/locking)
         tauA_s = TAU_ACT_MS / 1000.0
+        kA = 1.0 - np.exp(-dt_s_safe / max(1e-9, tauA_s))
         target_ae = clamp(ACT_GAIN * r_muse, 0.0, ACT_MAX)
         target_af = clamp(ACT_GAIN * r_musf, 0.0, ACT_MAX)
-        S["act_e"] += (dt_s / tauA_s) * (target_ae - S["act_e"])
-        S["act_f"] += (dt_s / tauA_s) * (target_af - S["act_f"])
+        S["act_e"] += kA * (target_ae - S["act_e"])
+        S["act_f"] += kA * (target_af - S["act_f"])
+        S["act_e"] = clamp(S["act_e"], 0.0, ACT_MAX)
+        S["act_f"] = clamp(S["act_f"], 0.0, ACT_MAX)
 
         target_fe = FORCE_MAX * (1.0 - np.exp(-FORCE_SAT_K * S["act_e"]))
         target_ff = FORCE_MAX * (1.0 - np.exp(-FORCE_SAT_K * S["act_f"]))
         tau_rise_s = TAU_FORCE_RISE_MS / 1000.0
         tau_decay_s = TAU_FORCE_DECAY_MS / 1000.0
 
-        if target_fe > S["force_e"]:
-            S["force_e"] += (dt_s / tau_rise_s) * (target_fe - S["force_e"])
-        else:
-            S["force_e"] += (dt_s / tau_decay_s) * (target_fe - S["force_e"])
-
-        if target_ff > S["force_f"]:
-            S["force_f"] += (dt_s / tau_rise_s) * (target_ff - S["force_f"])
-        else:
-            S["force_f"] += (dt_s / tau_decay_s) * (target_ff - S["force_f"])
+        # Stable force dynamics (rise/decay) for large dt
+        kFe = 1.0 - np.exp(-dt_s_safe / max(1e-9, (tau_rise_s if target_fe > S["force_e"] else tau_decay_s)))
+        kFf = 1.0 - np.exp(-dt_s_safe / max(1e-9, (tau_rise_s if target_ff > S["force_f"] else tau_decay_s)))
+        S["force_e"] += kFe * (target_fe - S["force_e"])
+        S["force_f"] += kFf * (target_ff - S["force_f"])
 
         S["force_e"] = clamp(S["force_e"], 0.0, FORCE_MAX)
         S["force_f"] = clamp(S["force_f"], 0.0, FORCE_MAX)
 
         tauL_s = TAU_LENGTH_MS / 1000.0
-        S["len_e"] += (dt_s / tauL_s) * (L0 - S["len_e"])
-        S["len_f"] += (dt_s / tauL_s) * (L0 - S["len_f"])
+        kL = 1.0 - np.exp(-dt_s_safe / max(1e-9, tauL_s))
+        S["len_e"] += kL * (L0 - S["len_e"])
+        S["len_f"] += kL * (L0 - S["len_f"])
         S["len_e"] -= SHORTEN_GAIN * S["force_e"] * dt_s
         S["len_f"] -= SHORTEN_GAIN * S["force_f"] * dt_s
         if cut_active_frac > 0.0:
