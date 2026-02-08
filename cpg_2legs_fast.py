@@ -82,6 +82,12 @@ P_RG_RECIP = 0.20
 W_RG_RECIP = -18.0
 DELAY_RECIP_MS = 1.0
 
+# Motor-pool reciprocal inhibition (extra safeguard against E/F co-activation)
+P_MOTOR_RECIP = 0.25
+W_MOTOR_RECIP = -22.0
+DELAY_MOTOR_RECIP_E2F_MS = 1.5
+DELAY_MOTOR_RECIP_F2E_MS = 1.0
+
 W_M2MUS = 1.0
 P_M2MUS = 0.8
 
@@ -415,6 +421,14 @@ def main():
         nest.Connect(L["rg_f"], L["m_f"], conn_spec={"rule": "pairwise_bernoulli", "p": P_IN_STDP},
                      syn_spec={"synapse_model": "static_synapse", "weight": W0_RM, "delay": DELAY_MS})
 
+        # Motor-pool reciprocal inhibition (helps enforce E/F alternation)
+        nest.Connect(L["m_e"], L["m_f"], conn_spec={"rule": "pairwise_bernoulli", "p": P_MOTOR_RECIP},
+                     syn_spec={"synapse_model": "static_synapse", "weight": W_MOTOR_RECIP,
+                               "delay": DELAY_MOTOR_RECIP_E2F_MS})
+        nest.Connect(L["m_f"], L["m_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_MOTOR_RECIP},
+                     syn_spec={"synapse_model": "static_synapse", "weight": W_MOTOR_RECIP,
+                               "delay": DELAY_MOTOR_RECIP_F2E_MS})
+
         nest.Connect(L["m_e"], L["mus_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_M2MUS},
                      syn_spec={"synapse_model": "static_synapse", "weight": W_M2MUS, "delay": DELAY_MS})
         nest.Connect(L["m_f"], L["mus_f"], conn_spec={"rule": "pairwise_bernoulli", "p": P_M2MUS},
@@ -564,8 +578,9 @@ def main():
         S["last_muse"] = cur_e;
         S["last_musf"] = cur_f
 
-        r_muse = (sp_e / max(1, N_MUS_E)) / dt_s
-        r_musf = (sp_f / max(1, N_MUS_F)) / dt_s
+        dt_s_safe = max(1e-9, dt_s)
+        r_muse = (sp_e / max(1, N_MUS_E)) / dt_s_safe
+        r_musf = (sp_f / max(1, N_MUS_F)) / dt_s_safe
         P["mus_e"].append(r_muse);
         P["mus_f"].append(r_musf)
 
