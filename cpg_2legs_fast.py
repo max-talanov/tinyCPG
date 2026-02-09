@@ -134,9 +134,12 @@ RGF_D = 2.0
 I_E_MOTOR = 1.0
 
 # ---------- muscle proxies ----------
-TAU_ACT_MS = 80.0
-ACT_GAIN = 0.03
+# Activation proxy: saturating nonlinearity + brainstem gating to avoid saturation & enforce timing
+TAU_ACT_RISE_MS = 60.0
+TAU_ACT_DECAY_MS = 35.0
 ACT_MAX = 1.2
+ACT_SAT_K = 5e-4          # slope for activation from muscle relay rate
+ACT_GATE_POWER = 1.0      # >1.0 makes windows narrower around BS peaks
 
 TAU_FORCE_RISE_MS = 140.0
 TAU_FORCE_DECAY_MS = 60.0
@@ -245,8 +248,8 @@ def main():
     # Long-run mode shifts toward "trend" logging rather than high-frequency snapshots.
     if args.long_run:
         # Coarser outer chunking reduces the number of nest.Simulate() calls.
-        if args.simulate_chunk_ms < 200.0:
-            args.simulate_chunk_ms = 200.0
+        if args.simulate_chunk_ms < 100.0:
+            args.simulate_chunk_ms = 100.0
         # Coarser rate updates reduce frequent SetStatus calls.
         if args.rate_update_ms < 100.0:
             args.rate_update_ms = 100.0
@@ -589,13 +592,32 @@ def main():
         P["mus_e"].append(r_muse)
         P["mus_f"].append(r_musf)
 
-        # Stable low-pass update even when dt > tau (avoids overshoot/locking)
-        tauA_s = TAU_ACT_MS / 1000.0
-        kA = 1.0 - np.exp(-dt_s_safe / max(1e-9, tauA_s))
-        target_ae = clamp(ACT_GAIN * r_muse, 0.0, ACT_MAX)
-        target_af = clamp(ACT_GAIN * r_musf, 0.0, ACT_MAX)
-        S["act_e"] += kA * (target_ae - S["act_e"])
-        S["act_f"] += kA * (target_af - S["act_f"])
+        # Activation proxy: (1) saturate muscle relay rate -> activation,
+        # (2) gate by BS drive phase, (3) separate rise/decay taus so it won't linger > step.
+        bs_den = max(1e-9, float(BS_RATE_AMP_HZ))
+        d_e = clamp((r_e - float(BS_RATE_BASE_HZ)) / bs_den, 0.0, 1.0)
+        d_f = clamp((r_f - float(BS_RATE_BASE_HZ)) / bs_den, 0.0, 1.0)
+        d_e = float(d_e) ** float(ACT_GATE_POWER)
+        d_f = float(d_f) ** float(ACT_GATE_POWER)
+
+        # Saturating mapping from muscle relay rate to activation
+        a_raw_e = ACT_MAX * (1.0 - np.exp(-ACT_SAT_K * float(r_muse)))
+        a_raw_f = ACT_MAX * (1.0 - np.exp(-ACT_SAT_K * float(r_musf)))
+
+        # Gate by brainstem drive (enforces correct phase and duration)
+        target_ae = clamp(a_raw_e * d_e, 0.0, ACT_MAX)
+        target_af = clamp(a_raw_f * d_f, 0.0, ACT_MAX)
+
+        tau_rise_s = TAU_ACT_RISE_MS / 1000.0
+        tau_decay_s = TAU_ACT_DECAY_MS / 1000.0
+        tau_e = tau_rise_s if target_ae > S["act_e"] else tau_decay_s
+        tau_f = tau_rise_s if target_af > S["act_f"] else tau_decay_s
+
+        kAe = 1.0 - np.exp(-dt_s_safe / max(1e-9, tau_e))
+        kAf = 1.0 - np.exp(-dt_s_safe / max(1e-9, tau_f))
+
+        S["act_e"] += kAe * (target_ae - S["act_e"])
+        S["act_f"] += kAf * (target_af - S["act_f"])
         S["act_e"] = clamp(S["act_e"], 0.0, ACT_MAX)
         S["act_f"] = clamp(S["act_f"], 0.0, ACT_MAX)
 
