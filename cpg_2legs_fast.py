@@ -497,13 +497,9 @@ def main():
         "L_stdp_cut_rge": safe_len_connections(synapse_model="stdp_cut_rge_L"),
         "L_stdp_bs_rge": safe_len_connections(synapse_model="stdp_bs_rge_L"),
         "L_stdp_bs_rgf": safe_len_connections(synapse_model="stdp_bs_rgf_L"),
-        "L_stdp_rge_me": safe_len_connections(synapse_model="stdp_rge_me_L"),
-        "L_stdp_rgf_mf": safe_len_connections(synapse_model="stdp_rgf_mf_L"),
         "R_stdp_cut_rge": safe_len_connections(synapse_model="stdp_cut_rge_R"),
         "R_stdp_bs_rge": safe_len_connections(synapse_model="stdp_bs_rge_R"),
         "R_stdp_bs_rgf": safe_len_connections(synapse_model="stdp_bs_rgf_R"),
-        "R_stdp_rge_me": safe_len_connections(synapse_model="stdp_rge_me_R"),
-        "R_stdp_rgf_mf": safe_len_connections(synapse_model="stdp_rgf_mf_R"),
         "static_total": safe_len_connections(synapse_model="static_synapse"),
     }
     if rank == 0:
@@ -525,16 +521,6 @@ def main():
                 conns_cache[side][key] = nest.GetConnections(synapse_model=model)
             except Exception:
                 conns_cache[side][key] = []
-
-        # Static RG -> Motor connections cached by source/target
-        try:
-            conns_cache[side]["rge->me"] = nest.GetConnections(L["rg_e"], L["m_e"])
-        except Exception:
-            conns_cache[side]["rge->me"] = []
-        try:
-            conns_cache[side]["rgf->mf"] = nest.GetConnections(L["rg_f"], L["m_f"])
-        except Exception:
-            conns_cache[side]["rgf->mf"] = []
     # Optional connection downsampling for faster weight trend stats (mean/std)
     # This reduces the size of the weight arrays pulled via nest.GetStatus(conns, "weight")
     # without changing the simulated network.
@@ -551,7 +537,7 @@ def main():
                     pass
     # ---- storage ----
     times = []
-    wstats = {side: {k: ([], []) for k in ["cut->rge", "bs->rge", "bs->rgf", "rge->me", "rgf->mf"]} for side in LEGS}
+    wstats = {side: {k: ([], []) for k in ["cut->rge", "bs->rge", "bs->rgf"]} for side in LEGS}
     logs = {side: dict(bs_e=[], bs_f=[], mus_e=[], mus_f=[],
                        act_e=[], act_f=[], force_e=[], force_f=[],
                        len_e=[], len_f=[], ia_e=[], ia_f=[]) for side in LEGS}
@@ -666,8 +652,7 @@ def main():
         P["ia_f"].append(ia_f)
 
     # Keep last sampled mean/std so we can append smoothly without resampling every step
-    last_wstats = {side: {k: (np.nan, np.nan) for k in ["cut->rge", "bs->rge", "bs->rgf", "rge->me", "rgf->mf"]} for
-                   side in LEGS}
+    last_wstats = {side: {k: (np.nan, np.nan) for k in ["cut->rge", "bs->rge", "bs->rgf"]} for side in LEGS}
 
     def log_weights(t_ms: float, step_idx: int):
         """Append weight mean/std time series.
@@ -677,7 +662,7 @@ def main():
         do_sample = (step_idx % weight_every == 0)
 
         for side in LEGS:
-            for key in ["cut->rge", "bs->rge", "bs->rgf", "rge->me", "rgf->mf"]:
+            for key in ["cut->rge", "bs->rge", "bs->rgf"]:
                 if do_sample:
                     conns = conns_cache[side][key]
                     if conns is None or len(conns) == 0:
@@ -781,7 +766,7 @@ def main():
                 g.create_dataset(key, data=np.asarray(arr, dtype=np.float32), compression="gzip")
 
             gw = g.create_group("weights")
-            for key in ["cut->rge", "bs->rge", "bs->rgf", "rge->me", "rgf->mf"]:
+            for key in ["cut->rge", "bs->rge", "bs->rgf"]:
                 gw.create_dataset(f"{key}_mean", data=np.asarray(wstats[side][key][0], dtype=np.float32),
                                   compression="gzip")
                 gw.create_dataset(f"{key}_std", data=np.asarray(wstats[side][key][1], dtype=np.float32),
