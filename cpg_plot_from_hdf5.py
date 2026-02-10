@@ -50,10 +50,6 @@ def main():
     with h5py.File(args.inp, "r") as h5:
         times_ms = np.array(h5["times_ms"])
         dt_ms = float(h5.attrs.get("dt_ms", np.median(np.diff(times_ms)) if len(times_ms) > 1 else 10.0))
-        if "weights_times_ms" in h5:
-            times_w = np.array(h5["weights_times_ms"])
-        else:
-            times_w = times_ms
 
         print("=== Run metadata ===")
         for k in ["created_utc", "nest_version", "sim_ms", "dt_ms", "phases", "bs_osc_hz", "local_threads", "mpi_processes"]:
@@ -70,16 +66,14 @@ def main():
         print(f"[Plot] weight smoothing: {args.smooth_sec:.3f}s -> {win} samples")
 
         legs = sorted([k.split("_", 1)[1] for k in h5.keys() if k.startswith("leg_")])
+        has_full = "weights_times_ms" in h5
+        wtimes_ms = np.array(h5["weights_times_ms"]) if has_full else None
+        if has_full:
+            print(f"[Plot] full weight samples: {len(wtimes_ms)}")
 
         for side in legs:
             g = h5[f"leg_{side}"]
             w = g["weights"]
-
-            # Debug/robustness: show what weight datasets exist for this leg
-            try:
-                print(f"[Plot] leg {side} weight datasets: {list(w.keys())}")
-            except Exception:
-                pass
 
             def maybe_save(fig, name):
                 if args.save_prefix:
@@ -94,45 +88,64 @@ def main():
             plt.legend(); plt.tight_layout()
             maybe_save(fig, "bs")
 
-            # Inputs learning (smoothed)
+            # Weight learning trends (mean ± std, smoothed). Plot whatever projections exist.
             fig = plt.figure(figsize=(14, 7))
-
-            # Discover which weight series exist in this file for this leg
-            available_keys = sorted([name[:-5] for name in w.keys() if name.endswith("_mean")])
-
-            preferred = ["cut->rge", "bs->rge", "bs->rgf"]
-            keys_to_plot = [k for k in preferred if f"{k}_mean" in w]
-            if not keys_to_plot:
-                # Plot any existing series except deprecated motor projections
-                keys_to_plot = [k for k in available_keys if k not in ("rge->me", "rgf->mf")]
-
-            if not keys_to_plot:
-                plt.text(0.5, 0.5, f"No weight trends found for leg {side}", ha="center", va="center", transform=plt.gca().transAxes)
+            mean_keys = sorted([k for k in w.keys() if k.endswith("_mean")])
+            if len(mean_keys) == 0:
+                plt.text(0.5, 0.5, "No weight trends found in HDF5 (leg_{side}/weights)", ha="center", va="center")
             else:
-                # Smooth in weight-time coordinates
-                dtw = float(np.median(np.diff(times_w)) if len(times_w) > 1 else dt_ms)
-                win_w = max(1, int(round((args.smooth_sec * 1000.0) / max(1e-6, dtw))))
-
-                for key in keys_to_plot:
-                    try:
-                        m = moving_average(w[f"{key}_mean"][:], win_w)
-                    except KeyError:
-                        # Some older files only store a subset of expected series
-                        print(f"[Plot] WARNING: missing {key}_mean in leg {side}; skipping")
-                        continue
-
-                    if f"{key}_std" in w:
-                        s = moving_average(w[f"{key}_std"][:], win_w)
-                    else:
-                        s = np.zeros_like(m)
-
-                    plt.plot(times_w, m, label=f"{key} mean ({args.smooth_sec:.1f}s MA)")
-                    plt.fill_between(times_w, m - s, m + s, alpha=0.15)
-
+                for mk in mean_keys:
+                    base = mk[:-5]  # strip '_mean'
+                    sk = f"{base}_std"
+                    m = moving_average(w[mk][:], win)
+                    if sk in w:
+                        s = moving_average(w[sk][:], win)
+                        plt.fill_between(times_ms, m - s, m + s, alpha=0.15)
+                    plt.plot(times_ms, m, label=f"{base} mean ({args.smooth_sec:.1f}s MA)")
             plt.xlabel("time (ms)"); plt.ylabel("weight (pA)")
-            plt.title(f"STDP learning — inputs trend (leg {side})")
+            plt.title(f"STDP learning — weight trends (leg {side})")
             plt.legend(); plt.tight_layout()
-            maybe_save(fig, "w_inputs")
+            maybe_save(fig, "w_trends")
+
+            # Optional: full weight vectors (percentile bands over connections)
+            if has_full and "full_weights" in g:
+                gfw = g["full_weights"]
+                fig = plt.figure(figsize=(14, 7))
+                any_plotted = False
+                for proj in sorted(gfw.keys()):
+                    if "w" not in gfw[proj]:
+                        continue
+                    wmat = np.asarray(gfw[proj]["w"])  # shape [T, N]
+                    if wmat.ndim != 2:
+                        continue
+                    # Compute summary across connections (axis=1)
+                    mean_t = np.nanmean(wmat, axis=1) if wmat.shape[1] > 0 else np.full((wmat.shape[0],), np.nan)
+                    p10 = np.nanpercentile(wmat, 10, axis=1) if wmat.shape[1] > 0 else np.full((wmat.shape[0],), np.nan)
+                    p90 = np.nanpercentile(wmat, 90, axis=1) if wmat.shape[1] > 0 else np.full((wmat.shape[0],), np.nan)
+                    plt.plot(wtimes_ms, mean_t, label=f"{proj} mean")
+                    plt.fill_between(wtimes_ms, p10, p90, alpha=0.12)
+                    any_plotted = True
+                if not any_plotted:
+                    plt.text(0.5, 0.5, "No full weight matrices found under leg/full_weights", ha="center", va="center")
+                plt.xlabel("time (ms)"); plt.ylabel("weight (pA)")
+                plt.title(f"STDP learning — full weight bands (10–90%) (leg {side})")
+                plt.legend(); plt.tight_layout()
+                maybe_save(fig, "w_full_bands")
+
+                # Final weight histograms (one subplot-like sequence using separate figs to keep style simple)
+                for proj in sorted(gfw.keys()):
+                    if "w" not in gfw[proj]:
+                        continue
+                    wmat = np.asarray(gfw[proj]["w"])  # [T, N]
+                    if wmat.ndim != 2 or wmat.shape[0] == 0 or wmat.shape[1] == 0:
+                        continue
+                    wfinal = wmat[-1]
+                    fig = plt.figure(figsize=(10, 5))
+                    plt.hist(wfinal, bins=60)
+                    plt.xlabel("weight (pA)"); plt.ylabel("count")
+                    plt.title(f"Final weight distribution — {proj} (leg {side})")
+                    plt.tight_layout()
+                    maybe_save(fig, f"w_hist_{proj}")
 
             # Muscle
             fig = plt.figure(figsize=(14, 5))
