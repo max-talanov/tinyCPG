@@ -233,6 +233,8 @@ def main():
                     help="Enable long-run defaults (aimed at >=30s sims): coarser chunking, less frequent sampling, and weight downsampling for trend plots.")
     ap.add_argument("--max-weight-conns", type=int, default=0,
                     help="If >0, downsample each projection's connection list to at most this many connections when computing weight mean/std (trend mode speed-up).")
+    ap.add_argument("--save-weights", type=str, default="final", choices=["none", "final", "snapshots"],
+                    help="Save full weight vectors for plastic projections: none=only mean/std; final=store final full vectors; snapshots=store full vectors at each weight sample tick (can be large).")
     ap.add_argument("--nest-verbosity", type=str, default="M_ERROR",
                     help="NEST verbosity level to reduce slurmout I/O. Try M_ERROR or M_WARNING.")
     args = ap.parse_args()
@@ -521,6 +523,23 @@ def main():
                 conns_cache[side][key] = nest.GetConnections(synapse_model=model)
             except Exception:
                 conns_cache[side][key] = []
+
+    # Keep an unmodified cache for full-weight saving (not downsampled)
+    conns_full_cache = {side: {k: conns_cache[side][k] for k in conns_cache[side].keys()} for side in LEGS}
+
+    # Cache endpoints once for full-weight saving
+    conns_endpoints = {side: {} for side in LEGS}
+    for side in LEGS:
+        for key, conns in conns_full_cache[side].items():
+            try:
+                if conns is None or len(conns) == 0:
+                    conns_endpoints[side][key] = (np.array([], dtype=np.int64), np.array([], dtype=np.int64))
+                else:
+                    src = np.asarray(nest.GetStatus(conns, "source"), dtype=np.int64)
+                    tgt = np.asarray(nest.GetStatus(conns, "target"), dtype=np.int64)
+                    conns_endpoints[side][key] = (src, tgt)
+            except Exception:
+                conns_endpoints[side][key] = (np.array([], dtype=np.int64), np.array([], dtype=np.int64))
     # Optional connection downsampling for faster weight trend stats (mean/std)
     # This reduces the size of the weight arrays pulled via nest.GetStatus(conns, "weight")
     # without changing the simulated network.
@@ -543,6 +562,10 @@ def main():
                        len_e=[], len_f=[], ia_e=[], ia_f=[]) for side in LEGS}
     state = {side: dict(act_e=0.0, act_f=0.0, force_e=0.0, force_f=0.0,
                         len_e=L0, len_f=L0, last_muse=0, last_musf=0) for side in LEGS}
+
+    # Optional full-weight storage (final or snapshots)
+    wfull_times = []
+    wfull = {side: {k: [] for k in ["cut->rge", "bs->rge", "bs->rgf"]} for side in LEGS}
 
     def new_spikes(rec, last_n):
         # Fast, constant-memory spike counting
@@ -656,7 +679,10 @@ def main():
 
     def log_weights(t_ms: float, step_idx: int):
         """Append weight mean/std time series.
-        To accelerate, only sample actual weights every `weight_every` steps, and reuse last values otherwise.
+        Optionally store full weight vectors for plastic projections.
+
+        - mean/std are appended every step (reusing last sampled values)
+        - full vectors are stored only when sampling happens (snapshots)
         """
         times.append(t_ms)
         do_sample = (step_idx % weight_every == 0)
@@ -673,6 +699,18 @@ def main():
                 mval, sval = last_wstats[side][key]
                 wstats[side][key][0].append(mval)
                 wstats[side][key][1].append(sval)
+
+        # Full weight storage (snapshots only)
+        if args.save_weights == "snapshots" and do_sample:
+            wfull_times.append(float(t_ms))
+            for side in LEGS:
+                for key in ["cut->rge", "bs->rge", "bs->rgf"]:
+                    conns = conns_full_cache[side][key]
+                    if conns is None or len(conns) == 0:
+                        wfull[side][key].append(np.array([], dtype=np.float32))
+                    else:
+                        w = np.asarray(nest.GetStatus(conns, "weight"), dtype=np.float32)
+                        wfull[side][key].append(w)
 
     total_steps = int(np.ceil(SIM_MS / CHUNK_MS))
     if rank == 0 and (SIM_MS >= 30000.0) and (not args.long_run):
@@ -732,6 +770,18 @@ def main():
         print(
             f"[Timing] nest.Simulate: {sim_accum:.1f}s ({100.0 * sim_accum / tot:.1f}%) | bookkeeping: {book_accum:.1f}s ({100.0 * book_accum / tot:.1f}%)")
 
+    # Capture final full weight vectors once (after simulation) if requested
+    if rank == 0 and args.save_weights == "final":
+        wfull_times.append(float(t_ms))
+        for side in LEGS:
+            for key in ["cut->rge", "bs->rge", "bs->rgf"]:
+                conns = conns_full_cache[side][key]
+                if conns is None or len(conns) == 0:
+                    wfull[side][key].append(np.array([], dtype=np.float32))
+                else:
+                    w = np.asarray(nest.GetStatus(conns, "weight"), dtype=np.float32)
+                    wfull[side][key].append(w)
+
     # ---- write HDF5 (rank 0 only) ----
     if rank != 0:
         return
@@ -749,6 +799,7 @@ def main():
         h5.attrs["bs_osc_hz"] = float(BS_OSC_HZ)
         h5.attrs["local_threads"] = int(args.threads)
         h5.attrs["mpi_processes"] = int(nproc)
+        h5.attrs["save_weights_mode"] = str(args.save_weights)
 
         gstats = h5.create_group("stats")
         for k, v in stats_nodes.items():
@@ -759,6 +810,8 @@ def main():
             gstats.attrs[k] = int(v)
 
         h5.create_dataset("times_ms", data=times_arr, compression="gzip")
+        if len(wfull_times) > 0:
+            h5.create_dataset("weights_times_ms", data=np.asarray(wfull_times, dtype=np.float32), compression="gzip")
 
         for side in LEGS:
             g = h5.create_group(f"leg_{side}")
@@ -771,6 +824,22 @@ def main():
                                   compression="gzip")
                 gw.create_dataset(f"{key}_std", data=np.asarray(wstats[side][key][1], dtype=np.float32),
                                   compression="gzip")
+
+            # Optional: full weight vectors (shape: [T_samples, N_connections])
+            if len(wfull_times) > 0:
+                gfw = g.create_group("full_weights")
+                for key in ["cut->rge", "bs->rge", "bs->rgf"]:
+                    src, tgt = conns_endpoints[side].get(key, (np.array([], dtype=np.int64), np.array([], dtype=np.int64)))
+                    gk = gfw.create_group(key.replace("->", "_to_"))
+                    gk.create_dataset("source", data=src, compression="gzip")
+                    gk.create_dataset("target", data=tgt, compression="gzip")
+
+                    if len(wfull[side][key]) > 0:
+                        if wfull[side][key][0].size == 0:
+                            wmat = np.zeros((len(wfull[side][key]), 0), dtype=np.float32)
+                        else:
+                            wmat = np.stack(wfull[side][key], axis=0).astype(np.float32, copy=False)
+                        gk.create_dataset("w", data=wmat, compression="gzip")
 
     print(f"[HDF5] saved {args.out}")
 
