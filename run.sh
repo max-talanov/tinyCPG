@@ -31,4 +31,5 @@ srun --cpu-bind=cores --distribution=block:block \
     --threads $SLURM_CPUS_PER_TASK \
     --long-run \
     --nest-verbosity M_ERROR \
-    --max-weight-conns 2000
+    --max-weight-conns 2000 \
+    --save-weights final
