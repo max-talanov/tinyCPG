@@ -26,7 +26,7 @@ PY
 srun --cpu-bind=cores --distribution=block:block \
   python3 -u cpg_2legs_fast.py \
     --out cpg_${SLURM_JOB_ID}.h5 \
-    --sim-ms 10000 \
+    --sim-ms 60000 \
     --dt-ms 10 \
     --threads $SLURM_CPUS_PER_TASK \
     --long-run \
