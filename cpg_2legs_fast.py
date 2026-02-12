@@ -233,8 +233,8 @@ def main():
                     help="Enable long-run defaults (aimed at >=30s sims): coarser chunking, less frequent sampling, and weight downsampling for trend plots.")
     ap.add_argument("--max-weight-conns", type=int, default=0,
                     help="If >0, downsample each projection's connection list to at most this many connections when computing weight mean/std (trend mode speed-up).")
-    ap.add_argument("--save-weights", type=str, default="final", choices=["none", "final", "snapshots"],
-                    help="Save full weight vectors for plastic projections: none=only mean/std; final=store final full vectors; snapshots=store full vectors at each weight sample tick (can be large).")
+    ap.add_argument("--save-weights", type=str, default="snapshots", choices=["none", "final", "snapshots"],
+                    help="Save full weight vectors for plastic projections: none=only mean/std; final=store initial+final full vectors; snapshots=store full vectors at each weight sample tick (can be large).")
     ap.add_argument("--nest-verbosity", type=str, default="M_ERROR",
                     help="NEST verbosity level to reduce slurmout I/O. Try M_ERROR or M_WARNING.")
     args = ap.parse_args()
@@ -540,6 +540,7 @@ def main():
                     conns_endpoints[side][key] = (src, tgt)
             except Exception:
                 conns_endpoints[side][key] = (np.array([], dtype=np.int64), np.array([], dtype=np.int64))
+
     # Optional connection downsampling for faster weight trend stats (mean/std)
     # This reduces the size of the weight arrays pulled via nest.GetStatus(conns, "weight")
     # without changing the simulated network.
@@ -566,6 +567,20 @@ def main():
     # Optional full-weight storage (final or snapshots)
     wfull_times = []
     wfull = {side: {k: [] for k in ["cut->rge", "bs->rge", "bs->rgf"]} for side in LEGS}
+
+    # If only "final" weights are requested, also capture the INITIAL full weight vectors at t=0.
+    # This prevents downstream plotting code (e.g., quantile bands over time) from seeing only a
+    # single timepoint and producing empty/degenerate plots.
+    if rank == 0 and args.save_weights == "final":
+        wfull_times.append(0.0)
+        for side in LEGS:
+            for key in ["cut->rge", "bs->rge", "bs->rgf"]:
+                conns = conns_full_cache[side][key]
+                if conns is None or len(conns) == 0:
+                    wfull[side][key].append(np.array([], dtype=np.float32))
+                else:
+                    w = np.asarray(nest.GetStatus(conns, "weight"), dtype=np.float32)
+                    wfull[side][key].append(w)
 
     def new_spikes(rec, last_n):
         # Fast, constant-memory spike counting
@@ -700,7 +715,7 @@ def main():
                 wstats[side][key][0].append(mval)
                 wstats[side][key][1].append(sval)
 
-        # Full weight storage (snapshots only)
+        # Full weight storage (snapshots at sampling ticks)
         if args.save_weights == "snapshots" and do_sample:
             wfull_times.append(float(t_ms))
             for side in LEGS:
@@ -770,7 +785,8 @@ def main():
         print(
             f"[Timing] nest.Simulate: {sim_accum:.1f}s ({100.0 * sim_accum / tot:.1f}%) | bookkeeping: {book_accum:.1f}s ({100.0 * book_accum / tot:.1f}%)")
 
-    # Capture final full weight vectors once (after simulation) if requested
+    # Capture final full weight vectors once (after simulation) if requested.
+    # Note: in "final" mode we store both initial (t=0) and final (t=end) snapshots.
     if rank == 0 and args.save_weights == "final":
         wfull_times.append(float(t_ms))
         for side in LEGS:
