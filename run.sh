@@ -32,4 +32,4 @@ srun --cpu-bind=cores --distribution=block:block \
     --long-run \
     --nest-verbosity M_ERROR \
     --max-weight-conns 2000 \
-    --save-weights final
+    --save-weights snapshots
