@@ -117,6 +117,8 @@ def main():
                 fig = plt.figure(figsize=(14, 7))
                 any_plotted = False
                 for proj in sorted(gfw.keys()):
+                    # Pick a stable color per projection from Matplotlib's default cycle
+                    color = f"C{list(sorted(gfw.keys())).index(proj) % 10}"
                     if "w" not in gfw[proj]:
                         continue
                     wmat = np.asarray(gfw[proj]["w"])  # shape [T, N]
@@ -126,8 +128,8 @@ def main():
                     mean_t = np.nanmean(wmat, axis=1) if wmat.shape[1] > 0 else np.full((wmat.shape[0],), np.nan)
                     p10 = np.nanpercentile(wmat, 10, axis=1) if wmat.shape[1] > 0 else np.full((wmat.shape[0],), np.nan)
                     p90 = np.nanpercentile(wmat, 90, axis=1) if wmat.shape[1] > 0 else np.full((wmat.shape[0],), np.nan)
-                    plt.plot(wtimes_ms, mean_t, label=f"{proj} mean")
-                    plt.fill_between(wtimes_ms, p10, p90, alpha=0.12)
+                    plt.plot(wtimes_ms, mean_t, label=f"{proj} mean", color=color)
+                    plt.fill_between(wtimes_ms, p10, p90, alpha=0.12, color=color)
 
                     # Optional: overlay individual connection weight traces (semi-transparent)
                     if args.plot_individual and wmat.shape[1] > 0:
@@ -139,7 +141,7 @@ def main():
                             idx = np.linspace(0, n_conn - 1, n_show, dtype=int)
                             # Plot without legend entries to keep legend readable.
                             for j in idx:
-                                plt.plot(wtimes_ms, wmat[:, j], alpha=0.08, linewidth=0.8, label=None)
+                                plt.plot(wtimes_ms, wmat[:, j], alpha=0.08, linewidth=0.8, label=None, color=color)
 
                     any_plotted = True
                 extra = " + individual" if args.plot_individual else ""
@@ -150,6 +152,7 @@ def main():
 
                 # Final weight histograms (one subplot-like sequence using separate figs to keep style simple)
                 for proj in sorted(gfw.keys()):
+                    color = f"C{list(sorted(gfw.keys())).index(proj) % 10}"
                     if "w" not in gfw[proj]:
                         continue
                     wmat = np.asarray(gfw[proj]["w"])  # [T, N]
@@ -157,7 +160,7 @@ def main():
                         continue
                     wfinal = wmat[-1]
                     fig = plt.figure(figsize=(10, 5))
-                    plt.hist(wfinal, bins=60)
+                    plt.hist(wfinal, bins=60, color=color, alpha=0.85)
                     plt.xlabel("weight (pA)"); plt.ylabel("count")
                     plt.title(f"Final weight distribution — {proj} (leg {side})")
                     plt.tight_layout()
