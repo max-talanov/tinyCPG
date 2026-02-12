@@ -43,6 +43,10 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--in", dest="inp", required=True, help="Input HDF5 file from HPC")
     ap.add_argument("--smooth-sec", type=float, default=1.0, help="Smoothing window for weights (seconds)")
+    ap.add_argument("--plot-individual", action="store_true",
+                    help="If set and full weight matrices exist, overlay individual connection weight traces (semi-transparent) on the full-weight band plot.")
+    ap.add_argument("--max-individual", type=int, default=50,
+                    help="Max number of individual weight traces to overlay per projection (default: 50).")
     ap.add_argument("--save-prefix", type=str, default="", help="If set, save PNGs as <prefix>_legX_*.png")
     ap.add_argument("--show", action="store_true", help="Show plots interactively (default: false if saving)")
     args = ap.parse_args()
@@ -124,11 +128,23 @@ def main():
                     p90 = np.nanpercentile(wmat, 90, axis=1) if wmat.shape[1] > 0 else np.full((wmat.shape[0],), np.nan)
                     plt.plot(wtimes_ms, mean_t, label=f"{proj} mean")
                     plt.fill_between(wtimes_ms, p10, p90, alpha=0.12)
+
+                    # Optional: overlay individual connection weight traces (semi-transparent)
+                    if args.plot_individual and wmat.shape[1] > 0:
+                        n_conn = int(wmat.shape[1])
+                        n_show = int(max(0, args.max_individual))
+                        if n_show > 0:
+                            n_show = min(n_show, n_conn)
+                            # Pick evenly-spaced indices to represent the population without randomness.
+                            idx = np.linspace(0, n_conn - 1, n_show, dtype=int)
+                            # Plot without legend entries to keep legend readable.
+                            for j in idx:
+                                plt.plot(wtimes_ms, wmat[:, j], alpha=0.08, linewidth=0.8, label=None)
+
                     any_plotted = True
-                if not any_plotted:
-                    plt.text(0.5, 0.5, "No full weight matrices found under leg/full_weights", ha="center", va="center")
+                extra = " + individual" if args.plot_individual else ""
+                plt.title(f"STDP learning — full weight bands (10–90%){extra} (leg {side})")
                 plt.xlabel("time (ms)"); plt.ylabel("weight (pA)")
-                plt.title(f"STDP learning — full weight bands (10–90%) (leg {side})")
                 plt.legend(); plt.tight_layout()
                 maybe_save(fig, "w_full_bands")
 
