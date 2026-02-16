@@ -166,6 +166,7 @@ def main():
                     plt.tight_layout()
                     maybe_save(fig, f"w_hist_{proj}")
 
+
             # Muscle
             fig = plt.figure(figsize=(14, 5))
             plt.plot(times_ms, g["mus_e"][:], label="mus-E rate")
@@ -174,6 +175,19 @@ def main():
             plt.title(f"Muscle relay rates — leg {side}")
             plt.legend(); plt.tight_layout()
             maybe_save(fig, "mus_rate")
+
+            # Rhythm generator (RG) population rates
+            if "rge" in g and "rgf" in g:
+                fig = plt.figure(figsize=(14, 5))
+                plt.plot(times_ms, g["rge"][:], label="RG-E rate")
+                plt.plot(times_ms, g["rgf"][:], label="RG-F rate")
+                plt.xlabel("time (ms)"); plt.ylabel("Hz/neuron")
+                plt.title(f"Rhythm generator rates — leg {side}")
+                plt.legend(); plt.tight_layout()
+                maybe_save(fig, "rg_rate")
+            else:
+                # Backward compatibility with older HDF5 files
+                pass
 
             # Activation
             fig = plt.figure(figsize=(14, 5))
