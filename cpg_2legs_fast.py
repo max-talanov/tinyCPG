@@ -348,6 +348,11 @@ def main():
         rg_f = nest.Create("izhikevich", N_RG_F)
         m_e = nest.Create("izhikevich", N_MOTOR_E)
         m_f = nest.Create("izhikevich", N_MOTOR_F)
+        # Record RG population spiking to compute population rates (like muscle relay rates)
+        rec_rge = nest.Create("spike_recorder")
+        rec_rgf = nest.Create("spike_recorder")
+        nest.Connect(rg_e, rec_rge)
+        nest.Connect(rg_f, rec_rgf)
         # Interneurons
         ia_int_e = nest.Create("izhikevich", N_IA_INT)  # inhibitory
         ia_int_f = nest.Create("izhikevich", N_IA_INT)  # inhibitory
@@ -380,7 +385,8 @@ def main():
             rg_e=rg_e, rg_f=rg_f, m_e=m_e, m_f=m_f,
             ia_int_e=ia_int_e, ia_int_f=ia_int_f, in_e=in_e, in_f=in_f,
             mus_e=mus_e, mus_f=mus_f,
-            rec_muse=rec_muse, rec_musf=rec_musf
+            rec_muse=rec_muse, rec_musf=rec_musf,
+            rec_rge=rec_rge, rec_rgf=rec_rgf
         )
 
     # ---- STDP models ----
@@ -559,10 +565,13 @@ def main():
     times = []
     wstats = {side: {k: ([], []) for k in ["cut->rge", "bs->rge", "bs->rgf"]} for side in LEGS}
     logs = {side: dict(bs_e=[], bs_f=[], mus_e=[], mus_f=[],
+                       rge=[], rgf=[],
                        act_e=[], act_f=[], force_e=[], force_f=[],
                        len_e=[], len_f=[], ia_e=[], ia_f=[]) for side in LEGS}
     state = {side: dict(act_e=0.0, act_f=0.0, force_e=0.0, force_f=0.0,
-                        len_e=L0, len_f=L0, last_muse=0, last_musf=0) for side in LEGS}
+                        len_e=L0, len_f=L0,
+                        last_muse=0, last_musf=0,
+                        last_rge=0, last_rgf=0) for side in LEGS}
 
     # Optional full-weight storage (final or snapshots)
     wfull_times = []
@@ -605,6 +614,12 @@ def main():
         S["last_muse"] = cur_e;
         S["last_musf"] = cur_f
 
+        # RG population spike rates (Hz per neuron) for plotting
+        sp_rge, cur_rge = new_spikes(L["rec_rge"], S["last_rge"])
+        sp_rgf, cur_rgf = new_spikes(L["rec_rgf"], S["last_rgf"])
+        S["last_rge"] = cur_rge
+        S["last_rgf"] = cur_rgf
+
         # NOTE: muscle parrot neurons amplify spikes because each muscle cell can receive many motor spikes.
         # Normalize by expected motor->muscle fan-in so proxy activation doesn't saturate in both phases.
         dt_s_safe = max(1e-9, dt_s)
@@ -615,6 +630,11 @@ def main():
         r_musf = ((sp_f / max(1, N_MUS_F)) / dt_s_safe) / fanin_f
         P["mus_e"].append(r_muse)
         P["mus_f"].append(r_musf)
+
+        r_rge = (sp_rge / max(1, N_RG_E)) / dt_s_safe
+        r_rgf = (sp_rgf / max(1, N_RG_F)) / dt_s_safe
+        P["rge"].append(r_rge)
+        P["rgf"].append(r_rgf)
 
         # Activation proxy: (1) saturate muscle relay rate -> activation,
         # (2) gate by BS drive phase, (3) separate rise/decay taus so it won't linger > step.
