@@ -111,10 +111,11 @@ DELAY_COMM_MS = 1.0
 
 # ---------- STDP ----------
 TAU_PLUS = 20.0
-LAMBDA = 0.002
-ALPHA = 1.05
-MU_PLUS = 0.0
-MU_MINUS = 0.0
+# Lower learning rate and mild LTP/LTD balance + multiplicative STDP to reduce hard-boundary pileups at 0/Wmax
+LAMBDA = 0.001
+ALPHA = 0.95
+MU_PLUS = 0.4
+MU_MINUS = 0.4
 WMAX = 120.0
 
 W0_IN = 22.0
