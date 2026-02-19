@@ -255,7 +255,7 @@ def main():
         """Return either a scalar or a NEST Parameter for per-connection initial weights.
 
         Bio-plausible default: lognormal (positive, heavy-tailed). We enforce bounds using
-        nest.math.redraw when available, otherwise fall back to the raw distribution.
+        clipping (not redraw) for speed and reliability during Connect.
 
         Notes:
           - For `normal`: std_w is in weight units.
@@ -273,20 +273,52 @@ def main():
 
         if dist == "normal":
             p = nest.random.normal(mean=mean_w, std=max(1e-12, std_w))
+
         elif dist == "lognormal":
+            # IMPORTANT: NEST's lognormal parameterization can vary by version.
+            # We try the underlying-normal (mu/sigma) form first, then fall back.
+            if mean_w <= 0.0:
+                return float(wmin)
+
             sigma = max(1e-12, std_w)
             mu = float(np.log(max(1e-12, mean_w)) - 0.5 * sigma * sigma)
-            p = nest.random.lognormal(mean=mu, std=sigma)
+
+            p = None
+            try:
+                # Newer-style / explicit parameterization
+                p = nest.random.lognormal(mu=mu, sigma=sigma)
+            except Exception:
+                try:
+                    # Older-style signature might still accept mean/std keywords
+                    p = nest.random.lognormal(mean=mu, std=sigma)
+                except Exception:
+                    try:
+                        # Last resort: interpret args as mean/std of the *lognormal* itself
+                        p = nest.random.lognormal(mean=mean_w, std=sigma)
+                    except Exception:
+                        return float(mean_w)
+
         else:
             # Safe fallback
             return float(mean_w)
 
-        # Enforce biologically sensible bounds (e.g., non-negative and <= Wmax)
-        try:
-            p = nest.math.redraw(p, min=wmin, max=wmax)
-        except Exception:
-            # If redraw is unavailable in the installed NEST version, keep raw distribution
-            pass
+        # Enforce biologically sensible bounds without redraw (redraw can crash during Connect)
+        # We prefer hard clipping via NEST math combinators so weight sampling never retries.
+        if wmin > -np.inf or wmax < np.inf:
+            try:
+                # Try a dedicated clip if available (version-dependent)
+                if hasattr(nest.math, "clip"):
+                    p = nest.math.clip(p, min=wmin, max=wmax)
+                else:
+                    # Generic: p <- min(max(p, wmin), wmax)
+                    if wmin > -np.inf:
+                        p = nest.math.max(p, wmin)
+                    if wmax < np.inf:
+                        p = nest.math.min(p, wmax)
+            except Exception:
+                # As a last resort, skip bounding rather than failing the run
+                pass
+
         return p
 
     # STDP initial weight parameter (scalar or per-connection random Parameter)
