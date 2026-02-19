@@ -236,9 +236,67 @@ def main():
                     help="If >0, downsample each projection's connection list to at most this many connections when computing weight mean/std (trend mode speed-up).")
     ap.add_argument("--save-weights", type=str, default="snapshots", choices=["none", "final", "snapshots"],
                     help="Save full weight vectors for plastic projections: none=only mean/std; final=store initial+final full vectors; snapshots=store full vectors at each weight sample tick (can be large).")
+    ap.add_argument("--stdp-winit-dist", type=str, default="lognormal",
+                    choices=["const", "normal", "lognormal"],
+                    help="Initial weight distribution for STDP synapses. const=all weights=W0_IN; normal/lognormal draw per-connection weights.")
+    ap.add_argument("--stdp-winit-mean", type=float, default=W0_IN,
+                    help="Target mean (approx.) for initial STDP weights.")
+    ap.add_argument("--stdp-winit-std", type=float, default=0.5,
+                    help="Std parameter for initial STDP weights. For normal: std in weight units. For lognormal: sigma of underlying normal.")
+    ap.add_argument("--stdp-winit-min", type=float, default=0.0,
+                    help="Lower bound for initial STDP weights (used via redraw/clipping).")
+    ap.add_argument("--stdp-winit-max", type=float, default=WMAX,
+                    help="Upper bound for initial STDP weights (used via redraw/clipping).")
     ap.add_argument("--nest-verbosity", type=str, default="M_ERROR",
                     help="NEST verbosity level to reduce slurmout I/O. Try M_ERROR or M_WARNING.")
     args = ap.parse_args()
+    # --- STDP randomized initial weights helper ---
+    def make_stdp_init_weight_param(dist: str, mean_w: float, std_w: float, wmin: float, wmax: float):
+        """Return either a scalar or a NEST Parameter for per-connection initial weights.
+
+        Bio-plausible default: lognormal (positive, heavy-tailed). We enforce bounds using
+        nest.math.redraw when available, otherwise fall back to the raw distribution.
+
+        Notes:
+          - For `normal`: std_w is in weight units.
+          - For `lognormal`: std_w is sigma of the underlying normal distribution.
+            We choose mu so that E[w] ~= mean_w (before redraw/clipping): mu = ln(mean_w) - 0.5*sigma^2.
+        """
+        dist = str(dist).lower().strip()
+        mean_w = float(mean_w)
+        std_w = float(std_w)
+        wmin = float(wmin)
+        wmax = float(wmax)
+
+        if dist == "const":
+            return float(mean_w)
+
+        if dist == "normal":
+            p = nest.random.normal(mean=mean_w, std=max(1e-12, std_w))
+        elif dist == "lognormal":
+            sigma = max(1e-12, std_w)
+            mu = float(np.log(max(1e-12, mean_w)) - 0.5 * sigma * sigma)
+            p = nest.random.lognormal(mean=mu, std=sigma)
+        else:
+            # Safe fallback
+            return float(mean_w)
+
+        # Enforce biologically sensible bounds (e.g., non-negative and <= Wmax)
+        try:
+            p = nest.math.redraw(p, min=wmin, max=wmax)
+        except Exception:
+            # If redraw is unavailable in the installed NEST version, keep raw distribution
+            pass
+        return p
+
+    # STDP initial weight parameter (scalar or per-connection random Parameter)
+    W_INIT_IN = make_stdp_init_weight_param(
+        args.stdp_winit_dist,
+        args.stdp_winit_mean,
+        args.stdp_winit_std,
+        args.stdp_winit_min,
+        min(float(args.stdp_winit_max), float(WMAX)),
+    )
     # --- NEST verbosity (reduce log spam / slurmout I/O) ---
     try:
         nest.set_verbosity(str(args.nest_verbosity))
@@ -311,6 +369,7 @@ def main():
         print(f"[NEST] processes={nproc} | local_threads={nest.GetKernelStatus('local_num_threads')}")
         print(
             f"[Run] sim_ms={SIM_MS} dt_ms={DT_MS} chunk_ms={CHUNK_MS} resolution_ms={float(args.resolution_ms)} phases={N_PHASES} phase_ms={PHASE_MS:.2f}")
+        print(f"[STDP init] dist={args.stdp_winit_dist} mean={args.stdp_winit_mean} std={args.stdp_winit_std} min={args.stdp_winit_min} max={min(float(args.stdp_winit_max), float(WMAX))}")
 
     # ---- build per-leg ----
     leg = {}
@@ -416,12 +475,12 @@ def main():
         L = leg[side]
 
         nest.Connect(L["cut_in"], L["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_IN_STDP},
-                     syn_spec={"synapse_model": f"stdp_cut_rge_{side}", "weight": W0_IN, "delay": DELAY_MS})
+                     syn_spec={"synapse_model": f"stdp_cut_rge_{side}", "weight": W_INIT_IN, "delay": DELAY_MS})
 
         nest.Connect(L["bs_in_e"], L["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_IN_STDP},
-                     syn_spec={"synapse_model": f"stdp_bs_rge_{side}", "weight": W0_IN, "delay": DELAY_MS})
+                     syn_spec={"synapse_model": f"stdp_bs_rge_{side}", "weight": W_INIT_IN, "delay": DELAY_MS})
         nest.Connect(L["bs_in_f"], L["rg_f"], conn_spec={"rule": "pairwise_bernoulli", "p": P_IN_STDP},
-                     syn_spec={"synapse_model": f"stdp_bs_rgf_{side}", "weight": W0_IN, "delay": DELAY_MS})
+                     syn_spec={"synapse_model": f"stdp_bs_rgf_{side}", "weight": W_INIT_IN, "delay": DELAY_MS})
 
         nest.Connect(L["base_in"], L["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": BASE_DRIVE_P},
                      syn_spec={"synapse_model": "static_synapse", "weight": BASE_DRIVE_W, "delay": DELAY_MS})
