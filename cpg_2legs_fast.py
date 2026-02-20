@@ -69,8 +69,8 @@ CUT_RATE_OFF_HZ = 0.0
 # ---------- brainstem ----------
 BS_OSC_HZ = 1.0
 BS_RATE_BASE_HZ = 0.0  # keep near-zero baseline; learning should shape effective drive via STDP weights
-# Reduced BS drive amplitude to make BS->RG STDP learning more informative (less early saturation)
-BS_RATE_AMP_HZ = 150.0
+ # Further reduced BS drive amplitude to avoid dominating RG dynamics and to amplify BS->RG STDP learning trajectories
+BS_RATE_AMP_HZ = 80.0
 BS_RATE_MIN_HZ = 0.0
 BS_PHASE = {"L": 0.0, "R": np.pi}  # left-right alternation
 
@@ -248,6 +248,10 @@ def main():
                     help="Lower bound for initial STDP weights (used via redraw/clipping).")
     ap.add_argument("--stdp-winit-max", type=float, default=WMAX,
                     help="Upper bound for initial STDP weights (used via redraw/clipping).")
+    ap.add_argument("--stdp-winit-bs-mean-mul", type=float, default=1.0,
+                    help="Multiplier applied to --stdp-winit-mean for BS->RG STDP projections only.")
+    ap.add_argument("--stdp-winit-bs-std-mul", type=float, default=2.0,
+                    help="Multiplier applied to --stdp-winit-std for BS->RG STDP projections only (widens BS init distribution).")
     ap.add_argument("--nest-verbosity", type=str, default="M_ERROR",
                     help="NEST verbosity level to reduce slurmout I/O. Try M_ERROR or M_WARNING.")
     args = ap.parse_args()
@@ -322,11 +326,21 @@ def main():
 
         return p
 
-    # STDP initial weight parameter (scalar or per-connection random Parameter)
-    W_INIT_IN = make_stdp_init_weight_param(
+    # STDP initial weight parameters (scalar or per-connection random Parameter)
+    # - CUT->RG: use the base distribution
+    # - BS->RG: optionally widen/shift the distribution to increase heterogeneity and learning headroom
+    W_INIT_CUT = make_stdp_init_weight_param(
         args.stdp_winit_dist,
         args.stdp_winit_mean,
         args.stdp_winit_std,
+        args.stdp_winit_min,
+        min(float(args.stdp_winit_max), float(WMAX)),
+    )
+
+    W_INIT_BS = make_stdp_init_weight_param(
+        args.stdp_winit_dist,
+        float(args.stdp_winit_mean) * float(getattr(args, "stdp_winit_bs_mean_mul", 1.0)),
+        float(args.stdp_winit_std) * float(getattr(args, "stdp_winit_bs_std_mul", 1.0)),
         args.stdp_winit_min,
         min(float(args.stdp_winit_max), float(WMAX)),
     )
@@ -402,7 +416,13 @@ def main():
         print(f"[NEST] processes={nproc} | local_threads={nest.GetKernelStatus('local_num_threads')}")
         print(
             f"[Run] sim_ms={SIM_MS} dt_ms={DT_MS} chunk_ms={CHUNK_MS} resolution_ms={float(args.resolution_ms)} phases={N_PHASES} phase_ms={PHASE_MS:.2f}")
-        print(f"[STDP init] dist={args.stdp_winit_dist} mean={args.stdp_winit_mean} std={args.stdp_winit_std} min={args.stdp_winit_min} max={min(float(args.stdp_winit_max), float(WMAX))}")
+        print(
+            f"[STDP init] dist={args.stdp_winit_dist} "
+            f"CUT(mean={args.stdp_winit_mean}, std={args.stdp_winit_std}) "
+            f"BS(mean={float(args.stdp_winit_mean)*float(getattr(args,'stdp_winit_bs_mean_mul',1.0))}, "
+            f"std={float(args.stdp_winit_std)*float(getattr(args,'stdp_winit_bs_std_mul',1.0))}) "
+            f"min={args.stdp_winit_min} max={min(float(args.stdp_winit_max), float(WMAX))}"
+        )
 
     # ---- build per-leg ----
     leg = {}
@@ -508,12 +528,12 @@ def main():
         L = leg[side]
 
         nest.Connect(L["cut_in"], L["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_IN_STDP},
-                     syn_spec={"synapse_model": f"stdp_cut_rge_{side}", "weight": W_INIT_IN, "delay": DELAY_MS})
+                     syn_spec={"synapse_model": f"stdp_cut_rge_{side}", "weight": W_INIT_CUT, "delay": DELAY_MS})
 
         nest.Connect(L["bs_in_e"], L["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_IN_STDP},
-                     syn_spec={"synapse_model": f"stdp_bs_rge_{side}", "weight": W_INIT_IN, "delay": DELAY_MS})
+                     syn_spec={"synapse_model": f"stdp_bs_rge_{side}", "weight": W_INIT_BS, "delay": DELAY_MS})
         nest.Connect(L["bs_in_f"], L["rg_f"], conn_spec={"rule": "pairwise_bernoulli", "p": P_IN_STDP},
-                     syn_spec={"synapse_model": f"stdp_bs_rgf_{side}", "weight": W_INIT_IN, "delay": DELAY_MS})
+                     syn_spec={"synapse_model": f"stdp_bs_rgf_{side}", "weight": W_INIT_BS, "delay": DELAY_MS})
 
         nest.Connect(L["base_in"], L["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": BASE_DRIVE_P},
                      syn_spec={"synapse_model": "static_synapse", "weight": BASE_DRIVE_W, "delay": DELAY_MS})
