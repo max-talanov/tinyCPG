@@ -99,7 +99,7 @@ BASE_DRIVE_HZ = 2.0
 BASE_DRIVE_W = 1.0
 BASE_DRIVE_P = 0.10
 
-USE_STATIC_PARALLEL = False
+USE_STATIC_PARALLEL = False # it should be always false if we want STDP working
 P_STATIC_IN = 0.03
 P_STATIC_RM = 0.03
 W_STATIC_IN = 22.0
