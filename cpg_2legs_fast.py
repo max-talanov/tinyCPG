@@ -68,8 +68,9 @@ CUT_RATE_OFF_HZ = 0.0
 
 # ---------- brainstem ----------
 BS_OSC_HZ = 1.0
-BS_RATE_BASE_HZ = 0.0
-BS_RATE_AMP_HZ = 300.0
+BS_RATE_BASE_HZ = 0.0  # keep near-zero baseline; learning should shape effective drive via STDP weights
+# Reduced BS drive amplitude to make BS->RG STDP learning more informative (less early saturation)
+BS_RATE_AMP_HZ = 150.0
 BS_RATE_MIN_HZ = 0.0
 BS_PHASE = {"L": 0.0, "R": np.pi}  # left-right alternation
 
