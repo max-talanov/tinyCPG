@@ -326,24 +326,6 @@ def main():
 
         return p
 
-    # STDP initial weight parameters (scalar or per-connection random Parameter)
-    # - CUT->RG: use the base distribution
-    # - BS->RG: optionally widen/shift the distribution to increase heterogeneity and learning headroom
-    W_INIT_CUT = make_stdp_init_weight_param(
-        args.stdp_winit_dist,
-        args.stdp_winit_mean,
-        args.stdp_winit_std,
-        args.stdp_winit_min,
-        min(float(args.stdp_winit_max), float(WMAX)),
-    )
-
-    W_INIT_BS = make_stdp_init_weight_param(
-        args.stdp_winit_dist,
-        float(args.stdp_winit_mean) * float(getattr(args, "stdp_winit_bs_mean_mul", 1.0)),
-        float(args.stdp_winit_std) * float(getattr(args, "stdp_winit_bs_std_mul", 1.0)),
-        args.stdp_winit_min,
-        min(float(args.stdp_winit_max), float(WMAX)),
-    )
     # --- NEST verbosity (reduce log spam / slurmout I/O) ---
     try:
         nest.set_verbosity(str(args.nest_verbosity))
@@ -401,6 +383,24 @@ def main():
     nest.ResetKernel()
     nest.SetKernelStatus(
         {"resolution": float(args.resolution_ms), "local_num_threads": int(args.threads), "print_time": False})
+
+    # IMPORTANT (NEST safety): Create random Parameter objects only after the kernel is configured.
+    # Creating Parameters before setting threads/virtual processes can cause incorrect behavior or segfaults.
+    W_INIT_CUT = make_stdp_init_weight_param(
+        args.stdp_winit_dist,
+        args.stdp_winit_mean,
+        args.stdp_winit_std,
+        args.stdp_winit_min,
+        min(float(args.stdp_winit_max), float(WMAX)),
+    )
+
+    W_INIT_BS = make_stdp_init_weight_param(
+        args.stdp_winit_dist,
+        float(args.stdp_winit_mean) * float(getattr(args, "stdp_winit_bs_mean_mul", 1.0)),
+        float(args.stdp_winit_std) * float(getattr(args, "stdp_winit_bs_std_mul", 1.0)),
+        args.stdp_winit_min,
+        min(float(args.stdp_winit_max), float(WMAX)),
+    )
 
     # Robust rank/proc detection:
     # - under Slurm, SLURM_PROCID/SLURM_NTASKS are the most reliable

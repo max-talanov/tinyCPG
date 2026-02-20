@@ -32,4 +32,5 @@ srun --cpu-bind=cores --distribution=block:block \
     --nest-verbosity M_ERROR \
     --max-weight-conns 2000 \
     --save-weights snapshots\
-    --long-run
+    --long-run\
+    --stdp-winit-dist lognormal
