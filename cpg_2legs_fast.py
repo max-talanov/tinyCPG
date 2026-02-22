@@ -219,6 +219,21 @@ def sample_w(model_name: str) -> np.ndarray:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", type=str, default="cpg_run.h5")
+    ap.add_argument("--outdir", type=str, default=".",
+                    help="Output directory for HDF5 when using sweep mode. Ignored unless --sweep-pairs is set.")
+    ap.add_argument("--tag", type=str, default="cpg",
+                    help="Tag used in auto-generated filenames when using sweep mode.")
+    ap.add_argument("--run-name", type=str, default="",
+                    help="Optional explicit output base name (without .h5). Overrides auto-naming in sweep mode.")
+    ap.add_argument("--seed", type=int, default=12345,
+                    help="Base RNG seed used for sweep runs (each sweep index gets a deterministic offset).")
+    ap.add_argument("--sweep-pairs", type=str, default="",
+                    help="Comma-separated list of mu:cv pairs, e.g. '0:0,1:0.8,2:0.4'. When set, runs exactly one pair selected by --sweep-run-idx or SLURM_ARRAY_TASK_ID.")
+    ap.add_argument("--sweep-run-idx", type=int, default=-1,
+                    help="Index into --sweep-pairs (0-based). If -1, uses SLURM_ARRAY_TASK_ID when available.")
+    ap.add_argument("--sweep-dist", type=str, default="lognormal_cv",
+                    choices=["const", "normal", "lognormal", "lognormal_cv"],
+                    help="Distribution used for initial STDP weights in sweep mode. lognormal_cv interprets CV directly (CV=std/mean).")
     ap.add_argument("--sim-ms", type=float, default=10000.0)
     ap.add_argument("--dt-ms", type=float, default=10.0)
     ap.add_argument("--threads", type=int, default=10)
@@ -238,7 +253,7 @@ def main():
     ap.add_argument("--save-weights", type=str, default="snapshots", choices=["none", "final", "snapshots"],
                     help="Save full weight vectors for plastic projections: none=only mean/std; final=store initial+final full vectors; snapshots=store full vectors at each weight sample tick (can be large).")
     ap.add_argument("--stdp-winit-dist", type=str, default="lognormal",
-                    choices=["const", "normal", "lognormal"],
+                    choices=["const", "normal", "lognormal", "lognormal_cv"],
                     help="Initial weight distribution for STDP synapses. const=all weights=W0_IN; normal/lognormal draw per-connection weights.")
     ap.add_argument("--stdp-winit-mean", type=float, default=W0_IN,
                     help="Target mean (approx.) for initial STDP weights.")
@@ -255,6 +270,82 @@ def main():
     ap.add_argument("--nest-verbosity", type=str, default="M_ERROR",
                     help="NEST verbosity level to reduce slurmout I/O. Try M_ERROR or M_WARNING.")
     args = ap.parse_args()
+    # ---- sweep mode (Option C): run one (mu, CV) pair per Slurm array task ----
+    def _parse_pairs(s: str):
+        s = (s or "").strip()
+        if not s:
+            return []
+        out = []
+        for item in s.split(","):
+            item = item.strip()
+            if not item:
+                continue
+            if ":" not in item:
+                raise ValueError(f"Bad --sweep-pairs item '{item}'. Expected mu:cv.")
+            mu_s, cv_s = item.split(":", 1)
+            out.append((float(mu_s), float(cv_s)))
+        return out
+
+    sweep_pairs = _parse_pairs(getattr(args, "sweep_pairs", ""))
+    sweep_active = len(sweep_pairs) > 0
+
+    sweep_idx = int(getattr(args, "sweep_run_idx", -1))
+    if sweep_active and sweep_idx < 0:
+        if "SLURM_ARRAY_TASK_ID" in os.environ:
+            sweep_idx = int(os.environ.get("SLURM_ARRAY_TASK_ID", "0"))
+        else:
+            sweep_idx = 0
+
+    sweep_mu = None
+    sweep_cv = None
+    sweep_sigma = None
+    run_seed = int(getattr(args, "seed", 12345))
+
+    if sweep_active:
+        if sweep_idx < 0 or sweep_idx >= len(sweep_pairs):
+            raise ValueError(f"--sweep-run-idx={sweep_idx} out of range for {len(sweep_pairs)} pairs")
+        sweep_mu, sweep_cv = sweep_pairs[sweep_idx]
+        sweep_sigma = float(sweep_cv) * float(sweep_mu)
+
+        # Deterministic per-index seed offset (reduces accidental correlations across tasks)
+        run_seed = int(getattr(args, "seed", 12345)) + int(sweep_idx) * 10007
+        np.random.seed(run_seed)
+
+        # Auto-name output unless user explicitly set --out to something other than the default
+        outdir = str(getattr(args, "outdir", "."))
+        tag = str(getattr(args, "tag", "cpg"))
+        run_name = str(getattr(args, "run_name", "")).strip()
+
+        if run_name:
+            base = run_name
+        else:
+            base = f"cpg_{tag}_idx{sweep_idx:02d}_mu{sweep_mu:05.2f}_cv{sweep_cv:05.2f}_seed{run_seed}"
+
+        if not base.endswith(".h5"):
+            base += ".h5"
+
+        if str(getattr(args, "out", "")).strip() in ("", "cpg_run.h5"):
+            args.out = os.path.join(outdir, base)
+
+        # In sweep mode, override STDP init params to match (mu, CV)
+        sweep_dist = str(getattr(args, "sweep_dist", "lognormal_cv")).lower().strip()
+        if sweep_dist == "const":
+            args.stdp_winit_dist = "const"
+            args.stdp_winit_mean = float(sweep_mu)
+            args.stdp_winit_std = 0.0
+        elif sweep_dist == "normal":
+            args.stdp_winit_dist = "normal"
+            args.stdp_winit_mean = float(sweep_mu)
+            args.stdp_winit_std = float(sweep_sigma)  # std in weight units
+        elif sweep_dist == "lognormal":
+            # Legacy: args.stdp_winit_std is interpreted as underlying-normal sigma
+            args.stdp_winit_dist = "lognormal"
+            args.stdp_winit_mean = float(sweep_mu)
+        else:
+            # lognormal_cv: args.stdp_winit_std is interpreted as CV (std/mean)
+            args.stdp_winit_dist = "lognormal_cv"
+            args.stdp_winit_mean = float(sweep_mu)
+            args.stdp_winit_std = float(sweep_cv)
     # --- STDP randomized initial weights helper ---
     def make_stdp_init_weight_param(dist: str, mean_w: float, std_w: float, wmin: float, wmax: float):
         """Return either a scalar or a NEST Parameter for per-connection initial weights.
@@ -266,6 +357,7 @@ def main():
           - For `normal`: std_w is in weight units.
           - For `lognormal`: std_w is sigma of the underlying normal distribution.
             We choose mu so that E[w] ~= mean_w (before redraw/clipping): mu = ln(mean_w) - 0.5*sigma^2.
+          - For `lognormal_cv`: std_w is interpreted as CV in weight space (std/mean). We convert CV->sigma via sigma = sqrt(log(1+CV^2)) and choose mu so E[w] ~= mean_w.
         """
         dist = str(dist).lower().strip()
         mean_w = float(mean_w)
@@ -278,6 +370,26 @@ def main():
 
         if dist == "normal":
             p = nest.random.normal(mean=mean_w, std=max(1e-12, std_w))
+
+        elif dist == "lognormal_cv":
+            # std_w is CV in weight space; convert to underlying-normal sigma
+            if mean_w <= 0.0:
+                return float(wmin)
+            cv = max(0.0, std_w)
+            sigma = float(np.sqrt(np.log(1.0 + cv * cv)))
+            mu = float(np.log(max(1e-12, mean_w)) - 0.5 * sigma * sigma)
+
+            p = None
+            try:
+                p = nest.random.lognormal(mu=mu, sigma=max(1e-12, sigma))
+            except Exception:
+                try:
+                    p = nest.random.lognormal(mean=mu, std=max(1e-12, sigma))
+                except Exception:
+                    try:
+                        p = nest.random.lognormal(mean=mean_w, std=max(1e-12, sigma))
+                    except Exception:
+                        return float(mean_w)
 
         elif dist == "lognormal":
             # IMPORTANT: NEST's lognormal parameterization can vary by version.
@@ -384,6 +496,14 @@ def main():
     nest.SetKernelStatus(
         {"resolution": float(args.resolution_ms), "local_num_threads": int(args.threads), "print_time": False})
 
+    # Ensure output directory exists (especially for sweep auto-naming)
+    try:
+        out_dirname = os.path.dirname(str(args.out))
+        if out_dirname:
+            os.makedirs(out_dirname, exist_ok=True)
+    except Exception:
+        pass
+
     # IMPORTANT (NEST safety): Create random Parameter objects only after the kernel is configured.
     # Creating Parameters before setting threads/virtual processes can cause incorrect behavior or segfaults.
     W_INIT_CUT = make_stdp_init_weight_param(
@@ -411,6 +531,10 @@ def main():
     else:
         rank = getattr(nest, "Rank", lambda: 0)()
         nproc = getattr(nest, "NumProcesses", lambda: 1)()
+
+    if rank == 0 and ("sweep_active" in locals()) and sweep_active:
+        print(f"[Sweep] active=True idx={sweep_idx} mu={sweep_mu} cv={sweep_cv} sigma={sweep_sigma} dist={args.stdp_winit_dist} seed={run_seed}")
+        print(f"[Sweep] out={args.out}")
 
     if rank == 0:
         print(f"[NEST] processes={nproc} | local_threads={nest.GetKernelStatus('local_num_threads')}")
@@ -949,6 +1073,21 @@ def main():
         h5.attrs["local_threads"] = int(args.threads)
         h5.attrs["mpi_processes"] = int(nproc)
         h5.attrs["save_weights_mode"] = str(args.save_weights)
+        # Sweep metadata (if active)
+        if ("sweep_active" in locals()) and sweep_active:
+            h5.attrs["sweep_active"] = True
+            h5.attrs["sweep_idx"] = int(sweep_idx)
+            h5.attrs["winit_mu"] = float(sweep_mu)
+            h5.attrs["winit_cv"] = float(sweep_cv)
+            h5.attrs["winit_sigma"] = float(sweep_sigma)
+            h5.attrs["winit_dist"] = str(args.stdp_winit_dist)
+            h5.attrs["seed"] = int(run_seed)
+            if "SLURM_JOB_ID" in os.environ:
+                h5.attrs["slurm_job_id"] = str(os.environ.get("SLURM_JOB_ID"))
+            if "SLURM_ARRAY_TASK_ID" in os.environ:
+                h5.attrs["slurm_array_task_id"] = str(os.environ.get("SLURM_ARRAY_TASK_ID"))
+        else:
+            h5.attrs["sweep_active"] = False
 
         gstats = h5.create_group("stats")
         for k, v in stats_nodes.items():
