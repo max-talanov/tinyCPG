@@ -254,7 +254,51 @@ def main():
                     help="Multiplier applied to --stdp-winit-std for BS->RG STDP projections only (widens BS init distribution).")
     ap.add_argument("--nest-verbosity", type=str, default="M_ERROR",
                     help="NEST verbosity level to reduce slurmout I/O. Try M_ERROR or M_WARNING.")
+    ap.add_argument("--params-json", type=str, default=None,
+                    help="Path to JSON file with parameter overrides for GA optimization. "
+                         "Keys map to module-level constants (e.g. LAMBDA, ALPHA, BS_RATE_AMP_HZ).")
     args = ap.parse_args()
+
+    # --- Apply parameter overrides from JSON (for GA optimization) ---
+    if args.params_json is not None:
+        import json as _json
+        with open(args.params_json, "r") as _f:
+            _overrides = _json.load(_f)
+        _GLOBAL_MAP = {
+            "stdp_lambda": "LAMBDA",
+            "stdp_alpha": "ALPHA",
+            "stdp_mu_plus": "MU_PLUS",
+            "stdp_mu_minus": "MU_MINUS",
+            "stdp_wmax": "WMAX",
+            "w0_in": "W0_IN",
+            "w0_rm": "W0_RM",
+            "bs_rate_amp_hz": "BS_RATE_AMP_HZ",
+            "bs_osc_hz": "BS_OSC_HZ",
+            "base_drive_hz": "BASE_DRIVE_HZ",
+            "base_drive_w": "BASE_DRIVE_W",
+            "cut_rate_on_hz": "CUT_RATE_ON_HZ",
+            "w_rg_recip": "W_IN2RG",
+            "w_comm_inh": "W_COMM_INH",
+            "p_comm": "P_COMM",
+            "ia2rg_w": "IA2RG_W",
+            "stretch_gain": "STRETCH_GAIN",
+            "ia_k_force": "IA_K_FORCE",
+        }
+        _g = globals()
+        _applied = []
+        for _key, _val in _overrides.items():
+            _gname = _GLOBAL_MAP.get(_key, _key.upper())
+            if _gname in _g:
+                _g[_gname] = type(_g[_gname])(_val)
+                _applied.append(f"{_key}->{_gname}={_g[_gname]}")
+        if _applied:
+            print(f"[params-json] Applied {len(_applied)} overrides: {', '.join(_applied)}")
+        # Propagate Wmax override to STDP CLI defaults
+        if "stdp_wmax" in _overrides:
+            args.stdp_winit_max = float(WMAX)
+        if "w0_in" in _overrides:
+            args.stdp_winit_mean = float(W0_IN)
+
     # --- STDP randomized initial weights helper ---
     def make_stdp_init_weight_param(dist: str, mean_w: float, std_w: float, wmin: float, wmax: float):
         """Return either a scalar or a NEST Parameter for per-connection initial weights.
