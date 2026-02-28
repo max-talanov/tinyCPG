@@ -26,7 +26,7 @@ PY
 
 # 10 diagnostic (mu,CV) pairs (Option C)
 SWEEP_PAIRS="0:0,1:0.8,2:0.4,3:0.2,5:0.1,8:0.05,11:0.2,14:0.4,20:0.8,25:0.05"
-OUTDIR="results/sweeps/winit_diag"
+OUTDIR="results/winit_diag"
 TAG="winit_diag"
 BASE_SEED=12345
 
@@ -39,7 +39,7 @@ srun --cpu-bind=cores --distribution=block:block \
     --sweep-pairs "$SWEEP_PAIRS" \
     --sweep-run-idx ${SLURM_ARRAY_TASK_ID} \
     --sweep-dist lognormal_cv \
-    --sim-ms 60000 \
+    --sim-ms 120000 \
     --dt-ms 10 \
     --threads $SLURM_CPUS_PER_TASK \
     --nest-verbosity M_ERROR \
