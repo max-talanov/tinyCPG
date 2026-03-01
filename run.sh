@@ -45,4 +45,7 @@ srun --cpu-bind=cores --distribution=block:block \
     --nest-verbosity M_ERROR \
     --max-weight-conns 2000 \
     --save-weights snapshots \
+    --delay-model length_velocity \
+    --species human \
+    --delay-jitter-ms 0.2 \
     --long-run
