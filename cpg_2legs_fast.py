@@ -110,6 +110,85 @@ P_COMM = 0.08
 W_COMM_INH = -10.0
 DELAY_COMM_MS = 1.0
 
+# ---------- conduction + synaptic delay presets ----------
+# Delay model: delay_ms = syn_delay_ms + (length_m / velocity_mps)*1000 + jitter
+# Notes:
+#  - `fixed` preserves legacy behavior using DELAY_MS/DELAY_RECIP_MS/etc.
+#  - `length_velocity` uses coarse, tunable presets.
+#  - Human presets intentionally use longer path lengths than rat.
+#  - Delays are clipped to at least the kernel resolution.
+DELAY_PRESETS = {
+    "rat": {
+        "cut_to_rg":   {"syn_delay_ms": 1.0, "length_m": 0.005, "velocity_mps": 5.0},
+        "bs_to_rg":    {"syn_delay_ms": 1.0, "length_m": 0.010, "velocity_mps": 5.0},
+        "base_to_rg":  {"syn_delay_ms": 1.0, "length_m": 0.010, "velocity_mps": 5.0},
+        "rg_to_m":     {"syn_delay_ms": 1.0, "length_m": 0.005, "velocity_mps": 5.0},
+        "m_to_mus":    {"syn_delay_ms": 1.0, "length_m": 0.005, "velocity_mps": 5.0},
+        "ia_path":     {"syn_delay_ms": 1.0, "length_m": 0.010, "velocity_mps": 10.0},
+        "rg_rec":      {"syn_delay_ms": 0.8, "length_m": 0.002, "velocity_mps": 5.0},
+        "rg_recip":    {"syn_delay_ms": 1.0, "length_m": 0.004, "velocity_mps": 5.0},
+        "motor_e2f":   {"syn_delay_ms": 1.0, "length_m": 0.004, "velocity_mps": 5.0},
+        "motor_f2e":   {"syn_delay_ms": 1.0, "length_m": 0.004, "velocity_mps": 5.0},
+        "commissural": {"syn_delay_ms": 1.0, "length_m": 0.006, "velocity_mps": 5.0},
+    },
+    "human": {
+        "cut_to_rg":   {"syn_delay_ms": 1.0, "length_m": 0.020, "velocity_mps": 30.0},
+        "bs_to_rg":    {"syn_delay_ms": 1.0, "length_m": 0.050, "velocity_mps": 40.0},
+        "base_to_rg":  {"syn_delay_ms": 1.0, "length_m": 0.050, "velocity_mps": 40.0},
+        "rg_to_m":     {"syn_delay_ms": 1.0, "length_m": 0.020, "velocity_mps": 30.0},
+        "m_to_mus":    {"syn_delay_ms": 1.0, "length_m": 0.020, "velocity_mps": 30.0},
+        "ia_path":     {"syn_delay_ms": 1.0, "length_m": 0.040, "velocity_mps": 30.0},
+        "rg_rec":      {"syn_delay_ms": 0.8, "length_m": 0.010, "velocity_mps": 25.0},
+        "rg_recip":    {"syn_delay_ms": 1.0, "length_m": 0.015, "velocity_mps": 25.0},
+        "motor_e2f":   {"syn_delay_ms": 1.0, "length_m": 0.015, "velocity_mps": 25.0},
+        "motor_f2e":   {"syn_delay_ms": 1.0, "length_m": 0.015, "velocity_mps": 25.0},
+        "commissural": {"syn_delay_ms": 1.0, "length_m": 0.040, "velocity_mps": 30.0},
+    },
+}
+
+
+def _delay_ms_from_preset(preset: dict, delay_scale: float) -> float:
+    syn_ms = float(preset.get("syn_delay_ms", 1.0))
+    length_m = float(preset.get("length_m", 0.0))
+    vel = float(preset.get("velocity_mps", 1.0))
+    vel = max(1e-9, vel)
+    base_ms = syn_ms + (length_m / vel) * 1000.0
+    return float(delay_scale) * float(base_ms)
+
+
+def make_delay_param(delay_model: str, species: str, key: str, *,
+                     fallback_ms: float, res_ms: float, jitter_ms: float, delay_scale: float):
+    """Return a scalar or a NEST Parameter for synaptic delays.
+
+    - fixed: returns fallback_ms
+    - length_velocity: returns base_ms (+ optional Gaussian jitter), clipped to >= res_ms
+
+    IMPORTANT: Call this only after nest.SetKernelStatus().
+    """
+    delay_model = str(delay_model).lower().strip()
+    species = str(species).lower().strip()
+
+    if delay_model == "fixed":
+        return float(fallback_ms)
+
+    presets = DELAY_PRESETS.get(species, DELAY_PRESETS["rat"])
+    preset = presets.get(key, None)
+    base_ms = float(fallback_ms) if preset is None else _delay_ms_from_preset(preset, delay_scale)
+
+    p = float(base_ms)
+    jm = float(max(0.0, jitter_ms))
+    if jm > 0.0:
+        p = p + nest.random.normal(mean=0.0, std=jm)
+
+    # Clip to at least the kernel resolution
+    try:
+        p = nest.math.max(p, float(max(1e-9, res_ms)))
+    except Exception:
+        p = float(max(float(p), float(max(1e-9, res_ms))))
+
+    return p
+
+
 # ---------- STDP ----------
 TAU_PLUS = 20.0
 # Lower learning rate and mild LTP/LTD balance + multiplicative STDP to reduce hard-boundary pileups at 0/Wmax
@@ -248,6 +327,16 @@ def main():
                     help="Simulate in larger chunks to reduce Python<->NEST call overhead (ms). Must be >= dt-ms. Try 50 or 100.")
     ap.add_argument("--long-run", action="store_true",
                     help="Enable long-run defaults (aimed at >=30s sims): coarser chunking, less frequent sampling, and weight downsampling for trend plots.")
+    # ---- delay model (rat vs human) ----
+    ap.add_argument("--species", type=str, default="rat", choices=["rat", "human"],
+                    help="Preset for axonal/synaptic delays. rat preserves legacy behavior; human uses longer path lengths.")
+    ap.add_argument("--delay-model", type=str, default="fixed", choices=["fixed", "length_velocity"],
+                    help="fixed uses legacy delay constants; length_velocity uses delay = syn_delay + length/velocity (+ jitter).")
+    ap.add_argument("--delay-jitter-ms", type=float, default=0.2,
+                    help="Std-dev (ms) for per-connection delay jitter when using length_velocity. Set 0 to disable.")
+    ap.add_argument("--delay-scale", type=float, default=1.0,
+                    help="Global multiplier on computed delays (useful for quick calibration).")
+
     ap.add_argument("--max-weight-conns", type=int, default=0,
                     help="If >0, downsample each projection's connection list to at most this many connections when computing weight mean/std (trend mode speed-up).")
     ap.add_argument("--save-weights", type=str, default="snapshots", choices=["none", "final", "snapshots"],
@@ -496,6 +585,48 @@ def main():
     nest.SetKernelStatus(
         {"resolution": float(args.resolution_ms), "local_num_threads": int(args.threads), "print_time": False})
 
+    # ---- delay parameters (must be created AFTER kernel config) ----
+    delay_model = str(getattr(args, "delay_model", "fixed"))
+    species = str(getattr(args, "species", "rat"))
+    delay_jitter_ms = float(getattr(args, "delay_jitter_ms", 0.0))
+    delay_scale = float(getattr(args, "delay_scale", 1.0))
+
+    delay = {
+        "cut_to_rg": make_delay_param(delay_model, species, "cut_to_rg",
+                                      fallback_ms=DELAY_MS, res_ms=RES_MS,
+                                      jitter_ms=delay_jitter_ms, delay_scale=delay_scale),
+        "bs_to_rg": make_delay_param(delay_model, species, "bs_to_rg",
+                                     fallback_ms=DELAY_MS, res_ms=RES_MS,
+                                     jitter_ms=delay_jitter_ms, delay_scale=delay_scale),
+        "base_to_rg": make_delay_param(delay_model, species, "base_to_rg",
+                                       fallback_ms=DELAY_MS, res_ms=RES_MS,
+                                       jitter_ms=delay_jitter_ms, delay_scale=delay_scale),
+        "rg_to_m": make_delay_param(delay_model, species, "rg_to_m",
+                                    fallback_ms=DELAY_MS, res_ms=RES_MS,
+                                    jitter_ms=delay_jitter_ms, delay_scale=delay_scale),
+        "m_to_mus": make_delay_param(delay_model, species, "m_to_mus",
+                                     fallback_ms=DELAY_MS, res_ms=RES_MS,
+                                     jitter_ms=delay_jitter_ms, delay_scale=delay_scale),
+        "ia_path": make_delay_param(delay_model, species, "ia_path",
+                                    fallback_ms=DELAY_MS, res_ms=RES_MS,
+                                    jitter_ms=delay_jitter_ms, delay_scale=delay_scale),
+        "rg_rec": make_delay_param(delay_model, species, "rg_rec",
+                                   fallback_ms=DELAY_MS, res_ms=RES_MS,
+                                   jitter_ms=delay_jitter_ms, delay_scale=delay_scale),
+        "rg_recip": make_delay_param(delay_model, species, "rg_recip",
+                                     fallback_ms=DELAY_RECIP_MS, res_ms=RES_MS,
+                                     jitter_ms=delay_jitter_ms, delay_scale=delay_scale),
+        "motor_e2f": make_delay_param(delay_model, species, "motor_e2f",
+                                      fallback_ms=DELAY_MOTOR_RECIP_E2F_MS, res_ms=RES_MS,
+                                      jitter_ms=delay_jitter_ms, delay_scale=delay_scale),
+        "motor_f2e": make_delay_param(delay_model, species, "motor_f2e",
+                                      fallback_ms=DELAY_MOTOR_RECIP_F2E_MS, res_ms=RES_MS,
+                                      jitter_ms=delay_jitter_ms, delay_scale=delay_scale),
+        "commissural": make_delay_param(delay_model, species, "commissural",
+                                        fallback_ms=DELAY_COMM_MS, res_ms=RES_MS,
+                                        jitter_ms=delay_jitter_ms, delay_scale=delay_scale),
+    }
+
     # Ensure output directory exists (especially for sweep auto-naming)
     try:
         out_dirname = os.path.dirname(str(args.out))
@@ -652,76 +783,76 @@ def main():
         L = leg[side]
 
         nest.Connect(L["cut_in"], L["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_IN_STDP},
-                     syn_spec={"synapse_model": f"stdp_cut_rge_{side}", "weight": W_INIT_CUT, "delay": DELAY_MS})
+                     syn_spec={"synapse_model": f"stdp_cut_rge_{side}", "weight": W_INIT_CUT, "delay": delay["cut_to_rg"]})
 
         nest.Connect(L["bs_in_e"], L["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_IN_STDP},
-                     syn_spec={"synapse_model": f"stdp_bs_rge_{side}", "weight": W_INIT_BS, "delay": DELAY_MS})
+                     syn_spec={"synapse_model": f"stdp_bs_rge_{side}", "weight": W_INIT_BS, "delay": delay["bs_to_rg"]})
         nest.Connect(L["bs_in_f"], L["rg_f"], conn_spec={"rule": "pairwise_bernoulli", "p": P_IN_STDP},
-                     syn_spec={"synapse_model": f"stdp_bs_rgf_{side}", "weight": W_INIT_BS, "delay": DELAY_MS})
+                     syn_spec={"synapse_model": f"stdp_bs_rgf_{side}", "weight": W_INIT_BS, "delay": delay["bs_to_rg"]})
 
         nest.Connect(L["base_in"], L["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": BASE_DRIVE_P},
-                     syn_spec={"synapse_model": "static_synapse", "weight": BASE_DRIVE_W, "delay": DELAY_MS})
+                     syn_spec={"synapse_model": "static_synapse", "weight": BASE_DRIVE_W, "delay": delay["base_to_rg"]})
         nest.Connect(L["base_in"], L["rg_f"], conn_spec={"rule": "pairwise_bernoulli", "p": BASE_DRIVE_P},
-                     syn_spec={"synapse_model": "static_synapse", "weight": BASE_DRIVE_W, "delay": DELAY_MS})
+                     syn_spec={"synapse_model": "static_synapse", "weight": BASE_DRIVE_W, "delay": delay["base_to_rg"]})
 
         nest.Connect(L["rg_e"], L["m_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_IN_STDP},
-                     syn_spec={"synapse_model": "static_synapse", "weight": W0_RM, "delay": DELAY_MS})
+                     syn_spec={"synapse_model": "static_synapse", "weight": W0_RM, "delay": delay["rg_to_m"]})
         nest.Connect(L["rg_f"], L["m_f"], conn_spec={"rule": "pairwise_bernoulli", "p": P_IN_STDP},
-                     syn_spec={"synapse_model": "static_synapse", "weight": W0_RM, "delay": DELAY_MS})
+                     syn_spec={"synapse_model": "static_synapse", "weight": W0_RM, "delay": delay["rg_to_m"]})
 
         # Motor-pool reciprocal inhibition (helps enforce E/F alternation)
         nest.Connect(L["m_e"], L["m_f"], conn_spec={"rule": "pairwise_bernoulli", "p": P_MOTOR_RECIP},
                      syn_spec={"synapse_model": "static_synapse", "weight": W_MOTOR_RECIP,
-                               "delay": DELAY_MOTOR_RECIP_E2F_MS})
+                               "delay": delay["motor_e2f"]})
         nest.Connect(L["m_f"], L["m_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_MOTOR_RECIP},
                      syn_spec={"synapse_model": "static_synapse", "weight": W_MOTOR_RECIP,
-                               "delay": DELAY_MOTOR_RECIP_F2E_MS})
+                               "delay": delay["motor_f2e"]})
 
         nest.Connect(L["m_e"], L["mus_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_M2MUS},
-                     syn_spec={"synapse_model": "static_synapse", "weight": W_M2MUS, "delay": DELAY_MS})
+                     syn_spec={"synapse_model": "static_synapse", "weight": W_M2MUS, "delay": delay["m_to_mus"]})
         nest.Connect(L["m_f"], L["mus_f"], conn_spec={"rule": "pairwise_bernoulli", "p": P_M2MUS},
-                     syn_spec={"synapse_model": "static_synapse", "weight": W_M2MUS, "delay": DELAY_MS})
+                     syn_spec={"synapse_model": "static_synapse", "weight": W_M2MUS, "delay": delay["m_to_mus"]})
 
         # Ia afferent pathways via inhibitory interneurons:
         # - Ia from extensor inhibits flexor motor pool
         # - Ia from flexor inhibits extensor motor pool
         nest.Connect(L["ia_in_e"], L["ia_int_e"], conn_spec={"rule": "pairwise_bernoulli", "p": IA2RG_P},
-                     syn_spec={"synapse_model": "static_synapse", "weight": W_IA_IN2INT, "delay": DELAY_MS})
+                     syn_spec={"synapse_model": "static_synapse", "weight": W_IA_IN2INT, "delay": delay["ia_path"]})
         nest.Connect(L["ia_int_e"], L["m_f"], conn_spec={"rule": "pairwise_bernoulli", "p": IA2RG_P},
-                     syn_spec={"synapse_model": "static_synapse", "weight": W_IA_INT2ANT, "delay": DELAY_MS})
+                     syn_spec={"synapse_model": "static_synapse", "weight": W_IA_INT2ANT, "delay": delay["ia_path"]})
 
         nest.Connect(L["ia_in_f"], L["ia_int_f"], conn_spec={"rule": "pairwise_bernoulli", "p": IA2RG_P},
-                     syn_spec={"synapse_model": "static_synapse", "weight": W_IA_IN2INT, "delay": DELAY_MS})
+                     syn_spec={"synapse_model": "static_synapse", "weight": W_IA_IN2INT, "delay": delay["ia_path"]})
         nest.Connect(L["ia_int_f"], L["m_e"], conn_spec={"rule": "pairwise_bernoulli", "p": IA2RG_P},
-                     syn_spec={"synapse_model": "static_synapse", "weight": W_IA_INT2ANT, "delay": DELAY_MS})
+                     syn_spec={"synapse_model": "static_synapse", "weight": W_IA_INT2ANT, "delay": delay["ia_path"]})
 
         nest.Connect(L["rg_e"], L["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_RG_REC},
-                     syn_spec={"synapse_model": "static_synapse", "weight": 8.0, "delay": DELAY_MS})
+                     syn_spec={"synapse_model": "static_synapse", "weight": 8.0, "delay": delay["rg_rec"]})
         nest.Connect(L["rg_f"], L["rg_f"], conn_spec={"rule": "pairwise_bernoulli", "p": P_RG_REC},
-                     syn_spec={"synapse_model": "static_synapse", "weight": 8.0, "delay": DELAY_MS})
+                     syn_spec={"synapse_model": "static_synapse", "weight": 8.0, "delay": delay["rg_rec"]})
 
         # Reciprocal inhibition mediated by inhibitory interneurons (InE, InF)
         nest.Connect(L["rg_e"], L["in_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_RG_RECIP},
-                     syn_spec={"synapse_model": "static_synapse", "weight": W_RG2IN, "delay": DELAY_RECIP_MS})
+                     syn_spec={"synapse_model": "static_synapse", "weight": W_RG2IN, "delay": delay["rg_recip"]})
         nest.Connect(L["in_e"], L["rg_f"], conn_spec={"rule": "pairwise_bernoulli", "p": P_RG_RECIP},
-                     syn_spec={"synapse_model": "static_synapse", "weight": W_IN2RG, "delay": DELAY_RECIP_MS})
+                     syn_spec={"synapse_model": "static_synapse", "weight": W_IN2RG, "delay": delay["rg_recip"]})
 
         nest.Connect(L["rg_f"], L["in_f"], conn_spec={"rule": "pairwise_bernoulli", "p": P_RG_RECIP},
-                     syn_spec={"synapse_model": "static_synapse", "weight": W_RG2IN, "delay": DELAY_RECIP_MS})
+                     syn_spec={"synapse_model": "static_synapse", "weight": W_RG2IN, "delay": delay["rg_recip"]})
         nest.Connect(L["in_f"], L["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_RG_RECIP},
-                     syn_spec={"synapse_model": "static_synapse", "weight": W_IN2RG, "delay": DELAY_RECIP_MS})
+                     syn_spec={"synapse_model": "static_synapse", "weight": W_IN2RG, "delay": delay["rg_recip"]})
 
         if USE_STATIC_PARALLEL:
             nest.Connect(L["bs_in_e"], L["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_STATIC_IN},
-                         syn_spec={"synapse_model": "static_synapse", "weight": W_STATIC_IN, "delay": DELAY_MS})
+                         syn_spec={"synapse_model": "static_synapse", "weight": W_STATIC_IN, "delay": delay["base_to_rg"]})
             nest.Connect(L["bs_in_f"], L["rg_f"], conn_spec={"rule": "pairwise_bernoulli", "p": P_STATIC_IN},
-                         syn_spec={"synapse_model": "static_synapse", "weight": W_STATIC_IN, "delay": DELAY_MS})
+                         syn_spec={"synapse_model": "static_synapse", "weight": W_STATIC_IN, "delay": delay["base_to_rg"]})
             nest.Connect(L["cut_in"], L["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_STATIC_IN},
-                         syn_spec={"synapse_model": "static_synapse", "weight": W_STATIC_IN, "delay": DELAY_MS})
+                         syn_spec={"synapse_model": "static_synapse", "weight": W_STATIC_IN, "delay": delay["base_to_rg"]})
             nest.Connect(L["rg_e"], L["m_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_STATIC_RM},
-                         syn_spec={"synapse_model": "static_synapse", "weight": W_STATIC_RM, "delay": DELAY_MS})
+                         syn_spec={"synapse_model": "static_synapse", "weight": W_STATIC_RM, "delay": delay["base_to_rg"]})
             nest.Connect(L["rg_f"], L["m_f"], conn_spec={"rule": "pairwise_bernoulli", "p": P_STATIC_RM},
-                         syn_spec={"synapse_model": "static_synapse", "weight": W_STATIC_RM, "delay": DELAY_MS})
+                         syn_spec={"synapse_model": "static_synapse", "weight": W_STATIC_RM, "delay": delay["base_to_rg"]})
 
         # ---- commissural ----
     if ENABLE_COMMISSURAL:
@@ -729,9 +860,9 @@ def main():
         RR = leg["R"]
         # Physiological simplification: flexor rhythm generators mutually inhibit across the midline
         nest.Connect(LL["rg_f"], RR["rg_f"], conn_spec={"rule": "pairwise_bernoulli", "p": P_COMM},
-                     syn_spec={"synapse_model": "static_synapse", "weight": W_COMM_INH, "delay": DELAY_COMM_MS})
+                     syn_spec={"synapse_model": "static_synapse", "weight": W_COMM_INH, "delay": delay["commissural"]})
         nest.Connect(RR["rg_f"], LL["rg_f"], conn_spec={"rule": "pairwise_bernoulli", "p": P_COMM},
-                     syn_spec={"synapse_model": "static_synapse", "weight": W_COMM_INH, "delay": DELAY_COMM_MS})
+                     syn_spec={"synapse_model": "static_synapse", "weight": W_COMM_INH, "delay": delay["commissural"]})
 
     # ---- stats (pre-sim) ----
 
@@ -1073,6 +1204,10 @@ def main():
         h5.attrs["local_threads"] = int(args.threads)
         h5.attrs["mpi_processes"] = int(nproc)
         h5.attrs["save_weights_mode"] = str(args.save_weights)
+        h5.attrs["delay_model"] = str(getattr(args, "delay_model", "fixed"))
+        h5.attrs["species"] = str(getattr(args, "species", "rat"))
+        h5.attrs["delay_jitter_ms"] = float(getattr(args, "delay_jitter_ms", 0.0))
+        h5.attrs["delay_scale"] = float(getattr(args, "delay_scale", 1.0))
         # Sweep metadata (if active)
         if ("sweep_active" in locals()) and sweep_active:
             h5.attrs["sweep_active"] = True
