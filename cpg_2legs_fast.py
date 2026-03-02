@@ -67,16 +67,17 @@ CUT_RATE_ON_HZ = 200.0
 CUT_RATE_OFF_HZ = 0.0
 
 # ---------- brainstem ----------
-BS_OSC_HZ = 1.0
+BS_OSC_HZ = 2.0  # MOD_FIG10: increase RG drive oscillation freq to ~2 Hz baseline (paper-like α≈0.1)
 BS_RATE_BASE_HZ = 0.0  # keep near-zero baseline; learning should shape effective drive via STDP weights
  # Further reduced BS drive amplitude to avoid dominating RG dynamics and to amplify BS->RG STDP learning trajectories
-BS_RATE_AMP_HZ = 80.0
+BS_RATE_AMP_HZ = 30.0  # MOD_FIG10: reduce BS modulation amplitude (was 80) to avoid overdriving RG and inflating population rates
 BS_RATE_MIN_HZ = 0.0
 BS_PHASE = {"L": 0.0, "R": np.pi}  # left-right alternation
 
 # ---------- connectivity ----------
 P_IN_STDP = 0.5
 P_RG_REC = 0.12
+W_RG_REC = 4.0  # MOD_FIG10: reduce RG self-excitation (was hardcoded 8.0) to bring rates/burst heights closer to paper
 DELAY_MS = 1.0
 
 P_RG_RECIP = 0.20
@@ -204,14 +205,15 @@ W0_RM = 30.0
 # ---------- Izhikevich ----------
 izh_params = dict(a=0.02, b=0.2, c=-65.0, d=8.0, V_th=30.0, V_min=-120.0)
 izh_inh_params = dict(a=0.1, b=0.2, c=-65.0, d=2.0, V_th=30.0, V_min=-120.0)  # UPDATED_v7
-I_E_RG = 1.0
+I_E_RGE = 2.0  # MOD_FIG10: extensor RG is more tonic; inhibition carves rhythm (was I_E_RG=1.0)
+I_E_RGF = 1.0  # MOD_FIG10: keep flexor RG baseline drive lower; flexor bursts arise from intrinsic parameters + network
 
 # Izhikevich "chattering" (bursting-like) parameters for RG-F excitatory neurons
 # (Izhikevich 2003/2004 canonical set)
 RGF_A = 0.02
 RGF_B = 0.2
-RGF_C = -50.0
-RGF_D = 2.0
+RGF_C = -55.0  # MOD_FIG10: shift RG-F from "chattering" toward intrinsic-bursting-ish regime (slower intra-burst rate)
+RGF_D = 4.0    # MOD_FIG10: paired with c=-55 to reduce spike "machine-gun" and match broader bursts
 I_E_MOTOR = 1.0
 
 # ---------- muscle proxies ----------
@@ -730,9 +732,9 @@ def main():
             nest.SetStatus(pop, izh_params)
         for pop in (ia_int_e, ia_int_f, in_e, in_f):
             nest.SetStatus(pop, izh_inh_params)
-        nest.SetStatus(rg_e, {"V_m": -65.0, "U_m": 0.2 * (-65.0), "I_e": I_E_RG})
+        nest.SetStatus(rg_e, {"V_m": -65.0, "U_m": 0.2 * (-65.0), "I_e": I_E_RGE})  # MOD_FIG10
         nest.SetStatus(rg_f, {"a": RGF_A, "b": RGF_B, "c": RGF_C, "d": RGF_D,
-                              "V_m": -65.0, "U_m": RGF_B * (-65.0), "I_e": I_E_RG})
+                              "V_m": -65.0, "U_m": RGF_B * (-65.0), "I_e": I_E_RGF})  # MOD_FIG10)
         nest.SetStatus(m_e, {"V_m": -65.0, "U_m": 0.2 * (-65.0), "I_e": I_E_MOTOR})
         nest.SetStatus(m_f, {"V_m": -65.0, "U_m": 0.2 * (-65.0), "I_e": I_E_MOTOR})
 
@@ -827,10 +829,9 @@ def main():
                      syn_spec={"synapse_model": "static_synapse", "weight": W_IA_INT2ANT, "delay": delay["ia_path"]})
 
         nest.Connect(L["rg_e"], L["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_RG_REC},
-                     syn_spec={"synapse_model": "static_synapse", "weight": 8.0, "delay": delay["rg_rec"]})
+                     syn_spec={"synapse_model": "static_synapse", "weight": W_RG_REC, "delay": delay["rg_rec"]})  # MOD_FIG10
         nest.Connect(L["rg_f"], L["rg_f"], conn_spec={"rule": "pairwise_bernoulli", "p": P_RG_REC},
-                     syn_spec={"synapse_model": "static_synapse", "weight": 8.0, "delay": delay["rg_rec"]})
-
+                     syn_spec={"synapse_model": "static_synapse", "weight": W_RG_REC, "delay": delay["rg_rec"]})  # MOD_FIG10
         # Reciprocal inhibition mediated by inhibitory interneurons (InE, InF)
         nest.Connect(L["rg_e"], L["in_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_RG_RECIP},
                      syn_spec={"synapse_model": "static_synapse", "weight": W_RG2IN, "delay": delay["rg_recip"]})
