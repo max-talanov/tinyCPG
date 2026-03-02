@@ -27,7 +27,7 @@ PY
 # 10 diagnostic (mu,CV) pairs (Option C)
 SWEEP_PAIRS="0:0,1:0.8,2:0.4,3:0.2,5:0.1,8:0.05,11:0.2,14:0.4,20:0.8,25:0.05"
 OUTDIR="results/"
-TAG="winit_diag"
+TAG="bursting"
 BASE_SEED=12345
 
 srun --cpu-bind=cores --distribution=block:block \
