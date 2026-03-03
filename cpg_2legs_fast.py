@@ -77,7 +77,16 @@ BS_PHASE = {"L": 0.0, "R": np.pi}  # left-right alternation
 # ---------- connectivity ----------
 P_IN_STDP = 0.5
 P_RG_REC = 0.12
-W_RG_REC = 4.0  # MOD_FIG10: reduce RG self-excitation (was hardcoded 8.0) to bring rates/burst heights closer to paper
+W_RG_REC_E = 4.0  # MOD_FIG10: reduced RG-E self-excitation (was 8.0) to bring rates closer to paper
+W_RG_REC_F = 5.5  # MOD_FLEXBOOST: slightly stronger RG-F recurrence to lift flexor activity
+
+# Flexor-phase brainstem gain can be species-dependent (human delays often damp oscillations slightly).
+# MOD_FLEXBOOST: auto-compensation by species.
+FLEXOR_BS_GAIN_BY_SPECIES = {
+    "rat": 1.70,
+    "human": 1.85,
+}
+FLEXOR_BS_GAIN = FLEXOR_BS_GAIN_BY_SPECIES["rat"]  # default; overridden in main() based on --species
 DELAY_MS = 1.0
 
 P_RG_RECIP = 0.20
@@ -206,7 +215,7 @@ W0_RM = 30.0
 izh_params = dict(a=0.02, b=0.2, c=-65.0, d=8.0, V_th=30.0, V_min=-120.0)
 izh_inh_params = dict(a=0.1, b=0.2, c=-65.0, d=2.0, V_th=30.0, V_min=-120.0)  # UPDATED_v7
 I_E_RGE = 2.0  # MOD_FIG10: extensor RG is more tonic; inhibition carves rhythm (was I_E_RG=1.0)
-I_E_RGF = 1.0  # MOD_FIG10: keep flexor RG baseline drive lower; flexor bursts arise from intrinsic parameters + network
+I_E_RGF = 1.7  # MOD_FLEXBOOST: raise flexor tonic drive to increase flexor activity (~1.5–2×)
 
 # Izhikevich "chattering" (bursting-like) parameters for RG-F excitatory neurons
 # (Izhikevich 2003/2004 canonical set)
@@ -253,8 +262,9 @@ def bs_rates_counterphase(t_ms: float, leg: str) -> tuple[float, float]:
     f = max(0.0, -s)
     r_e = BS_RATE_BASE_HZ + BS_RATE_AMP_HZ * e
     r_f = BS_RATE_BASE_HZ + BS_RATE_AMP_HZ * f
+    r_f *= FLEXOR_BS_GAIN  # MOD_FLEXBOOST
     r_e = clamp(r_e, BS_RATE_MIN_HZ, BS_RATE_BASE_HZ + BS_RATE_AMP_HZ)
-    r_f = clamp(r_f, BS_RATE_MIN_HZ, BS_RATE_BASE_HZ + BS_RATE_AMP_HZ)
+    r_f = clamp(r_f, BS_RATE_MIN_HZ, BS_RATE_BASE_HZ + BS_RATE_AMP_HZ * FLEXOR_BS_GAIN)
     return r_e, r_f
 
 
@@ -593,6 +603,10 @@ def main():
     delay_jitter_ms = float(getattr(args, "delay_jitter_ms", 0.0))
     delay_scale = float(getattr(args, "delay_scale", 1.0))
 
+    # MOD_FLEXBOOST: set species-dependent flexor BS gain (keeps patterns comparable across rat/human delays)
+    global FLEXOR_BS_GAIN
+    FLEXOR_BS_GAIN = float(FLEXOR_BS_GAIN_BY_SPECIES.get(species, FLEXOR_BS_GAIN_BY_SPECIES["rat"]))
+
     delay = {
         "cut_to_rg": make_delay_param(delay_model, species, "cut_to_rg",
                                       fallback_ms=DELAY_MS, res_ms=RES_MS,
@@ -829,9 +843,9 @@ def main():
                      syn_spec={"synapse_model": "static_synapse", "weight": W_IA_INT2ANT, "delay": delay["ia_path"]})
 
         nest.Connect(L["rg_e"], L["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_RG_REC},
-                     syn_spec={"synapse_model": "static_synapse", "weight": W_RG_REC, "delay": delay["rg_rec"]})  # MOD_FIG10
+                     syn_spec={"synapse_model": "static_synapse", "weight": W_RG_REC_E, "delay": delay["rg_rec"]})  # MOD_FIG10
         nest.Connect(L["rg_f"], L["rg_f"], conn_spec={"rule": "pairwise_bernoulli", "p": P_RG_REC},
-                     syn_spec={"synapse_model": "static_synapse", "weight": W_RG_REC, "delay": delay["rg_rec"]})  # MOD_FIG10
+                     syn_spec={"synapse_model": "static_synapse", "weight": W_RG_REC_F, "delay": delay["rg_rec"]})  # MOD_FIG10
         # Reciprocal inhibition mediated by inhibitory interneurons (InE, InF)
         nest.Connect(L["rg_e"], L["in_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_RG_RECIP},
                      syn_spec={"synapse_model": "static_synapse", "weight": W_RG2IN, "delay": delay["rg_recip"]})
