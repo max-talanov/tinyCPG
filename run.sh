@@ -46,6 +46,6 @@ srun --cpu-bind=cores --distribution=block:block \
     --max-weight-conns 2000 \
     --save-weights snapshots \
     --delay-model length_velocity \
-    --species human \
+    --species rat \
     --delay-jitter-ms 0.2 \
     --long-run
