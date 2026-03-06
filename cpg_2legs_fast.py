@@ -74,6 +74,15 @@ BS_RATE_AMP_HZ = 0.0  # MOD_ZHANG: disable oscillatory BS rate modulation (Zhang
 BS_RATE_MIN_HZ = 0.0
 BS_PHASE = {"L": 0.0, "R": np.pi}  # left-right alternation
 
+# --- Zhang et al. brainstem drive: tonic BS rate controlled by alpha (no sine clock) ---  # MOD_ZHANG
+BS_MODEL_DEFAULT = "zhang"  # MOD_ZHANG
+ZHANG_BS_RATE_BASE_HZ = 5.0  # MOD_ZHANG
+ZHANG_BS_RATE_GAIN_HZ = 45.0  # MOD_ZHANG
+ZHANG_BS_NOISE_CV_DEFAULT = 0.10  # MOD_ZHANG
+BS_MODEL = BS_MODEL_DEFAULT  # MOD_ZHANG
+ZHANG_BS_NOISE_CV = ZHANG_BS_NOISE_CV_DEFAULT  # MOD_ZHANG
+
+
 # ---------- connectivity ----------
 P_IN_STDP = 0.5
 P_RG_REC = 0.12
@@ -109,6 +118,102 @@ ENABLE_COMMISSURAL = True
 P_COMM = 0.08
 W_COMM_INH = -10.0
 DELAY_COMM_MS = 1.0
+
+# ---------- conduction + synaptic delay presets (species + delay model) ----------
+DELAY_PRESETS = {
+    "rat": {
+        "cut_to_rg":   {"syn_delay_ms": 1.0, "length_m": 0.005, "velocity_mps": 5.0},
+        "bs_to_rg":    {"syn_delay_ms": 1.0, "length_m": 0.010, "velocity_mps": 5.0},
+        "base_to_rg":  {"syn_delay_ms": 1.0, "length_m": 0.010, "velocity_mps": 5.0},
+        "rg_to_m":     {"syn_delay_ms": 1.0, "length_m": 0.005, "velocity_mps": 5.0},
+        "m_to_mus":    {"syn_delay_ms": 1.0, "length_m": 0.005, "velocity_mps": 5.0},
+        "ia_path":     {"syn_delay_ms": 1.0, "length_m": 0.010, "velocity_mps": 10.0},
+        "rg_rec":      {"syn_delay_ms": 0.8, "length_m": 0.002, "velocity_mps": 5.0},
+        "rg_recip":    {"syn_delay_ms": 1.0, "length_m": 0.004, "velocity_mps": 5.0},
+        "motor_e2f":   {"syn_delay_ms": 1.0, "length_m": 0.004, "velocity_mps": 5.0},
+        "motor_f2e":   {"syn_delay_ms": 1.0, "length_m": 0.004, "velocity_mps": 5.0},
+        "commissural": {"syn_delay_ms": 1.0, "length_m": 0.006, "velocity_mps": 5.0},
+    },
+    "human": {
+        "cut_to_rg":   {"syn_delay_ms": 1.0, "length_m": 0.020, "velocity_mps": 30.0},
+        "bs_to_rg":    {"syn_delay_ms": 1.0, "length_m": 0.050, "velocity_mps": 40.0},
+        "base_to_rg":  {"syn_delay_ms": 1.0, "length_m": 0.050, "velocity_mps": 40.0},
+        "rg_to_m":     {"syn_delay_ms": 1.0, "length_m": 0.020, "velocity_mps": 30.0},
+        "m_to_mus":    {"syn_delay_ms": 1.0, "length_m": 0.020, "velocity_mps": 30.0},
+        "ia_path":     {"syn_delay_ms": 1.0, "length_m": 0.040, "velocity_mps": 30.0},
+        "rg_rec":      {"syn_delay_ms": 0.8, "length_m": 0.010, "velocity_mps": 25.0},
+        "rg_recip":    {"syn_delay_ms": 1.0, "length_m": 0.015, "velocity_mps": 25.0},
+        "motor_e2f":   {"syn_delay_ms": 1.0, "length_m": 0.015, "velocity_mps": 25.0},
+        "motor_f2e":   {"syn_delay_ms": 1.0, "length_m": 0.015, "velocity_mps": 25.0},
+        "commissural": {"syn_delay_ms": 1.0, "length_m": 0.040, "velocity_mps": 30.0},
+    },
+}
+
+
+def _delay_ms_from_preset(preset: dict, delay_scale: float) -> float:
+    syn_ms = float(preset.get("syn_delay_ms", 1.0))
+    length_m = float(preset.get("length_m", 0.0))
+    vel = float(preset.get("velocity_mps", 1.0))
+    vel = max(1e-9, vel)
+    base_ms = syn_ms + (length_m / vel) * 1000.0
+    return float(delay_scale) * float(base_ms)
+
+
+def make_delay_param(delay_model: str, species: str, key: str, *,
+                     fallback_ms: float, res_ms: float, jitter_ms: float, delay_scale: float):
+    """Return a scalar or a NEST Parameter for synaptic delays.
+
+    - fixed: returns fallback_ms
+    - length_velocity: returns base_ms (+ optional Gaussian jitter), clipped to >= res_ms
+
+    IMPORTANT: Call this only after nest.SetKernelStatus().
+    """
+    delay_model = str(delay_model).lower().strip()
+
+    # ---- delays: species + delay model ----  # MOD_ZHANG_DELAYS
+    species = str(getattr(args, "species", "rat"))
+    delay_model = str(getattr(args, "delay_model", "fixed"))
+    delay_jitter_ms = float(getattr(args, "delay_jitter_ms", 0.2))
+    delay_scale = float(getattr(args, "delay_scale", 1.0))
+
+    global DELAY_MS, DELAY_RECIP_MS, DELAY_MOTOR_RECIP_E2F_MS, DELAY_MOTOR_RECIP_F2E_MS, DELAY_COMM_MS
+    DELAY_MS = make_delay_param(delay_model, species, "bs_to_rg",
+                                fallback_ms=DELAY_MS, res_ms=float(getattr(args, "resolution_ms", 0.2)),
+                                jitter_ms=delay_jitter_ms, delay_scale=delay_scale)
+    DELAY_RECIP_MS = make_delay_param(delay_model, species, "rg_recip",
+                                      fallback_ms=DELAY_RECIP_MS, res_ms=float(getattr(args, "resolution_ms", 0.2)),
+                                      jitter_ms=delay_jitter_ms, delay_scale=delay_scale)
+    DELAY_MOTOR_RECIP_E2F_MS = make_delay_param(delay_model, species, "motor_e2f",
+                                                fallback_ms=DELAY_MOTOR_RECIP_E2F_MS, res_ms=float(getattr(args, "resolution_ms", 0.2)),
+                                                jitter_ms=delay_jitter_ms, delay_scale=delay_scale)
+    DELAY_MOTOR_RECIP_F2E_MS = make_delay_param(delay_model, species, "motor_f2e",
+                                                fallback_ms=DELAY_MOTOR_RECIP_F2E_MS, res_ms=float(getattr(args, "resolution_ms", 0.2)),
+                                                jitter_ms=delay_jitter_ms, delay_scale=delay_scale)
+    DELAY_COMM_MS = make_delay_param(delay_model, species, "commissural",
+                                     fallback_ms=DELAY_COMM_MS, res_ms=float(getattr(args, "resolution_ms", 0.2)),
+                                     jitter_ms=delay_jitter_ms, delay_scale=delay_scale)
+    species = str(species).lower().strip()
+
+    if delay_model == "fixed":
+        return float(fallback_ms)
+
+    presets = DELAY_PRESETS.get(species, DELAY_PRESETS["rat"])
+    preset = presets.get(key, None)
+    base_ms = float(fallback_ms) if preset is None else _delay_ms_from_preset(preset, delay_scale)
+
+    p = float(base_ms)
+    jm = float(max(0.0, jitter_ms))
+    if jm > 0.0:
+        p = p + nest.random.normal(mean=0.0, std=jm)
+
+    # Clip to at least the kernel resolution
+    try:
+        p = nest.math.max(p, float(max(1e-9, res_ms)))
+    except Exception:
+        p = float(max(float(p), float(max(1e-9, res_ms))))
+
+    return p
+
 
 # ---------- STDP ----------
 TAU_PLUS = 20.0
@@ -186,6 +291,17 @@ def bs_rates_counterphase(t_ms: float, leg: str) -> tuple[float, float]:
     r_f = clamp(r_f, BS_RATE_MIN_HZ, BS_RATE_BASE_HZ + BS_RATE_AMP_HZ)
     return r_e, r_f
 
+def bs_rates(t_ms: float, leg: str, alpha: float) -> tuple[float, float]:
+    """Unified BS rate generator. Returns (bs_e_rate_hz, bs_f_rate_hz)."""  # MOD_ZHANG
+    if str(BS_MODEL) == "zhang":  # MOD_ZHANG
+        r = float(ZHANG_BS_RATE_BASE_HZ) + float(ZHANG_BS_RATE_GAIN_HZ) * float(alpha)  # MOD_ZHANG
+        if float(ZHANG_BS_NOISE_CV) > 0.0:  # MOD_ZHANG
+            r *= max(0.0, 1.0 + np.random.normal(0.0, float(ZHANG_BS_NOISE_CV)))  # MOD_ZHANG
+        r = max(float(BS_RATE_MIN_HZ), float(r))  # MOD_ZHANG
+        return float(r), float(r)  # MOD_ZHANG
+    return bs_rates(t_ms, leg, alpha)  # MOD_ZHANG  # MOD_ZHANG
+
+
 
 def make_weight_recorder_safe():
     try:
@@ -239,6 +355,10 @@ def main():
                     help="Base RNG seed used for sweep runs (each sweep index gets a deterministic offset).")
     ap.add_argument("--alpha", type=float, default=1.0,  # MOD_ZHANG
                     help="Brainstem drive strength α in [0..1] (Zhang et al. 2021); used to compute tonic drives to RG populations")
+    ap.add_argument("--bs-model", type=str, default=BS_MODEL_DEFAULT, choices=["counterphase", "zhang"],  # MOD_ZHANG
+                    help="Brainstem rate model: counterphase=sinusoidal left-right alternating (legacy); zhang=tonic alpha-controlled (Zhang et al.).")
+    ap.add_argument("--zhang-bs-noise-cv", type=float, default=ZHANG_BS_NOISE_CV_DEFAULT,  # MOD_ZHANG
+                    help="Noise CV for zhang BS rates (multiplicative Gaussian). Set 0 to disable.")
     ap.add_argument("--sweep-pairs", type=str, default="",
                     help="Comma-separated list of mu:cv pairs, e.g. '0:0,1:0.8,2:0.4'. When set, runs exactly one pair selected by --sweep-run-idx or SLURM_ARRAY_TASK_ID.")
     ap.add_argument("--sweep-run-idx", type=int, default=-1,
@@ -260,6 +380,16 @@ def main():
                     help="Simulate in larger chunks to reduce Python<->NEST call overhead (ms). Must be >= dt-ms. Try 50 or 100.")
     ap.add_argument("--long-run", action="store_true",
                     help="Enable long-run defaults (aimed at >=30s sims): coarser chunking, less frequent sampling, and weight downsampling for trend plots.")
+    # ---- delay model (rat vs human) ----  # MOD_ZHANG_DELAYS
+    ap.add_argument("--species", type=str, default="rat", choices=["rat", "human"],
+                    help="Preset for axonal/synaptic delays. rat preserves legacy behavior; human uses longer path lengths.")
+    ap.add_argument("--delay-model", type=str, default="fixed", choices=["fixed", "length_velocity"],
+                    help="fixed uses legacy delay constants; length_velocity uses delay = syn_delay + length/velocity (+ jitter).")
+    ap.add_argument("--delay-jitter-ms", type=float, default=0.2,
+                    help="Std-dev (ms) for per-connection delay jitter when using length_velocity. Set 0 to disable.")
+    ap.add_argument("--delay-scale", type=float, default=1.0,
+                    help="Global multiplier on computed delays (useful for quick calibration).")
+
     ap.add_argument("--max-weight-conns", type=int, default=0,
                     help="If >0, downsample each projection's connection list to at most this many connections when computing weight mean/std (trend mode speed-up).")
     ap.add_argument("--save-weights", type=str, default="snapshots", choices=["none", "final", "snapshots"],
@@ -282,6 +412,10 @@ def main():
     ap.add_argument("--nest-verbosity", type=str, default="M_ERROR",
                     help="NEST verbosity level to reduce slurmout I/O. Try M_ERROR or M_WARNING.")
     args = ap.parse_args()
+    # Apply BS model args (keeps legacy flags compatible).  # MOD_ZHANG
+    global BS_MODEL, ZHANG_BS_NOISE_CV  # MOD_ZHANG
+    BS_MODEL = str(getattr(args, 'bs_model', BS_MODEL_DEFAULT))  # MOD_ZHANG
+    ZHANG_BS_NOISE_CV = float(getattr(args, 'zhang_bs_noise_cv', ZHANG_BS_NOISE_CV_DEFAULT))  # MOD_ZHANG
 
     # --- MOD_ZHANG: compute tonic RG drives from α (Zhang Table 1) and map into NEST I_e units ---
     alpha = float(args.alpha)
@@ -860,7 +994,7 @@ def main():
         S = state[side]
         P = logs[side]
 
-        r_e, r_f = bs_rates_counterphase(t_ms, side)
+        r_e, r_f = bs_rates(t_ms, side, alpha)  # MOD_ZHANG
         if do_rate_update:
             nest.SetStatus(L["bs_pg_e"], {"rate": r_e})
             nest.SetStatus(L["bs_pg_f"], {"rate": r_f})
