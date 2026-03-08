@@ -30,8 +30,16 @@ OUTDIR="results/"
 TAG="bursting"
 BASE_SEED=12345
 
+# Zhang-style BS drive controls (deterministic sequential BS)
+BS_MODEL="zhang"
+ALPHA=0.5
+ZHANG_BS_NOISE_CV=0.0
+
 srun --cpu-bind=cores --distribution=block:block \
   python3 -u cpg_2legs_fast.py \
+    --bs-model "$BS_MODEL" \
+    --alpha $ALPHA \
+    --zhang-bs-noise-cv $ZHANG_BS_NOISE_CV \
     --out cpg_run.h5 \
     --outdir "$OUTDIR" \
     --tag "$TAG" \

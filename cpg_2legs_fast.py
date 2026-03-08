@@ -78,7 +78,7 @@ BS_PHASE = {"L": 0.0, "R": np.pi}  # left-right alternation
 BS_MODEL_DEFAULT = "zhang"  # MOD_ZHANG
 ZHANG_BS_RATE_BASE_HZ = 5.0  # MOD_ZHANG
 ZHANG_BS_RATE_GAIN_HZ = 45.0  # MOD_ZHANG
-ZHANG_BS_NOISE_CV_DEFAULT = 0.10  # MOD_ZHANG
+ZHANG_BS_NOISE_CV_DEFAULT = 0.0  # MOD_ZHANG (default deterministic; set >0 for stochastic BS)
 BS_MODEL = BS_MODEL_DEFAULT  # MOD_ZHANG
 ZHANG_BS_NOISE_CV = ZHANG_BS_NOISE_CV_DEFAULT  # MOD_ZHANG
 
@@ -157,62 +157,6 @@ def _delay_ms_from_preset(preset: dict, delay_scale: float) -> float:
     vel = max(1e-9, vel)
     base_ms = syn_ms + (length_m / vel) * 1000.0
     return float(delay_scale) * float(base_ms)
-
-
-def make_delay_param(delay_model: str, species: str, key: str, *,
-                     fallback_ms: float, res_ms: float, jitter_ms: float, delay_scale: float):
-    """Return a scalar or a NEST Parameter for synaptic delays.
-
-    - fixed: returns fallback_ms
-    - length_velocity: returns base_ms (+ optional Gaussian jitter), clipped to >= res_ms
-
-    IMPORTANT: Call this only after nest.SetKernelStatus().
-    """
-    delay_model = str(delay_model).lower().strip()
-
-    # ---- delays: species + delay model ----  # MOD_ZHANG_DELAYS
-    species = str(getattr(args, "species", "rat"))
-    delay_model = str(getattr(args, "delay_model", "fixed"))
-    delay_jitter_ms = float(getattr(args, "delay_jitter_ms", 0.2))
-    delay_scale = float(getattr(args, "delay_scale", 1.0))
-
-    global DELAY_MS, DELAY_RECIP_MS, DELAY_MOTOR_RECIP_E2F_MS, DELAY_MOTOR_RECIP_F2E_MS, DELAY_COMM_MS
-    DELAY_MS = make_delay_param(delay_model, species, "bs_to_rg",
-                                fallback_ms=DELAY_MS, res_ms=float(getattr(args, "resolution_ms", 0.2)),
-                                jitter_ms=delay_jitter_ms, delay_scale=delay_scale)
-    DELAY_RECIP_MS = make_delay_param(delay_model, species, "rg_recip",
-                                      fallback_ms=DELAY_RECIP_MS, res_ms=float(getattr(args, "resolution_ms", 0.2)),
-                                      jitter_ms=delay_jitter_ms, delay_scale=delay_scale)
-    DELAY_MOTOR_RECIP_E2F_MS = make_delay_param(delay_model, species, "motor_e2f",
-                                                fallback_ms=DELAY_MOTOR_RECIP_E2F_MS, res_ms=float(getattr(args, "resolution_ms", 0.2)),
-                                                jitter_ms=delay_jitter_ms, delay_scale=delay_scale)
-    DELAY_MOTOR_RECIP_F2E_MS = make_delay_param(delay_model, species, "motor_f2e",
-                                                fallback_ms=DELAY_MOTOR_RECIP_F2E_MS, res_ms=float(getattr(args, "resolution_ms", 0.2)),
-                                                jitter_ms=delay_jitter_ms, delay_scale=delay_scale)
-    DELAY_COMM_MS = make_delay_param(delay_model, species, "commissural",
-                                     fallback_ms=DELAY_COMM_MS, res_ms=float(getattr(args, "resolution_ms", 0.2)),
-                                     jitter_ms=delay_jitter_ms, delay_scale=delay_scale)
-    species = str(species).lower().strip()
-
-    if delay_model == "fixed":
-        return float(fallback_ms)
-
-    presets = DELAY_PRESETS.get(species, DELAY_PRESETS["rat"])
-    preset = presets.get(key, None)
-    base_ms = float(fallback_ms) if preset is None else _delay_ms_from_preset(preset, delay_scale)
-
-    p = float(base_ms)
-    jm = float(max(0.0, jitter_ms))
-    if jm > 0.0:
-        p = p + nest.random.normal(mean=0.0, std=jm)
-
-    # Clip to at least the kernel resolution
-    try:
-        p = nest.math.max(p, float(max(1e-9, res_ms)))
-    except Exception:
-        p = float(max(float(p), float(max(1e-9, res_ms))))
-
-    return p
 
 
 # ---------- STDP ----------
@@ -294,14 +238,22 @@ def bs_rates_counterphase(t_ms: float, leg: str) -> tuple[float, float]:
 def bs_rates(t_ms: float, leg: str, alpha: float) -> tuple[float, float]:
     """Unified BS rate generator. Returns (bs_e_rate_hz, bs_f_rate_hz)."""  # MOD_ZHANG
     if str(BS_MODEL) == "zhang":  # MOD_ZHANG
-        r = float(ZHANG_BS_RATE_BASE_HZ) + float(ZHANG_BS_RATE_GAIN_HZ) * float(alpha)  # MOD_ZHANG
+        # Zhang et al.: BS drive magnitude depends on a global drive parameter (alpha).  # MOD_ZHANG
+        # We keep the *sequential / counterphase* E-vs-F pattern from the original model to avoid ruining downstream signals,  # MOD_ZHANG
+        # but match the overall rate scale to the Zhang-style affine drive.  # MOD_ZHANG
+        r_peak = float(ZHANG_BS_RATE_BASE_HZ) + float(ZHANG_BS_RATE_GAIN_HZ) * float(alpha)  # MOD_ZHANG
         if float(ZHANG_BS_NOISE_CV) > 0.0:  # MOD_ZHANG
-            r *= max(0.0, 1.0 + np.random.normal(0.0, float(ZHANG_BS_NOISE_CV)))  # MOD_ZHANG
-        r = max(float(BS_RATE_MIN_HZ), float(r))  # MOD_ZHANG
-        return float(r), float(r)  # MOD_ZHANG
-    return bs_rates(t_ms, leg, alpha)  # MOD_ZHANG  # MOD_ZHANG
-
-
+            # Optional multiplicative noise (default is 0.0 to keep BS deterministic).  # MOD_ZHANG
+            r_peak *= max(0.0, 1.0 + np.random.normal(0.0, float(ZHANG_BS_NOISE_CV)))  # MOD_ZHANG
+        r_peak = max(float(BS_RATE_MIN_HZ), float(r_peak))  # MOD_ZHANG
+        t_s = t_ms / 1000.0  # MOD_ZHANG
+        s = np.sin(2.0 * np.pi * BS_OSC_HZ * t_s + BS_PHASE[leg])  # MOD_ZHANG
+        e = max(0.0, s)  # MOD_ZHANG
+        f = max(0.0, -s)  # MOD_ZHANG
+        r_e = clamp(r_peak * e, BS_RATE_MIN_HZ, r_peak)  # MOD_ZHANG
+        r_f = clamp(r_peak * f, BS_RATE_MIN_HZ, r_peak)  # MOD_ZHANG
+        return float(r_e), float(r_f)  # MOD_ZHANG
+    return bs_rates_counterphase(t_ms, leg)  # MOD_ZHANG
 
 def make_weight_recorder_safe():
     try:
