@@ -34,8 +34,7 @@ LEGS = ("L", "R")
 
 # ---------- sizes ----------
 N_CUT = 100
-N_BS = 100
-
+N_BS = 400  # MOD_BS_EQUAL: larger BS populations reduce Poisson sampling noise; E/F peak rates match more closely
 N_RG_TOTAL = 200
 N_RG_E = N_RG_TOTAL // 2
 N_RG_F = N_RG_TOTAL - N_RG_E
