@@ -1,5 +1,5 @@
 #!/bin/bash -l
-#SBATCH --job-name=CPG_WINIT_DIAG
+#SBATCH --job-name=CPG_NEST
 #SBATCH --output=Nest_processing_%A_%a.slurmout
 #SBATCH --error=Nest_processing_%A_%a.slurmerr
 #SBATCH --nodes=1
