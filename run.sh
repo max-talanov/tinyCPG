@@ -39,7 +39,7 @@ srun --cpu-bind=cores --distribution=block:block \
     --sweep-pairs "$SWEEP_PAIRS" \
     --sweep-run-idx ${SLURM_ARRAY_TASK_ID} \
     --sweep-dist lognormal_cv \
-    --sim-ms 60000 \
+    --sim-ms 10000 \
     --dt-ms 10 \
     --threads $SLURM_CPUS_PER_TASK \
     --nest-verbosity M_ERROR \
