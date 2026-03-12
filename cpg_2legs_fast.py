@@ -34,7 +34,8 @@ LEGS = ("L", "R")
 
 # ---------- sizes ----------
 N_CUT = 100
-N_BS = 400  # MOD_BS_EQUAL: larger BS populations reduce Poisson sampling noise; E/F peak rates match more closely
+N_BS = 100
+
 N_RG_TOTAL = 200
 N_RG_E = N_RG_TOTAL // 2
 N_RG_F = N_RG_TOTAL - N_RG_E
@@ -73,6 +74,11 @@ BS_RATE_AMP_HZ = 30.0  # MOD_FIG10: reduce BS modulation amplitude (was 80) to a
 BS_RATE_MIN_HZ = 0.0
 BS_PHASE = {"L": 0.0, "R": np.pi}  # left-right alternation
 
+BS_REGULAR_HZ = 200.0  # MOD_BS_REGULAR200: deterministic regular-spiking BS drive (Hz per neuron when active)
+BS_REGULAR_DESYNC = "linspace"  # MOD_BS_REGULAR200: desynchronize neurons deterministically to avoid synchrony artifacts
+BS_REGULAR_JITTER_MS = 0.3  # MOD_BS_REGULAR200: add small spike-time jitter (ms) for quasi-regular cortical-like drive; set 0.0 to disable
+BS_DRIVE_NORM_HZ = BS_REGULAR_HZ  # MOD_BS_REGULAR200: normalization constant for activation gating
+
 # ---------- connectivity ----------
 P_IN_STDP = 0.5
 P_RG_REC = 0.12
@@ -82,8 +88,8 @@ W_RG_REC_F = 5.5  # MOD_FLEXBOOST: slightly stronger RG-F recurrence to lift fle
 # Flexor-phase brainstem gain can be species-dependent (human delays often damp oscillations slightly).
 # MOD_FLEXBOOST: auto-compensation by species.
 FLEXOR_BS_GAIN_BY_SPECIES = {
-    "rat": 1.70,
-    "human": 1.85,
+    "rat": 1.00,   # MOD_BS_REGULAR200: keep BS E/F peak levels equal (no species gain)
+    "human": 1.00,  # MOD_BS_REGULAR200
 }
 FLEXOR_BS_GAIN = FLEXOR_BS_GAIN_BY_SPECIES["rat"]  # default; overridden in main() based on --species
 DELAY_MS = 1.0
@@ -255,15 +261,15 @@ def clamp(x: float, lo: float, hi: float) -> float:
 
 
 def bs_rates_counterphase(t_ms: float, leg: str) -> tuple[float, float]:
+    # MOD_BS_REGULAR200: BS is implemented as *regular spiking* (spike_generators) instead of Poisson.
+    # This helper returns the *commanded* (intended) drive levels for logging/analysis only.
     t_s = t_ms / 1000.0
     s = np.sin(2.0 * np.pi * BS_OSC_HZ * t_s + BS_PHASE[leg])
-    e = max(0.0, s)
-    f = max(0.0, -s)
-    r_e = BS_RATE_BASE_HZ + BS_RATE_AMP_HZ * e
-    r_f = BS_RATE_BASE_HZ + BS_RATE_AMP_HZ * f
-    r_f *= FLEXOR_BS_GAIN  # MOD_FLEXBOOST
-    r_e = clamp(r_e, BS_RATE_MIN_HZ, BS_RATE_BASE_HZ + BS_RATE_AMP_HZ)
-    r_f = clamp(r_f, BS_RATE_MIN_HZ, BS_RATE_BASE_HZ + BS_RATE_AMP_HZ * FLEXOR_BS_GAIN)
+    r_e = BS_REGULAR_HZ if s > 0.0 else 0.0  # MOD_BS_REGULAR200: extensor-active half-cycle
+    r_f = BS_REGULAR_HZ if s < 0.0 else 0.0  # MOD_BS_REGULAR200: flexor-active half-cycle
+    # Keep explicit clamps for safety/consistency with old plotting code
+    r_e = clamp(r_e, BS_RATE_MIN_HZ, BS_REGULAR_HZ)  # MOD_BS_REGULAR200
+    r_f = clamp(r_f, BS_RATE_MIN_HZ, BS_REGULAR_HZ)  # MOD_BS_REGULAR200
     return r_e, r_f
 
 
@@ -702,15 +708,48 @@ def main():
         nest.Connect(cut_pg, cut_in, conn_spec={"rule": "one_to_one"})
         nest.SetStatus(cut_pg, {"rate": CUT_RATE_OFF_HZ})
 
-        bs_pg_e = nest.Create("poisson_generator", N_BS)
+        bs_pg_e = nest.Create("spike_generator", N_BS)  # MOD_BS_REGULAR200: replace Poisson with regular spike generators
         bs_in_e = nest.Create("parrot_neuron", N_BS)
         nest.Connect(bs_pg_e, bs_in_e, conn_spec={"rule": "one_to_one"})
-        nest.SetStatus(bs_pg_e, {"rate": BS_RATE_BASE_HZ})
 
-        bs_pg_f = nest.Create("poisson_generator", N_BS)
+        bs_pg_f = nest.Create("spike_generator", N_BS)  # MOD_BS_REGULAR200
         bs_in_f = nest.Create("parrot_neuron", N_BS)
         nest.Connect(bs_pg_f, bs_in_f, conn_spec={"rule": "one_to_one"})
-        nest.SetStatus(bs_pg_f, {"rate": BS_RATE_BASE_HZ})
+
+        # MOD_BS_REGULAR200: program deterministic, desynchronized regular spikes and gate them counterphase by BS_OSC_HZ/BS_PHASE.
+        period_ms = 1000.0 / float(BS_REGULAR_HZ)  # MOD_BS_REGULAR200
+        base_times = np.arange(RES_MS, SIM_MS + 1e-9, period_ms)  # MOD_BS_REGULAR200  # MOD_BS_REGULAR200_FIX: avoid t=0 (NEST disallows spike at 0)
+
+        if BS_REGULAR_DESYNC == "random":  # MOD_BS_REGULAR200
+            offsets = np.random.uniform(0.0, period_ms, size=int(N_BS))  # MOD_BS_REGULAR200
+        else:
+            offsets = np.linspace(0.0, period_ms, int(N_BS), endpoint=False)  # MOD_BS_REGULAR200
+
+        times_e = []
+        times_f = []
+        for off in offsets:  # MOD_BS_REGULAR200
+            t_ms = base_times + float(off)  # MOD_BS_REGULAR200
+            t_s = t_ms / 1000.0  # MOD_BS_REGULAR200
+            s = np.sin(2.0 * np.pi * BS_OSC_HZ * t_s + BS_PHASE[side])  # MOD_BS_REGULAR200
+            te = t_ms[s > 0.0]  # MOD_BS_REGULAR200
+            tf = t_ms[s < 0.0]  # MOD_BS_REGULAR200
+            if BS_REGULAR_JITTER_MS > 0.0:  # MOD_BS_REGULAR200: quasi-regular spiking (small temporal jitter)
+                j = float(BS_REGULAR_JITTER_MS)  # MOD_BS_REGULAR200
+                if te.size:
+                    te = np.clip(te + np.random.uniform(-j, j, size=te.shape), RES_MS, SIM_MS)  # MOD_BS_REGULAR200  # MOD_BS_REGULAR200_FIX: keep strictly >0
+                    te = np.round(te / RES_MS) * RES_MS  # MOD_BS_REGULAR200: snap to NEST resolution to avoid BadProperty
+                    te = te[te >= RES_MS]  # MOD_BS_REGULAR200_FIX: NEST spike_generator forbids t=0
+                    te = np.unique(np.sort(te))  # MOD_BS_REGULAR200
+                if tf.size:
+                    tf = np.clip(tf + np.random.uniform(-j, j, size=tf.shape), RES_MS, SIM_MS)  # MOD_BS_REGULAR200  # MOD_BS_REGULAR200_FIX: keep strictly >0
+                    tf = np.round(tf / RES_MS) * RES_MS  # MOD_BS_REGULAR200: snap to NEST resolution to avoid BadProperty
+                    tf = tf[tf >= RES_MS]  # MOD_BS_REGULAR200_FIX: NEST spike_generator forbids t=0
+                    tf = np.unique(np.sort(tf))  # MOD_BS_REGULAR200
+            times_e.append(te.tolist())  # MOD_BS_REGULAR200
+            times_f.append(tf.tolist())  # MOD_BS_REGULAR200
+
+        nest.SetStatus(bs_pg_e, [{"spike_times": st} for st in times_e])  # MOD_BS_REGULAR200
+        nest.SetStatus(bs_pg_f, [{"spike_times": st} for st in times_f])  # MOD_BS_REGULAR200
 
         base_pg = nest.Create("poisson_generator", N_BS)
         base_in = nest.Create("parrot_neuron", N_BS)
@@ -985,9 +1024,7 @@ def main():
         P = logs[side]
 
         r_e, r_f = bs_rates_counterphase(t_ms, side)
-        if do_rate_update:
-            nest.SetStatus(L["bs_pg_e"], {"rate": r_e})
-            nest.SetStatus(L["bs_pg_f"], {"rate": r_f})
+        # MOD_BS_REGULAR200: BS spike_generators are pre-programmed; no per-step rate updates.
         P["bs_e"].append(r_e);
         P["bs_f"].append(r_f)
 
@@ -1020,7 +1057,7 @@ def main():
 
         # Activation proxy: (1) saturate muscle relay rate -> activation,
         # (2) gate by BS drive phase, (3) separate rise/decay taus so it won't linger > step.
-        bs_den = max(1e-9, float(BS_RATE_AMP_HZ))
+        bs_den = max(1e-9, float(BS_DRIVE_NORM_HZ))  # MOD_BS_REGULAR200
         d_e = clamp((r_e - float(BS_RATE_BASE_HZ)) / bs_den, 0.0, 1.0)
         d_f = clamp((r_f - float(BS_RATE_BASE_HZ)) / bs_den, 0.0, 1.0)
         d_e = float(d_e) ** float(ACT_GATE_POWER)
