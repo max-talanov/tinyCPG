@@ -67,17 +67,17 @@ CUT_RATE_ON_HZ = 200.0
 CUT_RATE_OFF_HZ = 0.0
 
 # ---------- brainstem ----------
-BS_OSC_HZ = 2.0  # MOD_FIG10: increase RG drive oscillation freq to ~2 Hz baseline (paper-like α≈0.1)
-BS_RATE_BASE_HZ = 0.0  # keep near-zero baseline; learning should shape effective drive via STDP weights
- # Further reduced BS drive amplitude to avoid dominating RG dynamics and to amplify BS->RG STDP learning trajectories
-BS_RATE_AMP_HZ = 30.0  # MOD_FIG10: reduce BS modulation amplitude (was 80) to avoid overdriving RG and inflating population rates
+BS_OSC_HZ = 2.0
+BS_RATE_BASE_HZ = 8.0           # tonic descending background
+BS_RATE_AMP_HZ = 12.0           # weak phase bias only; not a hard metronome
 BS_RATE_MIN_HZ = 0.0
+BS_RATE_MAX_HZ = 60.0
 BS_PHASE = {"L": 0.0, "R": np.pi}  # left-right alternation
 
-BS_REGULAR_HZ = 200.0  # MOD_BS_REGULAR200: deterministic regular-spiking BS drive (Hz per neuron when active)
-BS_REGULAR_DESYNC = "linspace"  # MOD_BS_REGULAR200: desynchronize neurons deterministically to avoid synchrony artifacts
-BS_REGULAR_JITTER_MS = 0.3  # MOD_BS_REGULAR200: add small spike-time jitter (ms) for quasi-regular cortical-like drive; set 0.0 to disable
-BS_DRIVE_NORM_HZ = BS_REGULAR_HZ  # MOD_BS_REGULAR200: normalization constant for activation gating
+BS_NOISE_STD_HZ = 2.5           # optional slow asymmetry/noise term
+BS_E_GAIN = 1.00
+BS_F_GAIN = 1.00
+BS_DRIVE_NORM_HZ = BS_RATE_BASE_HZ + BS_RATE_AMP_HZ
 
 # ---------- connectivity ----------
 P_IN_STDP = 0.5
@@ -231,12 +231,14 @@ RGF_D = 4.0    # MOD_FIG10: intrinsic-bursting-ish RG-F
 I_E_MOTOR = 1.0
 
 # ---------- muscle proxies ----------
-# Activation proxy: saturating nonlinearity + brainstem gating to avoid saturation & enforce timing
+# Activation proxy: saturating nonlinearity + weak brainstem gain bias
 TAU_ACT_RISE_MS = 60.0
 TAU_ACT_DECAY_MS = 35.0
 ACT_MAX = 1.2
-ACT_SAT_K = 5e-4          # slope for activation from muscle relay rate
-ACT_GATE_POWER = 1.0      # >1.0 makes windows narrower around BS peaks
+ACT_SAT_K = 5e-4
+ACT_GATE_POWER = 1.0
+ACT_GATE_FLOOR = 0.70
+ACT_GATE_CEIL = 1.00
 
 TAU_FORCE_RISE_MS = 140.0
 TAU_FORCE_DECAY_MS = 60.0
@@ -261,15 +263,15 @@ def clamp(x: float, lo: float, hi: float) -> float:
 
 
 def bs_rates_counterphase(t_ms: float, leg: str) -> tuple[float, float]:
-    # MOD_BS_REGULAR200: BS is implemented as *regular spiking* (spike_generators) instead of Poisson.
-    # This helper returns the *commanded* (intended) drive levels for logging/analysis only.
     t_s = t_ms / 1000.0
     s = np.sin(2.0 * np.pi * BS_OSC_HZ * t_s + BS_PHASE[leg])
-    r_e = BS_REGULAR_HZ if s > 0.0 else 0.0  # MOD_BS_REGULAR200: extensor-active half-cycle
-    r_f = BS_REGULAR_HZ if s < 0.0 else 0.0  # MOD_BS_REGULAR200: flexor-active half-cycle
-    # Keep explicit clamps for safety/consistency with old plotting code
-    r_e = clamp(r_e, BS_RATE_MIN_HZ, BS_REGULAR_HZ)  # MOD_BS_REGULAR200
-    r_f = clamp(r_f, BS_RATE_MIN_HZ, BS_REGULAR_HZ)  # MOD_BS_REGULAR200
+
+    # tonic + weak phase bias; no hard ON/OFF switching
+    r_e = BS_RATE_BASE_HZ + BS_E_GAIN * BS_RATE_AMP_HZ * max(0.0, s)
+    r_f = BS_RATE_BASE_HZ + BS_F_GAIN * BS_RATE_AMP_HZ * max(0.0, -s)
+
+    r_e = clamp(r_e, BS_RATE_MIN_HZ, BS_RATE_MAX_HZ)
+    r_f = clamp(r_f, BS_RATE_MIN_HZ, BS_RATE_MAX_HZ)
     return r_e, r_f
 
 
@@ -708,48 +710,15 @@ def main():
         nest.Connect(cut_pg, cut_in, conn_spec={"rule": "one_to_one"})
         nest.SetStatus(cut_pg, {"rate": CUT_RATE_OFF_HZ})
 
-        bs_pg_e = nest.Create("spike_generator", N_BS)  # MOD_BS_REGULAR200: replace Poisson with regular spike generators
+        bs_pg_e = nest.Create("poisson_generator", N_BS)
         bs_in_e = nest.Create("parrot_neuron", N_BS)
         nest.Connect(bs_pg_e, bs_in_e, conn_spec={"rule": "one_to_one"})
+        nest.SetStatus(bs_pg_e, {"rate": BS_RATE_BASE_HZ})
 
-        bs_pg_f = nest.Create("spike_generator", N_BS)  # MOD_BS_REGULAR200
+        bs_pg_f = nest.Create("poisson_generator", N_BS)
         bs_in_f = nest.Create("parrot_neuron", N_BS)
         nest.Connect(bs_pg_f, bs_in_f, conn_spec={"rule": "one_to_one"})
-
-        # MOD_BS_REGULAR200: program deterministic, desynchronized regular spikes and gate them counterphase by BS_OSC_HZ/BS_PHASE.
-        period_ms = 1000.0 / float(BS_REGULAR_HZ)  # MOD_BS_REGULAR200
-        base_times = np.arange(RES_MS, SIM_MS + 1e-9, period_ms)  # MOD_BS_REGULAR200  # MOD_BS_REGULAR200_FIX: avoid t=0 (NEST disallows spike at 0)
-
-        if BS_REGULAR_DESYNC == "random":  # MOD_BS_REGULAR200
-            offsets = np.random.uniform(0.0, period_ms, size=int(N_BS))  # MOD_BS_REGULAR200
-        else:
-            offsets = np.linspace(0.0, period_ms, int(N_BS), endpoint=False)  # MOD_BS_REGULAR200
-
-        times_e = []
-        times_f = []
-        for off in offsets:  # MOD_BS_REGULAR200
-            t_ms = base_times + float(off)  # MOD_BS_REGULAR200
-            t_s = t_ms / 1000.0  # MOD_BS_REGULAR200
-            s = np.sin(2.0 * np.pi * BS_OSC_HZ * t_s + BS_PHASE[side])  # MOD_BS_REGULAR200
-            te = t_ms[s > 0.0]  # MOD_BS_REGULAR200
-            tf = t_ms[s < 0.0]  # MOD_BS_REGULAR200
-            if BS_REGULAR_JITTER_MS > 0.0:  # MOD_BS_REGULAR200: quasi-regular spiking (small temporal jitter)
-                j = float(BS_REGULAR_JITTER_MS)  # MOD_BS_REGULAR200
-                if te.size:
-                    te = np.clip(te + np.random.uniform(-j, j, size=te.shape), RES_MS, SIM_MS)  # MOD_BS_REGULAR200  # MOD_BS_REGULAR200_FIX: keep strictly >0
-                    te = np.round(te / RES_MS) * RES_MS  # MOD_BS_REGULAR200: snap to NEST resolution to avoid BadProperty
-                    te = te[te >= RES_MS]  # MOD_BS_REGULAR200_FIX: NEST spike_generator forbids t=0
-                    te = np.unique(np.sort(te))  # MOD_BS_REGULAR200
-                if tf.size:
-                    tf = np.clip(tf + np.random.uniform(-j, j, size=tf.shape), RES_MS, SIM_MS)  # MOD_BS_REGULAR200  # MOD_BS_REGULAR200_FIX: keep strictly >0
-                    tf = np.round(tf / RES_MS) * RES_MS  # MOD_BS_REGULAR200: snap to NEST resolution to avoid BadProperty
-                    tf = tf[tf >= RES_MS]  # MOD_BS_REGULAR200_FIX: NEST spike_generator forbids t=0
-                    tf = np.unique(np.sort(tf))  # MOD_BS_REGULAR200
-            times_e.append(te.tolist())  # MOD_BS_REGULAR200
-            times_f.append(tf.tolist())  # MOD_BS_REGULAR200
-
-        nest.SetStatus(bs_pg_e, [{"spike_times": st} for st in times_e])  # MOD_BS_REGULAR200
-        nest.SetStatus(bs_pg_f, [{"spike_times": st} for st in times_f])  # MOD_BS_REGULAR200
+        nest.SetStatus(bs_pg_f, {"rate": BS_RATE_BASE_HZ})
 
         base_pg = nest.Create("poisson_generator", N_BS)
         base_in = nest.Create("parrot_neuron", N_BS)
@@ -1024,9 +993,20 @@ def main():
         P = logs[side]
 
         r_e, r_f = bs_rates_counterphase(t_ms, side)
-        # MOD_BS_REGULAR200: BS spike_generators are pre-programmed; no per-step rate updates.
-        P["bs_e"].append(r_e);
-        P["bs_f"].append(r_f)
+
+        # Placeholder for later sensory modulation of descending drive.
+        sensory_bias_e = 0.0
+        sensory_bias_f = 0.0
+
+        r_e_cmd = clamp(r_e + sensory_bias_e, BS_RATE_MIN_HZ, BS_RATE_MAX_HZ)
+        r_f_cmd = clamp(r_f + sensory_bias_f, BS_RATE_MIN_HZ, BS_RATE_MAX_HZ)
+
+        if do_rate_update:
+            nest.SetStatus(L["bs_pg_e"], {"rate": float(r_e_cmd)})
+            nest.SetStatus(L["bs_pg_f"], {"rate": float(r_f_cmd)})
+
+        P["bs_e"].append(r_e_cmd)
+        P["bs_f"].append(r_f_cmd)
 
         sp_e, cur_e = new_spikes(L["rec_muse"], S["last_muse"])
         sp_f, cur_f = new_spikes(L["rec_musf"], S["last_musf"])
@@ -1055,21 +1035,23 @@ def main():
         P["rge"].append(r_rge)
         P["rgf"].append(r_rgf)
 
-        # Activation proxy: (1) saturate muscle relay rate -> activation,
-        # (2) gate by BS drive phase, (3) separate rise/decay taus so it won't linger > step.
-        bs_den = max(1e-9, float(BS_DRIVE_NORM_HZ))  # MOD_BS_REGULAR200
-        d_e = clamp((r_e - float(BS_RATE_BASE_HZ)) / bs_den, 0.0, 1.0)
-        d_f = clamp((r_f - float(BS_RATE_BASE_HZ)) / bs_den, 0.0, 1.0)
-        d_e = float(d_e) ** float(ACT_GATE_POWER)
-        d_f = float(d_f) ** float(ACT_GATE_POWER)
+        # Activation proxy:
+        # (1) saturate muscle relay rate -> activation
+        # (2) apply only a weak BS gain bias
+        # (3) separate rise/decay taus so it won't linger > step.
+        bs_den = max(1e-9, float(BS_DRIVE_NORM_HZ))
+        d_e = clamp((r_e_cmd - float(BS_RATE_BASE_HZ)) / bs_den, 0.0, 1.0)
+        d_f = clamp((r_f_cmd - float(BS_RATE_BASE_HZ)) / bs_den, 0.0, 1.0)
+        g_e = ACT_GATE_FLOOR + (ACT_GATE_CEIL - ACT_GATE_FLOOR) * (float(d_e) ** float(ACT_GATE_POWER))
+        g_f = ACT_GATE_FLOOR + (ACT_GATE_CEIL - ACT_GATE_FLOOR) * (float(d_f) ** float(ACT_GATE_POWER))
 
         # Saturating mapping from muscle relay rate to activation
         a_raw_e = ACT_MAX * (1.0 - np.exp(-ACT_SAT_K * float(r_muse)))
         a_raw_f = ACT_MAX * (1.0 - np.exp(-ACT_SAT_K * float(r_musf)))
 
-        # Gate by brainstem drive (enforces correct phase and duration)
-        target_ae = clamp(a_raw_e * d_e, 0.0, ACT_MAX)
-        target_af = clamp(a_raw_f * d_f, 0.0, ACT_MAX)
+        # Weak BS bias only; do not hard-clamp the muscle phase
+        target_ae = clamp(a_raw_e * g_e, 0.0, ACT_MAX)
+        target_af = clamp(a_raw_f * g_f, 0.0, ACT_MAX)
 
         tau_rise_s = TAU_ACT_RISE_MS / 1000.0
         tau_decay_s = TAU_ACT_DECAY_MS / 1000.0
