@@ -67,17 +67,17 @@ CUT_RATE_ON_HZ = 200.0
 CUT_RATE_OFF_HZ = 0.0
 
 # ---------- brainstem ----------
-BS_OSC_HZ = 2.0
-BS_RATE_BASE_HZ = 8.0           # tonic descending background
-BS_RATE_AMP_HZ = 12.0           # weak phase bias only; not a hard metronome
+BS_OSC_HZ = 0.0
+BS_RATE_BASE_HZ = 12.0          # uniform tonic descending drive to all BS channels
+BS_RATE_AMP_HZ = 0.0            # no left-right / extensor-flexor alternation
 BS_RATE_MIN_HZ = 0.0
 BS_RATE_MAX_HZ = 60.0
-BS_PHASE = {"L": 0.0, "R": np.pi}  # left-right alternation
+BS_PHASE = {"L": 0.0, "R": 0.0}  # kept only for compatibility; no phase alternation is used
 
-BS_NOISE_STD_HZ = 2.5           # optional slow asymmetry/noise term
+BS_NOISE_STD_HZ = 0.0           # optional shared-noise term disabled by default
 BS_E_GAIN = 1.00
 BS_F_GAIN = 1.00
-BS_DRIVE_NORM_HZ = BS_RATE_BASE_HZ + BS_RATE_AMP_HZ
+BS_DRIVE_NORM_HZ = max(BS_RATE_BASE_HZ, 1e-9)
 
 # ---------- connectivity ----------
 P_IN_STDP = 0.5
@@ -237,7 +237,7 @@ TAU_ACT_DECAY_MS = 35.0
 ACT_MAX = 1.2
 ACT_SAT_K = 5e-4
 ACT_GATE_POWER = 1.0
-ACT_GATE_FLOOR = 0.70
+ACT_GATE_FLOOR = 1.00
 ACT_GATE_CEIL = 1.00
 
 TAU_FORCE_RISE_MS = 140.0
@@ -263,16 +263,18 @@ def clamp(x: float, lo: float, hi: float) -> float:
 
 
 def bs_rates_counterphase(t_ms: float, leg: str) -> tuple[float, float]:
-    t_s = t_ms / 1000.0
-    s = np.sin(2.0 * np.pi * BS_OSC_HZ * t_s + BS_PHASE[leg])
+    """
+    Uniform brainstem drive without left-right or flexor-extensor alternation.
+    The same tonic rate is sent to all BS channels. Optional noise can be added
+    later, but is disabled by default to keep the descending signal even.
+    """
+    del t_ms, leg  # compatibility with old call signature
 
-    # tonic + weak phase bias; no hard ON/OFF switching
-    r_e = BS_RATE_BASE_HZ + BS_E_GAIN * BS_RATE_AMP_HZ * max(0.0, s)
-    r_f = BS_RATE_BASE_HZ + BS_F_GAIN * BS_RATE_AMP_HZ * max(0.0, -s)
-
-    r_e = clamp(r_e, BS_RATE_MIN_HZ, BS_RATE_MAX_HZ)
-    r_f = clamp(r_f, BS_RATE_MIN_HZ, BS_RATE_MAX_HZ)
-    return r_e, r_f
+    r = float(BS_RATE_BASE_HZ)
+    if BS_NOISE_STD_HZ > 0.0:
+        r += float(np.random.normal(0.0, BS_NOISE_STD_HZ))
+    r = clamp(r, BS_RATE_MIN_HZ, BS_RATE_MAX_HZ)
+    return r, r
 
 
 def make_weight_recorder_safe():
