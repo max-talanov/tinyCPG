@@ -31,7 +31,7 @@ TAG="bursting_commfix"
 BASE_SEED=12345
 
 srun --cpu-bind=cores --distribution=block:block \
-  python3 -u cpg_2legs_fast_commissural_fix.py \
+  python3 -u cpg_2legs_fast.py \
     --out cpg_run.h5 \
     --outdir "$OUTDIR" \
     --tag "$TAG" \
