@@ -121,12 +121,9 @@ W_STATIC_IN = 22.0
 W_STATIC_RM = 35.0
 
 ENABLE_COMMISSURAL = True
-P_COMM_F = 0.22
-W_COMM_F_INH = -20.0
-P_COMM_E = 0.10
-W_COMM_E_INH = -8.0
+P_COMM = 0.08
+W_COMM_INH = -10.0
 DELAY_COMM_MS = 1.0
-LEFT_RIGHT_BIAS_IE = 0.12
 
 # ---------- conduction + synaptic delay presets ----------
 # Delay model: delay_ms = syn_delay_ms + (length_m / velocity_mps)*1000 + jitter
@@ -347,6 +344,12 @@ def main():
                     help="Simulate in larger chunks to reduce Python<->NEST call overhead (ms). Must be >= dt-ms. Try 50 or 100.")
     ap.add_argument("--long-run", action="store_true",
                     help="Enable long-run defaults (aimed at >=30s sims): coarser chunking, less frequent sampling, and weight downsampling for trend plots.")
+    ap.add_argument("--bs-base-hz", type=float, default=BS_RATE_BASE_HZ,
+                    help="Uniform tonic BS rate sent to all BS channels.")
+    ap.add_argument("--bs-noise-std-hz", type=float, default=BS_NOISE_STD_HZ,
+                    help="Shared BS noise std (Hz). Keep small for nearly tonic biological drive.")
+    ap.add_argument("--enforce-tonic-bs", action="store_true", default=True,
+                    help="Abort if BS-E and BS-F diverge or if left/right tonic BS differs beyond tolerance.")
     # ---- delay model (rat vs human) ----
     ap.add_argument("--species", type=str, default="rat", choices=["rat", "human"],
                     help="Preset for axonal/synaptic delays. rat preserves legacy behavior; human uses longer path lengths.")
@@ -379,6 +382,12 @@ def main():
     ap.add_argument("--nest-verbosity", type=str, default="M_ERROR",
                     help="NEST verbosity level to reduce slurmout I/O. Try M_ERROR or M_WARNING.")
     args = ap.parse_args()
+    global BS_RATE_BASE_HZ, BS_NOISE_STD_HZ, BS_DRIVE_NORM_HZ, ENFORCE_TONIC_BS
+    BS_RATE_BASE_HZ = float(args.bs_base_hz)
+    BS_NOISE_STD_HZ = float(args.bs_noise_std_hz)
+    BS_DRIVE_NORM_HZ = max(BS_RATE_BASE_HZ, 1e-9)
+    ENFORCE_TONIC_BS = bool(args.enforce_tonic_bs)
+
     # ---- sweep mode (Option C): run one (mu, CV) pair per Slurm array task ----
     def _parse_pairs(s: str):
         s = (s or "").strip()
@@ -787,10 +796,9 @@ def main():
             nest.SetStatus(pop, izh_params)
         for pop in (ia_int_e, ia_int_f, in_e, in_f):
             nest.SetStatus(pop, izh_inh_params)
-        bias = (+LEFT_RIGHT_BIAS_IE if side == "L" else -LEFT_RIGHT_BIAS_IE)
         nest.SetStatus(rg_e, {"V_m": -65.0, "U_m": 0.2 * (-65.0), "I_e": I_E_RGE})  # MOD_FIG10
         nest.SetStatus(rg_f, {"a": RGF_A, "b": RGF_B, "c": RGF_C, "d": RGF_D,
-                              "V_m": -65.0, "U_m": RGF_B * (-65.0), "I_e": I_E_RGF + bias})  # slight L/R bias breaks perfect synchrony
+                              "V_m": -65.0, "U_m": RGF_B * (-65.0), "I_e": I_E_RGF})  # MOD_FIG10)
         nest.SetStatus(m_e, {"V_m": -65.0, "U_m": 0.2 * (-65.0), "I_e": I_E_MOTOR})
         nest.SetStatus(m_f, {"V_m": -65.0, "U_m": 0.2 * (-65.0), "I_e": I_E_MOTOR})
 
@@ -913,19 +921,13 @@ def main():
 
         # ---- commissural ----
     if ENABLE_COMMISSURAL:
-        LL = leg["L"]; RR = leg["R"]
-        # Main left-right symmetry-breaking mechanism should be spinal, not brainstem.
-        # Strengthen mutual inhibition between homologous flexor half-centers and add a weaker
-        # extensor-side cross inhibition to suppress mirror-symmetric locking.
-        nest.Connect(LL["rg_f"], RR["rg_f"], conn_spec={"rule": "pairwise_bernoulli", "p": P_COMM_F},
-                     syn_spec={"synapse_model": "static_synapse", "weight": W_COMM_F_INH, "delay": delay["commissural"]})
-        nest.Connect(RR["rg_f"], LL["rg_f"], conn_spec={"rule": "pairwise_bernoulli", "p": P_COMM_F},
-                     syn_spec={"synapse_model": "static_synapse", "weight": W_COMM_F_INH, "delay": delay["commissural"]})
-
-        nest.Connect(LL["rg_e"], RR["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_COMM_E},
-                     syn_spec={"synapse_model": "static_synapse", "weight": W_COMM_E_INH, "delay": delay["commissural"]})
-        nest.Connect(RR["rg_e"], LL["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_COMM_E},
-                     syn_spec={"synapse_model": "static_synapse", "weight": W_COMM_E_INH, "delay": delay["commissural"]})
+        LL = leg["L"];
+        RR = leg["R"]
+        # Physiological simplification: flexor rhythm generators mutually inhibit across the midline
+        nest.Connect(LL["rg_f"], RR["rg_f"], conn_spec={"rule": "pairwise_bernoulli", "p": P_COMM},
+                     syn_spec={"synapse_model": "static_synapse", "weight": W_COMM_INH, "delay": delay["commissural"]})
+        nest.Connect(RR["rg_f"], LL["rg_f"], conn_spec={"rule": "pairwise_bernoulli", "p": P_COMM},
+                     syn_spec={"synapse_model": "static_synapse", "weight": W_COMM_INH, "delay": delay["commissural"]})
 
     # ---- stats (pre-sim) ----
 
@@ -1219,6 +1221,12 @@ def main():
             do_rate_update = (done_steps % rate_every == 0)
             for side in LEGS:
                 update_leg(side, t_ms, cur_chunk_ms, cut_active_frac, do_rate_update)
+            if ENFORCE_TONIC_BS:
+                bsL_e = logs["L"]["bs_e"][-1]; bsL_f = logs["L"]["bs_f"][-1]
+                bsR_e = logs["R"]["bs_e"][-1]; bsR_f = logs["R"]["bs_f"][-1]
+                vals = [float(bsL_e), float(bsL_f), float(bsR_e), float(bsR_f)]
+                if max(vals) - min(vals) > 1e-6:
+                    raise RuntimeError(f"Cross-leg tonic BS violated at t={t_ms:.3f} ms: {vals}")
             log_weights(t_ms, done_steps)
             book_accum += (time.perf_counter() - t_book0)
 
@@ -1262,6 +1270,9 @@ def main():
         h5.attrs["resolution_ms"] = float(args.resolution_ms)
         h5.attrs["phases"] = int(N_PHASES)
         h5.attrs["bs_osc_hz"] = float(BS_OSC_HZ)
+        h5.attrs["bs_rate_base_hz"] = float(BS_RATE_BASE_HZ)
+        h5.attrs["bs_noise_std_hz"] = float(BS_NOISE_STD_HZ)
+        h5.attrs["enforce_tonic_bs"] = bool(ENFORCE_TONIC_BS)
         h5.attrs["local_threads"] = int(args.threads)
         h5.attrs["mpi_processes"] = int(nproc)
         h5.attrs["save_weights_mode"] = str(args.save_weights)
