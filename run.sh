@@ -32,7 +32,6 @@ BASE_SEED=12345
 
 srun --cpu-bind=cores --distribution=block:block \
   python3 -u cpg_2legs_fast.py \
-
     --out cpg_run.h5 \
     --outdir "$OUTDIR" \
     --tag "$TAG" \
@@ -47,7 +46,6 @@ srun --cpu-bind=cores --distribution=block:block \
     --bs-base-hz 6 \
     --bs-noise-std-hz 0.25 \
     --enforce-tonic-bs \
-
     --dt-ms 10 \
     --threads $SLURM_CPUS_PER_TASK \
     --nest-verbosity M_ERROR \
