@@ -316,6 +316,7 @@ def sample_w(model_name: str) -> np.ndarray:
 
 
 def main():
+    global BS_RATE_BASE_HZ, BS_NOISE_STD_HZ, BS_DRIVE_NORM_HZ, ENFORCE_TONIC_BS
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", type=str, default="cpg_run.h5")
     ap.add_argument("--outdir", type=str, default=".",
@@ -378,7 +379,17 @@ def main():
                     help="Multiplier applied to --stdp-winit-std for BS->RG STDP projections only (widens BS init distribution).")
     ap.add_argument("--nest-verbosity", type=str, default="M_ERROR",
                     help="NEST verbosity level to reduce slurmout I/O. Try M_ERROR or M_WARNING.")
+    ap.add_argument("--bs-base-hz", type=float, default=BS_RATE_BASE_HZ,
+                    help="Override tonic brainstem base rate (Hz).")
+    ap.add_argument("--bs-noise-std-hz", type=float, default=BS_NOISE_STD_HZ,
+                    help="Override Gaussian BS noise std (Hz).")
+    ap.add_argument("--enforce-tonic-bs", action="store_true",
+                    help="Force BS E/F and L/R rates to remain identical; abort otherwise.")
     args = ap.parse_args()
+    BS_RATE_BASE_HZ = float(args.bs_base_hz)
+    BS_NOISE_STD_HZ = float(args.bs_noise_std_hz)
+    BS_DRIVE_NORM_HZ = max(BS_RATE_BASE_HZ, 1e-9)
+    ENFORCE_TONIC_BS = bool(args.enforce_tonic_bs)
     # ---- sweep mode (Option C): run one (mu, CV) pair per Slurm array task ----
     def _parse_pairs(s: str):
         s = (s or "").strip()
@@ -1219,6 +1230,11 @@ def main():
             do_rate_update = (done_steps % rate_every == 0)
             for side in LEGS:
                 update_leg(side, t_ms, cur_chunk_ms, cut_active_frac, do_rate_update)
+            if ENFORCE_TONIC_BS:
+                l_be = float(logs["L"]["bs_e"][-1]); r_be = float(logs["R"]["bs_e"][-1])
+                l_bf = float(logs["L"]["bs_f"][-1]); r_bf = float(logs["R"]["bs_f"][-1])
+                if abs(l_be - r_be) > 1e-9 or abs(l_bf - r_bf) > 1e-9:
+                    raise RuntimeError(f"Tonic BS violated across legs at t_ms={t_ms}: L=({l_be}, {l_bf}), R=({r_be}, {r_bf})")
             log_weights(t_ms, done_steps)
             book_accum += (time.perf_counter() - t_book0)
 
@@ -1262,6 +1278,9 @@ def main():
         h5.attrs["resolution_ms"] = float(args.resolution_ms)
         h5.attrs["phases"] = int(N_PHASES)
         h5.attrs["bs_osc_hz"] = float(BS_OSC_HZ)
+        h5.attrs["bs_rate_base_hz"] = float(BS_RATE_BASE_HZ)
+        h5.attrs["bs_noise_std_hz"] = float(BS_NOISE_STD_HZ)
+        h5.attrs["enforce_tonic_bs"] = bool(ENFORCE_TONIC_BS)
         h5.attrs["local_threads"] = int(args.threads)
         h5.attrs["mpi_processes"] = int(nproc)
         h5.attrs["save_weights_mode"] = str(args.save_weights)
