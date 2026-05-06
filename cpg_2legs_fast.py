@@ -264,17 +264,17 @@ def clamp(x: float, lo: float, hi: float) -> float:
     return float(max(lo, min(hi, x)))
 
 
+def bs_rates_tonic(t_ms: float, leg: str) -> tuple[float, float]:
+    # MOD_TONIC_BS: BS provides constant, equal drive to both E and F populations on both legs.
+    # L/R and E/F alternation must emerge entirely from spinal CPG circuitry (commissural +
+    # reciprocal inhibition). Both legs get identical rates so --enforce-tonic-bs passes.
+    r = clamp(BS_REGULAR_HZ, BS_RATE_MIN_HZ, BS_REGULAR_HZ)
+    return r, r
+
+
 def bs_rates_counterphase(t_ms: float, leg: str) -> tuple[float, float]:
-    # MOD_BS_REGULAR200: BS is implemented as *regular spiking* (spike_generators) instead of Poisson.
-    # This helper returns the *commanded* (intended) drive levels for logging/analysis only.
-    t_s = t_ms / 1000.0
-    s = np.sin(2.0 * np.pi * BS_OSC_HZ * t_s + BS_PHASE[leg])
-    r_e = BS_REGULAR_HZ if s > 0.0 else 0.0  # MOD_BS_REGULAR200: extensor-active half-cycle
-    r_f = BS_REGULAR_HZ if s < 0.0 else 0.0  # MOD_BS_REGULAR200: flexor-active half-cycle
-    # Keep explicit clamps for safety/consistency with old plotting code
-    r_e = clamp(r_e, BS_RATE_MIN_HZ, BS_REGULAR_HZ)  # MOD_BS_REGULAR200
-    r_f = clamp(r_f, BS_RATE_MIN_HZ, BS_REGULAR_HZ)  # MOD_BS_REGULAR200
-    return r_e, r_f
+    # Kept for backwards-compatible imports/references. Delegates to tonic version.
+    return bs_rates_tonic(t_ms, leg)
 
 
 def make_weight_recorder_safe():
@@ -731,37 +731,30 @@ def main():
         bs_in_f = nest.Create("parrot_neuron", N_BS)
         nest.Connect(bs_pg_f, bs_in_f, conn_spec={"rule": "one_to_one"})
 
-        # MOD_BS_REGULAR200: program deterministic, desynchronized regular spikes and gate them counterphase by BS_OSC_HZ/BS_PHASE.
-        period_ms = 1000.0 / float(BS_REGULAR_HZ)  # MOD_BS_REGULAR200
-        base_times = np.arange(RES_MS, SIM_MS + 1e-9, period_ms)  # MOD_BS_REGULAR200  # MOD_BS_REGULAR200_FIX: avoid t=0 (NEST disallows spike at 0)
+        # MOD_TONIC_BS: BS provides constant tonic drive throughout the simulation.
+        # No sinusoidal phase gating -- all neurons fire at BS_REGULAR_HZ for the full run.
+        # bs_pg_e and bs_pg_f receive identical spike trains; L/R and E/F alternation
+        # must emerge from spinal CPG circuitry (commissural + reciprocal inhibition).
+        period_ms = 1000.0 / float(BS_REGULAR_HZ)
+        base_times = np.arange(RES_MS, SIM_MS + 1e-9, period_ms)  # avoid t=0 (NEST forbids)
 
-        if BS_REGULAR_DESYNC == "random":  # MOD_BS_REGULAR200
-            offsets = np.random.uniform(0.0, period_ms, size=int(N_BS))  # MOD_BS_REGULAR200
+        if BS_REGULAR_DESYNC == "random":
+            offsets = np.random.uniform(0.0, period_ms, size=int(N_BS))
         else:
-            offsets = np.linspace(0.0, period_ms, int(N_BS), endpoint=False)  # MOD_BS_REGULAR200
+            offsets = np.linspace(0.0, period_ms, int(N_BS), endpoint=False)
 
         times_e = []
         times_f = []
-        for off in offsets:  # MOD_BS_REGULAR200
-            t_ms = base_times + float(off)  # MOD_BS_REGULAR200
-            t_s = t_ms / 1000.0  # MOD_BS_REGULAR200
-            s = np.sin(2.0 * np.pi * BS_OSC_HZ * t_s + BS_PHASE[side])  # MOD_BS_REGULAR200
-            te = t_ms[s > 0.0]  # MOD_BS_REGULAR200
-            tf = t_ms[s < 0.0]  # MOD_BS_REGULAR200
-            if BS_REGULAR_JITTER_MS > 0.0:  # MOD_BS_REGULAR200: quasi-regular spiking (small temporal jitter)
-                j = float(BS_REGULAR_JITTER_MS)  # MOD_BS_REGULAR200
-                if te.size:
-                    te = np.clip(te + np.random.uniform(-j, j, size=te.shape), RES_MS, SIM_MS)  # MOD_BS_REGULAR200  # MOD_BS_REGULAR200_FIX: keep strictly >0
-                    te = np.round(te / RES_MS) * RES_MS  # MOD_BS_REGULAR200: snap to NEST resolution to avoid BadProperty
-                    te = te[te >= RES_MS]  # MOD_BS_REGULAR200_FIX: NEST spike_generator forbids t=0
-                    te = np.unique(np.sort(te))  # MOD_BS_REGULAR200
-                if tf.size:
-                    tf = np.clip(tf + np.random.uniform(-j, j, size=tf.shape), RES_MS, SIM_MS)  # MOD_BS_REGULAR200  # MOD_BS_REGULAR200_FIX: keep strictly >0
-                    tf = np.round(tf / RES_MS) * RES_MS  # MOD_BS_REGULAR200: snap to NEST resolution to avoid BadProperty
-                    tf = tf[tf >= RES_MS]  # MOD_BS_REGULAR200_FIX: NEST spike_generator forbids t=0
-                    tf = np.unique(np.sort(tf))  # MOD_BS_REGULAR200
-            times_e.append(te.tolist())  # MOD_BS_REGULAR200
-            times_f.append(tf.tolist())  # MOD_BS_REGULAR200
+        for off in offsets:
+            t_arr = base_times + float(off)  # all spikes; no phase filter
+            if BS_REGULAR_JITTER_MS > 0.0:
+                j = float(BS_REGULAR_JITTER_MS)
+                t_arr = np.clip(t_arr + np.random.uniform(-j, j, size=t_arr.shape), RES_MS, SIM_MS)
+                t_arr = np.round(t_arr / RES_MS) * RES_MS  # snap to NEST resolution
+                t_arr = t_arr[t_arr >= RES_MS]             # NEST forbids t=0
+                t_arr = np.unique(np.sort(t_arr))
+            times_e.append(t_arr.tolist())
+            times_f.append(t_arr.tolist())  # E and F generators are identical (tonic)
 
         nest.SetStatus(bs_pg_e, [{"spike_times": st} for st in times_e])  # MOD_BS_REGULAR200
         nest.SetStatus(bs_pg_f, [{"spike_times": st} for st in times_f])  # MOD_BS_REGULAR200
@@ -1045,8 +1038,8 @@ def main():
         S = state[side]
         P = logs[side]
 
-        r_e, r_f = bs_rates_counterphase(t_ms, side)
-        # MOD_BS_REGULAR200: BS spike_generators are pre-programmed; no per-step rate updates.
+        r_e, r_f = bs_rates_tonic(t_ms, side)
+        # MOD_TONIC_BS: BS spike_generators are pre-programmed tonic drive; no per-step rate updates.
         P["bs_e"].append(r_e);
         P["bs_f"].append(r_f)
 
