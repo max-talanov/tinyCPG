@@ -63,7 +63,9 @@ W_IN2RG = -18.0  # inhibitory interneuron -> RG partner (inhibitory synapse)
 
 # ---------- CUT training ----------
 N_PHASES = 6
-CUT_RATE_ON_HZ = 200.0
+CUT_RATE_ON_HZ = 100.0   # MOD_COACT: bio-plausible rat cutaneous/Group-II afferent peak rate
+                          # (SAI 10-50 Hz, RA/Aβ up to 100 Hz during active paw contact;
+                          #  Loeb & Duysens; Pearson rat locomotion data). 400 Hz was not realistic.
 CUT_RATE_OFF_HZ = 0.0
 
 # ---------- brainstem ----------
@@ -72,10 +74,11 @@ BS_RATE_BASE_HZ = 0.0  # keep near-zero baseline; learning should shape effectiv
  # Further reduced BS drive amplitude to avoid dominating RG dynamics and to amplify BS->RG STDP learning trajectories
 BS_RATE_AMP_HZ = 30.0  # MOD_FIG10: reduce BS modulation amplitude (was 80) to avoid overdriving RG and inflating population rates
 BS_RATE_MIN_HZ = 0.0
-BS_NOISE_STD_HZ = 0.0   # overridden by --bs-noise-std-hz at runtime
 BS_PHASE = {"L": 0.0, "R": np.pi}  # left-right alternation
 
-BS_REGULAR_HZ = 200.0  # MOD_BS_REGULAR200: deterministic regular-spiking BS drive (Hz per neuron when active)
+BS_REGULAR_HZ = 60.0   # MOD_COACT: reticulospinal tonic drive 20-80 Hz in rat (bio-plausible).
+                       # At 60 Hz even fully potentiated STDP weights (capped at WMAX_BS=30)
+                       # keep BS alone subthreshold for RGE; CUT co-activation is required.
 BS_REGULAR_DESYNC = "linspace"  # MOD_BS_REGULAR200: desynchronize neurons deterministically to avoid synchrony artifacts
 BS_REGULAR_JITTER_MS = 0.3  # MOD_BS_REGULAR200: add small spike-time jitter (ms) for quasi-regular cortical-like drive; set 0.0 to disable
 BS_DRIVE_NORM_HZ = BS_REGULAR_HZ  # MOD_BS_REGULAR200: normalization constant for activation gating
@@ -217,6 +220,17 @@ MU_PLUS = 0.4
 MU_MINUS = 0.4
 WMAX = 120.0
 
+# MOD_COACT: BS STDP weights capped so tonic BS alone stays subthreshold even after
+# full STDP potentiation. CUT STDP keeps the full WMAX.
+WMAX_BS = 30.0
+
+# MOD_COACT: static CUT → RGE pathway — immediate cutaneous drive present from t=0,
+# before STDP bootstraps. Weight and density chosen so that CUT alone (100 Hz × W=14
+# × ~35 conns) is still subthreshold, but CUT + BS (60 Hz × ~25) together are supra-
+# threshold. This enforces the co-activation gate from the first simulation step.
+W_CUT2RGE_STATIC = 14.0
+P_CUT2RGE_STATIC = 0.35
+
 W0_IN = 22.0
 W0_RM = 30.0
 
@@ -265,15 +279,14 @@ def clamp(x: float, lo: float, hi: float) -> float:
 
 
 def bs_rates_tonic(t_ms: float, leg: str) -> tuple[float, float]:
-    # MOD_TONIC_BS: BS provides constant, equal drive to both E and F populations on both legs.
-    # L/R and E/F alternation must emerge entirely from spinal CPG circuitry (commissural +
-    # reciprocal inhibition). Both legs get identical rates so --enforce-tonic-bs passes.
+    # MOD_TONIC_BS: BS is constant, equal drive to both E and F on both legs.
+    # L/R and E/F alternation must emerge entirely from spinal CPG circuitry.
     r = clamp(BS_REGULAR_HZ, BS_RATE_MIN_HZ, BS_REGULAR_HZ)
     return r, r
 
 
 def bs_rates_counterphase(t_ms: float, leg: str) -> tuple[float, float]:
-    # Kept for backwards-compatible imports/references. Delegates to tonic version.
+    # Kept for backward-compatible references; delegates to tonic version.
     return bs_rates_tonic(t_ms, leg)
 
 
@@ -731,10 +744,9 @@ def main():
         bs_in_f = nest.Create("parrot_neuron", N_BS)
         nest.Connect(bs_pg_f, bs_in_f, conn_spec={"rule": "one_to_one"})
 
-        # MOD_TONIC_BS: BS provides constant tonic drive throughout the simulation.
-        # No sinusoidal phase gating -- all neurons fire at BS_REGULAR_HZ for the full run.
-        # bs_pg_e and bs_pg_f receive identical spike trains; L/R and E/F alternation
-        # must emerge from spinal CPG circuitry (commissural + reciprocal inhibition).
+        # MOD_TONIC_BS: constant tonic drive throughout simulation — no sinusoidal gating.
+        # Both bs_pg_e and bs_pg_f fire identically on both legs at BS_REGULAR_HZ.
+        # L/R and E/F alternation must emerge from spinal CPG (commissural + reciprocal inh).
         period_ms = 1000.0 / float(BS_REGULAR_HZ)
         base_times = np.arange(RES_MS, SIM_MS + 1e-9, period_ms)  # avoid t=0 (NEST forbids)
 
@@ -754,7 +766,7 @@ def main():
                 t_arr = t_arr[t_arr >= RES_MS]             # NEST forbids t=0
                 t_arr = np.unique(np.sort(t_arr))
             times_e.append(t_arr.tolist())
-            times_f.append(t_arr.tolist())  # E and F generators are identical (tonic)
+            times_f.append(t_arr.tolist())  # E and F are identical: tonic
 
         nest.SetStatus(bs_pg_e, [{"spike_times": st} for st in times_e])  # MOD_BS_REGULAR200
         nest.SetStatus(bs_pg_f, [{"spike_times": st} for st in times_f])  # MOD_BS_REGULAR200
@@ -823,23 +835,26 @@ def main():
     # ---- STDP models ----
     stdp_defaults = {
         "tau_plus": TAU_PLUS,
-        "lambda": LAMBDA,  # <-- key is a string, so it's fine
+        "lambda": LAMBDA,
         "alpha": ALPHA,
         "mu_plus": MU_PLUS,
         "mu_minus": MU_MINUS,
         "Wmax": WMAX,
     }
+    # MOD_COACT: BS STDP models use WMAX_BS so tonic BS weights cannot potentiate high
+    # enough to drive RGE alone even after extended training.
+    stdp_bs_defaults = {**stdp_defaults, "Wmax": WMAX_BS}
 
     for side in LEGS:
-        def copy(name, wr):
+        def copy(name, params, wr):
             if wr is not None:
-                nest.CopyModel("stdp_synapse", name, {**stdp_defaults, "weight_recorder": wr})
+                nest.CopyModel("stdp_synapse", name, {**params, "weight_recorder": wr})
             else:
-                nest.CopyModel("stdp_synapse", name, stdp_defaults)
+                nest.CopyModel("stdp_synapse", name, params)
 
-        copy(f"stdp_cut_rge_{side}", make_weight_recorder_safe())
-        copy(f"stdp_bs_rge_{side}", make_weight_recorder_safe())
-        copy(f"stdp_bs_rgf_{side}", make_weight_recorder_safe())
+        copy(f"stdp_cut_rge_{side}", stdp_defaults, make_weight_recorder_safe())
+        copy(f"stdp_bs_rge_{side}", stdp_bs_defaults, make_weight_recorder_safe())   # MOD_COACT: capped Wmax
+        copy(f"stdp_bs_rgf_{side}", stdp_bs_defaults, make_weight_recorder_safe())   # MOD_COACT: capped Wmax
 
     # ---- connect per leg ----
     for side in LEGS:
@@ -847,6 +862,12 @@ def main():
 
         nest.Connect(L["cut_in"], L["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_IN_STDP},
                      syn_spec={"synapse_model": f"stdp_cut_rge_{side}", "weight": W_INIT_CUT, "delay": delay["cut_to_rg"]})
+
+        # MOD_COACT: static CUT → RGE pathway — present from t=0 before STDP bootstraps.
+        # CUT 100 Hz × W=14 × ~35 conns alone is subthreshold; combined with BS 60 Hz it
+        # crosses threshold (bio-plausible co-activation gate for rat CPG).
+        nest.Connect(L["cut_in"], L["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_CUT2RGE_STATIC},
+                     syn_spec={"synapse_model": "static_synapse", "weight": W_CUT2RGE_STATIC, "delay": delay["cut_to_rg"]})
 
         nest.Connect(L["bs_in_e"], L["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_IN_STDP},
                      syn_spec={"synapse_model": f"stdp_bs_rge_{side}", "weight": W_INIT_BS, "delay": delay["bs_to_rg"]})
@@ -1038,8 +1059,8 @@ def main():
         S = state[side]
         P = logs[side]
 
-        r_e, r_f = bs_rates_tonic(t_ms, side)
-        # MOD_TONIC_BS: BS spike_generators are pre-programmed tonic drive; no per-step rate updates.
+        r_e, r_f = bs_rates_counterphase(t_ms, side)
+        # MOD_BS_REGULAR200: BS spike_generators are pre-programmed; no per-step rate updates.
         P["bs_e"].append(r_e);
         P["bs_f"].append(r_f)
 
@@ -1070,11 +1091,13 @@ def main():
         P["rge"].append(r_rge)
         P["rgf"].append(r_rgf)
 
-        # Activation proxy: (1) saturate muscle relay rate -> activation,
-        # (2) gate by BS drive phase, (3) separate rise/decay taus so it won't linger > step.
-        bs_den = max(1e-9, float(BS_DRIVE_NORM_HZ))  # MOD_BS_REGULAR200
-        d_e = clamp((r_e - float(BS_RATE_BASE_HZ)) / bs_den, 0.0, 1.0)
-        d_f = clamp((r_f - float(BS_RATE_BASE_HZ)) / bs_den, 0.0, 1.0)
+        # MOD_COACT: gate activation by actual RG population rate, not BS phase.
+        # With tonic BS the old BS-phase gate was permanently 1.0 (useless).
+        # Now d_e/d_f reflect whether the CPG is genuinely bursting (rises during
+        # CUT-triggered RG bursts, falls to zero in interburst silences).
+        rg_ref = max(1e-9, float(BS_REGULAR_HZ))  # normalise to expected peak burst rate
+        d_e = clamp(r_rge / rg_ref, 0.0, 1.0)
+        d_f = clamp(r_rgf / rg_ref, 0.0, 1.0)
         d_e = float(d_e) ** float(ACT_GATE_POWER)
         d_f = float(d_f) ** float(ACT_GATE_POWER)
 
