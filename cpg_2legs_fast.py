@@ -71,6 +71,7 @@ CUT_RATE_OFF_HZ = 0.0
 # ---------- brainstem ----------
 BS_OSC_HZ = 2.0  # MOD_FIG10: increase RG drive oscillation freq to ~2 Hz baseline (paper-like α≈0.1)
 BS_RATE_BASE_HZ = 0.0  # keep near-zero baseline; learning should shape effective drive via STDP weights
+BS_NOISE_STD_HZ = 0.0  # Gaussian noise std on BS rate (Hz); overridden by --bs-noise-std-hz
  # Further reduced BS drive amplitude to avoid dominating RG dynamics and to amplify BS->RG STDP learning trajectories
 BS_RATE_AMP_HZ = 30.0  # MOD_FIG10: reduce BS modulation amplitude (was 80) to avoid overdriving RG and inflating population rates
 BS_RATE_MIN_HZ = 0.0
