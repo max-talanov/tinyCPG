@@ -58,8 +58,22 @@ N_INF = 50  # inhibitory interneurons mediating RG-F -> RG-E inhibition
 W_IA_IN2INT = 6.0  # Ia parrot -> Ia inhibitory interneuron (excitatory synapse)
 W_IA_INT2ANT = -10.0  # Ia inhibitory interneuron -> antagonist motor pool (inhibitory synapse)
 
-W_RG2IN = 8.0  # RG -> inhibitory interneuron (excitatory synapse)
-W_IN2RG = -18.0  # inhibitory interneuron -> RG partner (inhibitory synapse)
+# MOD_ZHANG_ASYM: Asymmetric reciprocal inhibition between RG-F and RG-E half-centres.
+# Zhang/Shevtsova/Rybak (eLife 2022) Table 2 shows the F→InF→E inhibition is ~13× stronger
+# than E→InE→F (effective gains 0.18 vs 0.014). This asymmetry is what gives clean alternation:
+# F drives the rhythm and forcibly silences E during the flexor burst, while E only weakly
+# nudges F so F's intrinsic burst pattern survives. Symmetric weights here gave shallow
+# counter-phase (RG correlation only ~−0.65 instead of ~−0.95).
+W_RG2INE     =  8.0    # RG-E → InE   (excites flexor-suppressing interneuron)
+W_RG2INF     = 12.0    # RG-F → InF   (excites extensor-suppressing interneuron, stronger)
+W_INE2RGF    =  -5.0   # InE → RG-F   (WEAK suppression — preserve F's intrinsic rhythm)
+W_INF2RGE    = -32.0   # InF → RG-E   (STRONG suppression — F dominates and silences E)
+P_RG_RECIP_F = 0.30    # F→InF→E pathway density (higher for strong inhibition)
+P_RG_RECIP_E = 0.15    # E→InE→F pathway density (lower for weak inhibition)
+
+# Legacy symmetric constants (kept for any external scripts still importing them)
+W_RG2IN = 8.0
+W_IN2RG = -18.0
 
 # ---------- CUT training ----------
 N_PHASES = 6
@@ -232,6 +246,15 @@ WMAX_BS = 30.0
 W_CUT2RGE_STATIC = 14.0
 P_CUT2RGE_STATIC = 0.35
 
+# MOD_CUT_REFLEX: CUT also excites the flexor-suppressing interneuron (InE).
+# This is the canonical *stance-phase cutaneous reflex* (Schomburg, Pearson, Rossignol):
+# paw contact → cutaneous afferents → reinforce extensor activity AND suppress flexor.
+# Effect on the model: CUT now does double duty — direct excitation of RG-E *plus* indirect
+# inhibition of RG-F via InE. This dramatically deepens the counter-phase during stance
+# without altering BS or the central CPG balance.
+W_CUT2INE = 6.0
+P_CUT2INE = 0.30
+
 W0_IN = 22.0
 W0_RM = 30.0
 
@@ -260,7 +283,11 @@ ACT_GATE_POWER = 1.0      # >1.0 makes windows narrower around BS peaks
 TAU_FORCE_RISE_MS = 140.0
 TAU_FORCE_DECAY_MS = 60.0
 FORCE_MAX = 25.0
-FORCE_SAT_K = 2.5
+# MOD_FORCE_LINEAR: previously FORCE_SAT_K=2.5 made force saturate near 17.8 at activation 0.5,
+# so the force trace flat-topped and never came back to 0 between bursts. With K=1.0, force
+# is roughly linear in activation across the working range (0.1–0.6), so counter-phase from
+# the activation envelope passes through to force cleanly.
+FORCE_SAT_K = 1.0
 
 TAU_LENGTH_MS = 260.0
 L0 = 1.0
@@ -915,16 +942,27 @@ def main():
                      syn_spec={"synapse_model": "static_synapse", "weight": W_RG_REC_E, "delay": delay["rg_rec"]})  # MOD_FIG10
         nest.Connect(L["rg_f"], L["rg_f"], conn_spec={"rule": "pairwise_bernoulli", "p": P_RG_REC},
                      syn_spec={"synapse_model": "static_synapse", "weight": W_RG_REC_F, "delay": delay["rg_rec"]})  # MOD_FIG10
-        # Reciprocal inhibition mediated by inhibitory interneurons (InE, InF)
-        nest.Connect(L["rg_e"], L["in_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_RG_RECIP},
-                     syn_spec={"synapse_model": "static_synapse", "weight": W_RG2IN, "delay": delay["rg_recip"]})
-        nest.Connect(L["in_e"], L["rg_f"], conn_spec={"rule": "pairwise_bernoulli", "p": P_RG_RECIP},
-                     syn_spec={"synapse_model": "static_synapse", "weight": W_IN2RG, "delay": delay["rg_recip"]})
+        # MOD_ZHANG_ASYM: asymmetric reciprocal inhibition via inhibitory interneurons (InE, InF).
+        # F→InF→E pathway is strong (clean extensor silencing during flexor burst);
+        # E→InE→F pathway is weak (preserves flexor's rhythm-leading role).
+        # F → InF (strong drive of the extensor-suppressing interneuron)
+        nest.Connect(L["rg_f"], L["in_f"], conn_spec={"rule": "pairwise_bernoulli", "p": P_RG_RECIP_F},
+                     syn_spec={"synapse_model": "static_synapse", "weight": W_RG2INF, "delay": delay["rg_recip"]})
+        # InF → RG-E (STRONG inhibition: F dominates and silences E)
+        nest.Connect(L["in_f"], L["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_RG_RECIP_F},
+                     syn_spec={"synapse_model": "static_synapse", "weight": W_INF2RGE, "delay": delay["rg_recip"]})
 
-        nest.Connect(L["rg_f"], L["in_f"], conn_spec={"rule": "pairwise_bernoulli", "p": P_RG_RECIP},
-                     syn_spec={"synapse_model": "static_synapse", "weight": W_RG2IN, "delay": delay["rg_recip"]})
-        nest.Connect(L["in_f"], L["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_RG_RECIP},
-                     syn_spec={"synapse_model": "static_synapse", "weight": W_IN2RG, "delay": delay["rg_recip"]})
+        # E → InE (drives the flexor-suppressing interneuron)
+        nest.Connect(L["rg_e"], L["in_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_RG_RECIP_E},
+                     syn_spec={"synapse_model": "static_synapse", "weight": W_RG2INE, "delay": delay["rg_recip"]})
+        # InE → RG-F (WEAK inhibition: preserves F's intrinsic rhythm)
+        nest.Connect(L["in_e"], L["rg_f"], conn_spec={"rule": "pairwise_bernoulli", "p": P_RG_RECIP_E},
+                     syn_spec={"synapse_model": "static_synapse", "weight": W_INE2RGF, "delay": delay["rg_recip"]})
+
+        # MOD_CUT_REFLEX: CUT → InE — cutaneous afferents reinforce the stance-phase
+        # extensor reflex by exciting the flexor-suppressing interneuron.
+        nest.Connect(L["cut_in"], L["in_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_CUT2INE},
+                     syn_spec={"synapse_model": "static_synapse", "weight": W_CUT2INE, "delay": delay["cut_to_rg"]})
 
         if USE_STATIC_PARALLEL:
             nest.Connect(L["bs_in_e"], L["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_STATIC_IN},
@@ -1092,11 +1130,12 @@ def main():
         P["rge"].append(r_rge)
         P["rgf"].append(r_rgf)
 
-        # MOD_COACT: gate activation by actual RG population rate, not BS phase.
-        # With tonic BS the old BS-phase gate was permanently 1.0 (useless).
-        # Now d_e/d_f reflect whether the CPG is genuinely bursting (rises during
-        # CUT-triggered RG bursts, falls to zero in interburst silences).
-        rg_ref = max(1e-9, float(BS_REGULAR_HZ))  # normalise to expected peak burst rate
+        # MOD_ACT_GATE: gate by RG population rate using a *realistic* reference (~peak burst rate),
+        # not BS_REGULAR_HZ. Observed RG rates ride at 100–400 Hz, so using BS rate (60 Hz)
+        # as the reference clamped the gate to 1.0 constantly — activation rode high and
+        # force never returned to baseline. Using 250 Hz as the ref lets the gate sweep
+        # from ~0.2 in interburst silence to 1.0 during bursts, restoring depth of modulation.
+        rg_ref = 250.0
         d_e = clamp(r_rge / rg_ref, 0.0, 1.0)
         d_f = clamp(r_rgf / rg_ref, 0.0, 1.0)
         d_e = float(d_e) ** float(ACT_GATE_POWER)
