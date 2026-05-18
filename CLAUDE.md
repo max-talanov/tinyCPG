@@ -43,12 +43,14 @@ sbatch run.sh
 
 ## Current model state (as of this debug session)
 
-- Cleanly alternates at ~1.7 Hz (600 ms cycles), rat trot range.
-- E/F counter-phase: RG correlation ~−0.65 to −0.85, force correlation similar.
-- Force returns to 0 between bursts (no more flat-topping).
+- Cleanly alternates in debug mode; correlation corr(RGE,RGF) ~−0.71 to −0.73 at BS=20 Hz.
+- FE force peaks 12–14 a.u., FF peaks 9–10 a.u. (FF limited by RGF burst rate ~70 Hz at BS=20).
+- Force minima 0.9–1.8 a.u. (below 2) — activation and force time constants tuned to clear baseline.
 - L vs R desynchronised via commissural inhibition.
-- **Known residual**: RG-F peaks ~2× RG-E amplitude (intrinsic-bursting Izhikevich on F
-  side, regular-spiking on E side). User has decided to keep this asymmetry.
+- **Known debug-mode limitation**: −0.85 RG correlation and FF >12 require production (BS=60 Hz, N=100).
+  At 200 ms cycles with 50 ms bins, there are only 4 bins/cycle; 1–2 transition bins limit correlation.
+- **Known residual**: RG-F peaks ~2× RG-E amplitude in production (intrinsic-bursting IB vs RS).
+  In debug (BS=20), E and F burst rates are similar (~70-90 Hz).
 
 ## Architecture
 
@@ -81,13 +83,17 @@ Cross-leg: L↔R commissural inhibition on RG-F (strong) and RG-E (weak).
 |---|---|---|
 | `BS_REGULAR_HZ = 60` | line ~80 | Tonic BS rate. `--debug-small` drops to 20. |
 | `CUT_RATE_ON_HZ = 100` | line ~66 | Rat Group-II/Aβ peak rate. Don't push >100 Hz. |
-| `W_INF2RGE = -32`, `W_INE2RGF = -5` | lines ~67-72 | **Asymmetric reciprocal inhibition (Zhang 2022). KEEP THIS RATIO.** F→E is ~6× stronger than E→F. |
+| `W_INF2RGE = -48`, `W_INE2RGF = -8` | lines ~75-82 | **Asymmetric reciprocal inhibition (Zhang 2022). KEEP THIS RATIO.** F→E is 6× stronger (48:8). |
 | `WMAX_BS = 30` | line ~236 | BS STDP weight cap, prevents BS-alone runaway. |
 | `W_CUT2INE = 6`, `P_CUT2INE = 0.30` | line ~266 | Stance-phase cutaneous reflex. |
-| `W_IA2IN = 5`, `P_IA2IN = 0.25` | lines ~69-70 | **NEW** — Ia → RG reciprocal interneurons. This is the closed-loop knob for debug. |
+| `W_IA2IN = 6`, `P_IA2IN = 0.25` | lines ~69-70 | Ia → RG reciprocal interneurons. Closed-loop knob. 5 too weak; 8 over-speeds cycle. |
 | `RGF_C = -55, RGF_D = 4` | line ~288 | Intrinsically bursting Izhikevich for RG-F. |
-| `rg_ref = 250` | line ~1148 | Activation gate reference Hz. |
-| `FORCE_SAT_K = 1.0` | line ~298 | Force saturation. K=1 keeps force linear. |
+| `rg_ref = 100` | line ~1190 | Activation gate reference Hz. 100 Hz calibrated for debug-mode burst peaks; clamps to 1 in production (300+ Hz). |
+| `ACT_SAT_K = 0.02` | line ~291 | Activation saturation slope. **Was 5e-4 (40× too small) — regression fixed.** |
+| `TAU_ACT_RISE/DECAY_MS = 20/20` | line ~288 | Activation time constants. Tuned for 150–200 ms debug cycles. |
+| `TAU_FORCE_RISE/DECAY_MS = 30/30` | line ~294 | Force time constants. Rat fast-twitch range; enables force to clear baseline in 75 ms off-phase. |
+| `FORCE_SAT_K = 1.0` | line ~301 | Force saturation. K=1 keeps force linear. |
+| `N_INF = 40` (debug-small) | line ~792 | Doubled in debug-small to give 12 InF connections per RGE vs 6 at N=20. |
 
 ## Modification history (grep-friendly)
 
@@ -95,12 +101,12 @@ Cross-leg: L↔R commissural inhibition on RG-F (strong) and RG-E (weak).
 |---|---|
 | `MOD_TONIC_BS` | BS is constant-rate, identical for both legs (not phase-gated). |
 | `MOD_COACT` | BS subthreshold alone; CUT co-activates RG via static pathway. |
-| `MOD_ZHANG_ASYM` | F→E inhibition ~6× stronger than E→F (Zhang/Shevtsova/Rybak 2022). |
+| `MOD_ZHANG_ASYM` | F→E inhibition 6× stronger than E→F (W_INF2RGE=-48, W_INE2RGF=-8). |
 | `MOD_CUT_REFLEX` | CUT → InE (stance-phase cutaneous reflex). |
-| `MOD_ACT_GATE` | Activation gated by RG rate (ref 250 Hz), not BS phase. |
+| `MOD_ACT_GATE` | Activation gated by RG rate (rg_ref=100 Hz, ACT_GATE_POWER=2). |
 | `MOD_FORCE_LINEAR` | FORCE_SAT_K=1.0 — force linear in working range. |
-| `MOD_DEBUG_SMALL` | Small-N + low-BS local debug mode. |
-| `MOD_IA_LOOP` | **NEW** — Ia → InE/InF closed-loop sensory drive into CPG core. |
+| `MOD_DEBUG_SMALL` | Small-N + low-BS local debug mode; N_INF=40 (doubled). |
+| `MOD_IA_LOOP` | Ia → InE/InF closed-loop sensory drive into CPG core (W_IA2IN=6). |
 
 ## Bio-plausibility constraints (rat)
 
@@ -128,7 +134,7 @@ Don't push values outside these ranges without flagging it.
 - One half-center locked permanently → inhibition asymmetry too extreme → reduce `|W_INF2RGE|`
 - Both legs synchronised → commissural too weak → bump `W_COMM_F_INH`
 - Force flat-tops at 17 → `FORCE_SAT_K` regressed; should be 1.0
-- Activation rides at 0.5 constantly → `rg_ref` clamped; should be ~250 Hz
+- Activation rides at 0.5 constantly → `rg_ref` too low; should be ~100 Hz (debug) — gate always clamped to 1 means no burst/trough discrimination
 
 ## Debug iteration pattern
 
