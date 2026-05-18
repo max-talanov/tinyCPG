@@ -58,6 +58,17 @@ N_INF = 50  # inhibitory interneurons mediating RG-F -> RG-E inhibition
 W_IA_IN2INT = 6.0  # Ia parrot -> Ia inhibitory interneuron (excitatory synapse)
 W_IA_INT2ANT = -10.0  # Ia inhibitory interneuron -> antagonist motor pool (inhibitory synapse)
 
+# MOD_IA_LOOP: Ia afferents also drive the RG reciprocal interneurons (InE, InF).
+# Ia-E (driven by extensor force/stretch) → InE → inhibits RG-F.
+# Ia-F (driven by flexor  force/stretch) → InF → inhibits RG-E.
+# This is closed-loop sensory feedback INTO the CPG core. It reduces the model's
+# dependence on tonic BS drive: at low BS (~20 Hz in --debug-small), the
+# Ia → In → RG loop is what keeps the rhythm self-sustaining, approximating the
+# role that intrinsic INaP bursting plays in the Hodgkin-Huxley Zhang 2022 model
+# (we don't have INaP in Izhikevich neurons).
+W_IA2IN = 5.0
+P_IA2IN = 0.25
+
 # MOD_ZHANG_ASYM: Asymmetric reciprocal inhibition between RG-F and RG-E half-centres.
 # Zhang/Shevtsova/Rybak (eLife 2022) Table 2 shows the F→InF→E inhibition is ~13× stronger
 # than E→InE→F (effective gains 0.18 vs 0.014). This asymmetry is what gives clean alternation:
@@ -427,6 +438,11 @@ def main():
                     help="Override Gaussian BS noise std (Hz).")
     ap.add_argument("--enforce-tonic-bs", action="store_true",
                     help="Force BS E/F and L/R rates to remain identical; abort otherwise.")
+    ap.add_argument("--debug-small", action="store_true",
+                    help="MOD_DEBUG_SMALL: reduce neuron counts and BS drive for fast local "
+                         "iteration. Overrides N_RG/N_CUT/N_BS/N_MOTOR/N_MUS/N_IA/N_IA_INT/N_IN "
+                         "to ~30-40 and BS_REGULAR_HZ to 20 Hz. Use with --sim-ms 5000 to "
+                         "iterate in seconds instead of minutes.")
     args = ap.parse_args()
     BS_RATE_BASE_HZ = float(args.bs_base_hz)
     BS_NOISE_STD_HZ = float(args.bs_noise_std_hz)
@@ -756,6 +772,35 @@ def main():
             f"min={args.stdp_winit_min} max={min(float(args.stdp_winit_max), float(WMAX))}"
         )
 
+    # ---- MOD_DEBUG_SMALL: small-N + low-BS debug mode for fast local iteration ----
+    if args.debug_small:
+        global N_CUT, N_BS, N_RG_E, N_RG_F, N_MOTOR_E, N_MOTOR_F
+        global N_MUS_E, N_MUS_F, N_IA_E, N_IA_F, N_IA_INT, N_INE, N_INF
+        global BS_REGULAR_HZ
+        N_CUT = 30
+        N_BS  = 30
+        N_RG_E = 40
+        N_RG_F = 40
+        N_MOTOR_E = 30
+        N_MOTOR_F = 30
+        N_MUS_E = 30
+        N_MUS_F = 30
+        N_IA_E = 30
+        N_IA_F = 30
+        N_IA_INT = 20
+        N_INE = 20
+        N_INF = 20
+        BS_REGULAR_HZ = 20.0
+        if rank == 0:
+            print("=" * 64)
+            print("[DEBUG-SMALL] Local fast-iteration mode active")
+            print(f"  N_RG=({N_RG_E},{N_RG_F})  N_CUT={N_CUT}  N_BS={N_BS}")
+            print(f"  N_MOTOR=({N_MOTOR_E},{N_MOTOR_F})  N_MUS=({N_MUS_E},{N_MUS_F})")
+            print(f"  N_IA=({N_IA_E},{N_IA_F})  N_IA_INT={N_IA_INT}  N_IN=({N_INE},{N_INF})")
+            print(f"  BS_REGULAR_HZ={BS_REGULAR_HZ} Hz (was 60)")
+            print("  Rhythm now relies on Ia → In → RG closed-loop instead of BS drive.")
+            print("=" * 64)
+
     # ---- build per-leg ----
     leg = {}
     for side in LEGS:
@@ -937,6 +982,16 @@ def main():
                      syn_spec={"synapse_model": "static_synapse", "weight": W_IA_IN2INT, "delay": delay["ia_path"]})
         nest.Connect(L["ia_int_f"], L["m_e"], conn_spec={"rule": "pairwise_bernoulli", "p": IA2RG_P},
                      syn_spec={"synapse_model": "static_synapse", "weight": W_IA_INT2ANT, "delay": delay["ia_path"]})
+
+        # MOD_IA_LOOP: Ia afferents drive the RG reciprocal-inhibition interneurons too.
+        # Ia-E (peaks with extensor force/stretch) → InE → inhibits RG-F → reinforces
+        # extensor phase. Ia-F (peaks with flexor force/stretch) → InF → inhibits RG-E
+        # → reinforces flexor phase. Closed-loop sensory drive sustains the rhythm
+        # when BS is low (essential for --debug-small at BS=20 Hz).
+        nest.Connect(L["ia_in_e"], L["in_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_IA2IN},
+                     syn_spec={"synapse_model": "static_synapse", "weight": W_IA2IN, "delay": delay["ia_path"]})
+        nest.Connect(L["ia_in_f"], L["in_f"], conn_spec={"rule": "pairwise_bernoulli", "p": P_IA2IN},
+                     syn_spec={"synapse_model": "static_synapse", "weight": W_IA2IN, "delay": delay["ia_path"]})
 
         nest.Connect(L["rg_e"], L["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_RG_REC},
                      syn_spec={"synapse_model": "static_synapse", "weight": W_RG_REC_E, "delay": delay["rg_rec"]})  # MOD_FIG10
