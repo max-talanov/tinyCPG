@@ -19,7 +19,7 @@ python3 -u cpg_2legs_fast.py \
     --sim-ms 5000 \
     --dt-ms 10 \
     --threads "$THREADS" \
-    --sweep-pairs "3.5:0.30" \
+    --sweep-pairs "22:0.30" \
     --sweep-run-idx 0 \
     --sweep-dist lognormal_cv \
     --seed 12345 \

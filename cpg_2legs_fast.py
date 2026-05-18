@@ -66,7 +66,7 @@ W_IA_INT2ANT = -10.0  # Ia inhibitory interneuron -> antagonist motor pool (inhi
 # Ia → In → RG loop is what keeps the rhythm self-sustaining, approximating the
 # role that intrinsic INaP bursting plays in the Hodgkin-Huxley Zhang 2022 model
 # (we don't have INaP in Izhikevich neurons).
-W_IA2IN = 5.0
+W_IA2IN = 6.0  # moderate increase: reinforces Ia→In feedback without over-speeding cycle (was 5; 8 makes cycles too fast)
 P_IA2IN = 0.25
 
 # MOD_ZHANG_ASYM: Asymmetric reciprocal inhibition between RG-F and RG-E half-centres.
@@ -75,10 +75,10 @@ P_IA2IN = 0.25
 # F drives the rhythm and forcibly silences E during the flexor burst, while E only weakly
 # nudges F so F's intrinsic burst pattern survives. Symmetric weights here gave shallow
 # counter-phase (RG correlation only ~−0.65 instead of ~−0.95).
-W_RG2INE     =  8.0    # RG-E → InE   (excites flexor-suppressing interneuron)
-W_RG2INF     = 12.0    # RG-F → InF   (excites extensor-suppressing interneuron, stronger)
-W_INE2RGF    =  -5.0   # InE → RG-F   (WEAK suppression — preserve F's intrinsic rhythm)
-W_INF2RGE    = -32.0   # InF → RG-E   (STRONG suppression — F dominates and silences E)
+W_RG2INE     = 12.0    # RG-E → InE   (excites flexor-suppressing interneuron)
+W_RG2INF     = 18.0    # RG-F → InF   (excites extensor-suppressing interneuron, stronger)
+W_INE2RGF    =  -8.0   # InE → RG-F   (WEAK suppression — preserve F's intrinsic rhythm)
+W_INF2RGE    = -48.0   # InF → RG-E   (STRONG suppression — ratio 48:8=6:1, Zhang 2022)
 P_RG_RECIP_F = 0.30    # F→InF→E pathway density (higher for strong inhibition)
 P_RG_RECIP_E = 0.15    # E→InE→F pathway density (lower for weak inhibition)
 
@@ -273,7 +273,7 @@ W0_RM = 30.0
 izh_params = dict(a=0.02, b=0.2, c=-65.0, d=8.0, V_th=30.0, V_min=-120.0)
 izh_inh_params = dict(a=0.1, b=0.2, c=-65.0, d=2.0, V_th=30.0, V_min=-120.0)  # UPDATED_v7
 I_E_RGE = 1.0  # MOD_REBALANCE: extensor tonic drive baseline
-I_E_RGF = 0.9  # MOD_REBALANCE: flexor tonic drive slightly lower to shorten RG-F bursts
+I_E_RGF = 0.9  # MOD_REBALANCE: flexor tonic drive slightly lower to shorten RG-F bursts; 1.1 makes IB too fast
 
 # Izhikevich "chattering" (bursting-like) parameters for RG-F excitatory neurons
 # (Izhikevich 2003/2004 canonical set)
@@ -285,14 +285,14 @@ I_E_MOTOR = 1.0
 
 # ---------- muscle proxies ----------
 # Activation proxy: saturating nonlinearity + brainstem gating to avoid saturation & enforce timing
-TAU_ACT_RISE_MS = 60.0
-TAU_ACT_DECAY_MS = 35.0
+TAU_ACT_RISE_MS = 20.0   # fast rise: activation tracks burst onset in ~20ms (was 60ms, too slow for 150ms cycles)
+TAU_ACT_DECAY_MS = 20.0  # fast decay: activation drops in ~20ms so force clears baseline in 75ms off-phase (was 35ms)
 ACT_MAX = 1.2
-ACT_SAT_K = 5e-4          # slope for activation from muscle relay rate
-ACT_GATE_POWER = 1.0      # >1.0 makes windows narrower around BS peaks
+ACT_SAT_K = 0.02          # slope for activation from muscle relay rate; saturates at ~100-150 Hz (was 5e-4, ~40× too small)
+ACT_GATE_POWER = 2.0      # squared gate sharpens burst/trough discrimination
 
-TAU_FORCE_RISE_MS = 140.0
-TAU_FORCE_DECAY_MS = 60.0
+TAU_FORCE_RISE_MS = 30.0   # rat fast-twitch twitch rise ~15-30ms; shorter allows force to track 150ms bursts
+TAU_FORCE_DECAY_MS = 30.0  # fast relaxation: force drops below 2 in 75ms off-phase (was 60ms)
 FORCE_MAX = 25.0
 # MOD_FORCE_LINEAR: previously FORCE_SAT_K=2.5 made force saturate near 17.8 at activation 0.5,
 # so the force trace flat-topped and never came back to 0 between bursts. With K=1.0, force
@@ -788,8 +788,8 @@ def main():
         N_IA_E = 30
         N_IA_F = 30
         N_IA_INT = 20
-        N_INE = 20
-        N_INF = 20
+        N_INE = 20  # E→F pathway: keep sparse (preserves F's rhythm-leading role; doubling hurt correlation)
+        N_INF = 40  # F→E pathway: doubled for adequate RGE silencing during F burst at small N
         BS_REGULAR_HZ = 20.0
         if rank == 0:
             print("=" * 64)
@@ -1185,12 +1185,11 @@ def main():
         P["rge"].append(r_rge)
         P["rgf"].append(r_rgf)
 
-        # MOD_ACT_GATE: gate by RG population rate using a *realistic* reference (~peak burst rate),
-        # not BS_REGULAR_HZ. Observed RG rates ride at 100–400 Hz, so using BS rate (60 Hz)
-        # as the reference clamped the gate to 1.0 constantly — activation rode high and
-        # force never returned to baseline. Using 250 Hz as the ref lets the gate sweep
-        # from ~0.2 in interburst silence to 1.0 during bursts, restoring depth of modulation.
-        rg_ref = 250.0
+        # MOD_ACT_GATE: gate by RG population rate. rg_ref=100 Hz matches typical burst peaks
+        # in both debug (BS=20 Hz, N_RG=40) and production after convergence (d_e clamped to 1
+        # when bursting at 300+ Hz). ACT_GATE_POWER=2 sharpens discrimination: at trough
+        # (~25 Hz) d_e=(25/100)^2=0.063 → force<2; at burst peak (~80 Hz) d_e=0.64 → force>12.
+        rg_ref = 100.0
         d_e = clamp(r_rge / rg_ref, 0.0, 1.0)
         d_f = clamp(r_rgf / rg_ref, 0.0, 1.0)
         d_e = float(d_e) ** float(ACT_GATE_POWER)
