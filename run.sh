@@ -27,7 +27,7 @@ PY
 # 10 diagnostic (mu,CV) pairs (Option C)
 SWEEP_PAIRS="0:0,0.5:0.8,1.0:0.6,2.0:0.45,3.5:0.30,5.0:0.20,7.0:0.15,9.0:0.10,12.0:0.08,16.0:0.05"
 OUTDIR="results/"
-TAG="bursting_commfix"
+TAG="bursting_paced"
 BASE_SEED=12345
 
 srun --cpu-bind=cores --distribution=block:block \
@@ -54,4 +54,9 @@ srun --cpu-bind=cores --distribution=block:block \
     --bs-base-hz 6 \
     --bs-noise-std-hz 0.25 \
     --enforce-tonic-bs \
+    --paced-gait \
+    --step-period-ms 1000 \
+    --stance-fraction 0.5 \
+    --n-ia-groups 3 \
+    --ia-ext-hz 60 80 100 \
     --long-run
