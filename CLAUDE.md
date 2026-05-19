@@ -43,14 +43,14 @@ sbatch run.sh
 
 ## Current model state (as of this debug session)
 
-- Cleanly alternates in debug mode; correlation corr(RGE,RGF) ~−0.71 to −0.73 at BS=20 Hz.
-- FE force peaks 12–14 a.u., FF peaks 9–10 a.u. (FF limited by RGF burst rate ~70 Hz at BS=20).
-- Force minima 0.9–1.8 a.u. (below 2) — activation and force time constants tuned to clear baseline.
-- L vs R desynchronised via commissural inhibition.
-- **Known debug-mode limitation**: −0.85 RG correlation and FF >12 require production (BS=60 Hz, N=100).
-  At 200 ms cycles with 50 ms bins, there are only 4 bins/cycle; 1–2 transition bins limit correlation.
-- **Known residual**: RG-F peaks ~2× RG-E amplitude in production (intrinsic-bursting IB vs RS).
-  In debug (BS=20), E and F burst rates are similar (~70-90 Hz).
+- **Paced-gait mode** (`--paced-gait`): explicit 1 s trot cycle (L/R 180° offset). Force-E peaks ~17 a.u.
+  with clean flat-top 500 ms stance windows, drops to ~0 in swing. Force-F peaks ~5–7 a.u. in debug
+  (limited by RGF burst rate at BS=20 Hz); production will be higher.
+- Activation-E: square-wave plateau at ~1.2, clean reset to 0 each swing.
+- L vs R desynchronised via commissural inhibition + paced external drive.
+- **Known debug-mode limitation for F**: FF force limited to ~7 a.u. at BS=20 Hz; production (BS=60 Hz,
+  N=100) expected to reach >12 a.u.
+- Without `--paced-gait`: cleanly alternates in debug mode; corr(RGE,RGF) ~−0.71 to −0.73.
 
 ## Architecture
 
@@ -90,10 +90,12 @@ Cross-leg: L↔R commissural inhibition on RG-F (strong) and RG-E (weak).
 | `RGF_C = -55, RGF_D = 4` | line ~288 | Intrinsically bursting Izhikevich for RG-F. |
 | `rg_ref = 100` | line ~1190 | Activation gate reference Hz. 100 Hz calibrated for debug-mode burst peaks; clamps to 1 in production (300+ Hz). |
 | `ACT_SAT_K = 0.02` | line ~291 | Activation saturation slope. **Was 5e-4 (40× too small) — regression fixed.** |
-| `TAU_ACT_RISE/DECAY_MS = 20/20` | line ~288 | Activation time constants. Tuned for 150–200 ms debug cycles. |
-| `TAU_FORCE_RISE/DECAY_MS = 30/30` | line ~294 | Force time constants. Rat fast-twitch range; enables force to clear baseline in 75 ms off-phase. |
+| `TAU_ACT_RISE/DECAY_MS = 20/20` | line ~288 | Activation time constants. Tuned for 150–200 ms debug cycles. **Overridden to 40/40 by `--paced-gait`.** |
+| `TAU_FORCE_RISE/DECAY_MS = 30/30` | line ~294 | Force time constants. Rat fast-twitch range. **Overridden to 80/80 by `--paced-gait`.** |
 | `FORCE_SAT_K = 1.0` | line ~301 | Force saturation. K=1 keeps force linear. |
 | `N_INF = 40` (debug-small) | line ~792 | Doubled in debug-small to give 12 InF connections per RGE vs 6 at N=20. |
+| `--step-period-ms 1000` | `debug.sh` | Full gait cycle period. HALF_MS=500ms per leg. |
+| `--n-ia-groups 3` | `debug.sh` | Heel/mid/toe sequential Ia-E groups (60/80/100 Hz). Each active 167ms. |
 
 ## Modification history (grep-friendly)
 
@@ -107,6 +109,7 @@ Cross-leg: L↔R commissural inhibition on RG-F (strong) and RG-E (weak).
 | `MOD_FORCE_LINEAR` | FORCE_SAT_K=1.0 — force linear in working range. |
 | `MOD_DEBUG_SMALL` | Small-N + low-BS local debug mode; N_INF=40 (doubled). |
 | `MOD_IA_LOOP` | Ia → InE/InF closed-loop sensory drive into CPG core (W_IA2IN=6). |
+| `MOD_PACED_GAIT` | Explicit 1-s trot cycle: L/R 180° offset, sequential Ia-E heel→toe during stance. |
 
 ## Bio-plausibility constraints (rat)
 

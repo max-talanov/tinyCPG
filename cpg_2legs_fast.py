@@ -370,6 +370,7 @@ def sample_w(model_name: str) -> np.ndarray:
 
 def main():
     global BS_RATE_BASE_HZ, BS_NOISE_STD_HZ, BS_DRIVE_NORM_HZ, ENFORCE_TONIC_BS
+    global TAU_ACT_RISE_MS, TAU_ACT_DECAY_MS, TAU_FORCE_RISE_MS, TAU_FORCE_DECAY_MS
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", type=str, default="cpg_run.h5")
     ap.add_argument("--outdir", type=str, default=".",
@@ -443,11 +444,28 @@ def main():
                          "iteration. Overrides N_RG/N_CUT/N_BS/N_MOTOR/N_MUS/N_IA/N_IA_INT/N_IN "
                          "to ~30-40 and BS_REGULAR_HZ to 20 Hz. Use with --sim-ms 5000 to "
                          "iterate in seconds instead of minutes.")
+    ap.add_argument("--paced-gait", action="store_true",
+                    help="MOD_PACED_GAIT: replace rotating CUT phase with explicit 1-s gait cycle. "
+                         "L and R legs alternate 180° (trot). Stance leg gets CUT ON + sequential "
+                         "Ia-E groups (heel→toe). Swing leg gets CUT OFF, RGF bursts freely. "
+                         "Use with --sim-ms 10000 and --step-period-ms 1000.")
+    ap.add_argument("--step-period-ms", type=float, default=1000.0,
+                    help="Full gait cycle period (ms) for --paced-gait. Each leg spends half "
+                         "of this in stance and half in swing (trot pattern).")
+    ap.add_argument("--stance-fraction", type=float, default=0.5,
+                    help="Fraction of HALF the step period (per leg) spent with sequential "
+                         "Ia-E active. 0.5 = Ia active for all of the stance half-cycle.")
+    ap.add_argument("--n-ia-groups", type=int, default=3,
+                    help="Number of sequential Ia-E sub-groups (heel→mid→toe) for --paced-gait.")
+    ap.add_argument("--ia-ext-hz", type=float, nargs="+", default=[60.0, 80.0, 100.0],
+                    help="Peak Ia rate (Hz) for each sequential extensor sub-group. "
+                         "Mimics heel→mid→toe pressure ramp. Must have --n-ia-groups values.")
     args = ap.parse_args()
     BS_RATE_BASE_HZ = float(args.bs_base_hz)
     BS_NOISE_STD_HZ = float(args.bs_noise_std_hz)
     BS_DRIVE_NORM_HZ = max(BS_RATE_BASE_HZ, 1e-9)
     ENFORCE_TONIC_BS = bool(args.enforce_tonic_bs)
+    PACED_GAIT = bool(getattr(args, "paced_gait", False))
     # ---- sweep mode (Option C): run one (mu, CV) pair per Slurm array task ----
     def _parse_pairs(s: str):
         s = (s or "").strip()
@@ -670,6 +688,26 @@ def main():
     weight_every = max(1, int(round(float(args.weight_sample_ms) / CHUNK_MS)))
     rate_every = max(1, int(round(float(args.rate_update_ms) / CHUNK_MS)))
 
+    # ---- MOD_PACED_GAIT: explicit 1-s trot cycle constants ----
+    if PACED_GAIT:
+        STEP_PERIOD_MS = q_ms(float(args.step_period_ms))   # full stride (both legs)
+        STANCE_FRAC    = float(args.stance_fraction)         # fraction of full stride in stance
+        HALF_MS        = q_ms(STEP_PERIOD_MS / 2.0)         # per half-cycle (one leg's turn = 500ms)
+        STANCE_MS      = q_ms(STEP_PERIOD_MS * STANCE_FRAC) # stance duration per leg (= 500ms @ FRAC=0.5)
+        SWING_MS       = q_ms(HALF_MS - STANCE_MS)          # residual swing window within half-cycle
+        N_IA_GROUPS_PACED = int(args.n_ia_groups)
+        IA_EXT_HZ      = list(args.ia_ext_hz)
+        while len(IA_EXT_HZ) < N_IA_GROUPS_PACED:
+            IA_EXT_HZ.append(float(IA_EXT_HZ[-1]))
+        # Each Ia sub-group window = stance duration / n_groups (e.g. 500/3 ≈ 167ms)
+        SUB_STANCE_MS  = q_ms(STANCE_MS / max(1, N_IA_GROUPS_PACED))
+        n_half_cycles  = max(2, int(np.ceil(SIM_MS / HALF_MS)))
+        # Longer time constants for smooth 500ms force plateaus (was tuned for ~150ms cycles)
+        TAU_ACT_RISE_MS   = 40.0
+        TAU_ACT_DECAY_MS  = 40.0
+        TAU_FORCE_RISE_MS = 80.0
+        TAU_FORCE_DECAY_MS = 80.0
+
     nest.ResetKernel()
     nest.SetKernelStatus(
         {"resolution": float(args.resolution_ms), "local_num_threads": int(args.threads), "print_time": False})
@@ -771,6 +809,13 @@ def main():
             f"std={float(args.stdp_winit_std)*float(getattr(args,'stdp_winit_bs_std_mul',1.0))}) "
             f"min={args.stdp_winit_min} max={min(float(args.stdp_winit_max), float(WMAX))}"
         )
+        if PACED_GAIT:
+            print(f"[PACED-GAIT] step_period={STEP_PERIOD_MS:.0f}ms  half={HALF_MS:.0f}ms  "
+                  f"stance={STANCE_MS:.0f}ms  swing={SWING_MS:.0f}ms  "
+                  f"n_ia_groups={N_IA_GROUPS_PACED}  sub_stance={SUB_STANCE_MS:.1f}ms  "
+                  f"ia_ext_hz={IA_EXT_HZ}  n_half_cycles={n_half_cycles}")
+            print(f"[PACED-GAIT] TAU_ACT={TAU_ACT_RISE_MS}/{TAU_ACT_DECAY_MS}ms  "
+                  f"TAU_FORCE={TAU_FORCE_RISE_MS}/{TAU_FORCE_DECAY_MS}ms")
 
     # ---- MOD_DEBUG_SMALL: small-N + low-BS debug mode for fast local iteration ----
     if args.debug_small:
@@ -859,6 +904,19 @@ def main():
         nest.Connect(ia_pg_f, ia_in_f, conn_spec={"rule": "one_to_one"})
         nest.SetStatus(ia_pg_f, {"rate": IA_BASE_HZ})
 
+        # MOD_PACED_GAIT: external sequential Ia-E groups (heel→mid→toe)
+        ia_ext_pg_e_groups = []
+        ia_ext_in_e_groups = []
+        if PACED_GAIT:
+            n_per = max(1, N_IA_E // N_IA_GROUPS_PACED)
+            for _ in range(N_IA_GROUPS_PACED):
+                pg = nest.Create("poisson_generator", n_per)
+                pn = nest.Create("parrot_neuron", n_per)
+                nest.Connect(pg, pn, conn_spec={"rule": "one_to_one"})
+                nest.SetStatus(pg, {"rate": 0.0})
+                ia_ext_pg_e_groups.append(pg)
+                ia_ext_in_e_groups.append(pn)
+
         rg_e = nest.Create("izhikevich", N_RG_E)
         rg_f = nest.Create("izhikevich", N_RG_F)
         m_e = nest.Create("izhikevich", N_MOTOR_E)
@@ -898,6 +956,7 @@ def main():
             base_pg=base_pg, base_in=base_in,
             ia_pg_e=ia_pg_e, ia_in_e=ia_in_e,
             ia_pg_f=ia_pg_f, ia_in_f=ia_in_f,
+            ia_ext_pg_e=ia_ext_pg_e_groups,   # MOD_PACED_GAIT: list of sequential Ia-E groups
             rg_e=rg_e, rg_f=rg_f, m_e=m_e, m_f=m_f,
             ia_int_e=ia_int_e, ia_int_f=ia_int_f, in_e=in_e, in_f=in_f,
             mus_e=mus_e, mus_f=mus_f,
@@ -992,6 +1051,14 @@ def main():
                      syn_spec={"synapse_model": "static_synapse", "weight": W_IA2IN, "delay": delay["ia_path"]})
         nest.Connect(L["ia_in_f"], L["in_f"], conn_spec={"rule": "pairwise_bernoulli", "p": P_IA2IN},
                      syn_spec={"synapse_model": "static_synapse", "weight": W_IA2IN, "delay": delay["ia_path"]})
+
+        # MOD_PACED_GAIT: external sequential Ia-E groups → InE → inhibits RGF during stance.
+        # Reinforces extensor phase while preserving F→E asymmetry (InF→RGE still 6× stronger).
+        if PACED_GAIT:
+            for pn in L["ia_ext_pg_e"]:
+                nest.Connect(pn, L["in_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_IA2IN},
+                             syn_spec={"synapse_model": "static_synapse", "weight": W_IA2IN,
+                                       "delay": delay["ia_path"]})
 
         nest.Connect(L["rg_e"], L["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_RG_REC},
                      syn_spec={"synapse_model": "static_synapse", "weight": W_RG_REC_E, "delay": delay["rg_rec"]})  # MOD_FIG10
@@ -1303,56 +1370,130 @@ def main():
         print("[Hint] Long simulation detected. Consider adding --long-run "
               "(sets chunk>=200ms, weight_sample>=1000ms, rate_update>=100ms, and downsamples weight reads).")
     done_steps = 0
-    chunk = max(1, int(N_CUT / N_PHASES))
     t_ms = 0.0
 
     t0 = time.time()
     sim_accum = 0.0
     book_accum = 0.0
-    for phase in range(N_PHASES):
-        for side in LEGS:
-            nest.SetStatus(leg[side]["cut_pg"], {"rate": CUT_RATE_OFF_HZ})
 
-        start = phase * chunk
-        end = min(N_CUT, (phase + 1) * chunk)
-        for side in LEGS:
-            nest.SetStatus(leg[side]["cut_pg"][start:end], {"rate": CUT_RATE_ON_HZ})
-        cut_active_frac = float(end - start) / float(N_CUT)
-
-        # Simulate in larger chunks to reduce Python <-> NEST overhead.
-        n_chunks = int(PHASE_MS // CHUNK_MS)
-        tail_ms = q_ms(PHASE_MS - n_chunks * CHUNK_MS)
-        n_chunks_total = n_chunks + (1 if tail_ms > 1e-9 else 0)
-
-        for local_chunk in range(n_chunks_total):
-            cur_chunk_ms = CHUNK_MS if local_chunk < n_chunks else tail_ms
-            cur_chunk_ms = q_ms(cur_chunk_ms)
-            if cur_chunk_ms <= 0.0:
+    def run_window(window_ms: float, cut_active_frac: float):
+        """Simulate window_ms of NEST time in CHUNK_MS steps, updating logs and rates."""
+        nonlocal done_steps, t_ms, sim_accum, book_accum
+        n_c = int(window_ms // CHUNK_MS)
+        tail = q_ms(window_ms - n_c * CHUNK_MS)
+        n_c_total = n_c + (1 if tail > 1e-9 else 0)
+        for ci in range(n_c_total):
+            cur = q_ms(CHUNK_MS if ci < n_c else tail)
+            if cur <= 0.0:
                 continue
-
             t_sim0 = time.perf_counter()
-            nest.Simulate(cur_chunk_ms)
+            nest.Simulate(cur)
             sim_accum += (time.perf_counter() - t_sim0)
-
-            t_ms += cur_chunk_ms
-            done_steps += 1  # now counts "chunks"
-
+            t_ms += cur
+            done_steps += 1
             t_book0 = time.perf_counter()
             do_rate_update = (done_steps % rate_every == 0)
             for side in LEGS:
-                update_leg(side, t_ms, cur_chunk_ms, cut_active_frac, do_rate_update)
+                update_leg(side, t_ms, cur, cut_active_frac, do_rate_update)
             if ENFORCE_TONIC_BS:
                 l_be = float(logs["L"]["bs_e"][-1]); r_be = float(logs["R"]["bs_e"][-1])
                 l_bf = float(logs["L"]["bs_f"][-1]); r_bf = float(logs["R"]["bs_f"][-1])
                 if abs(l_be - r_be) > 1e-9 or abs(l_bf - r_bf) > 1e-9:
-                    raise RuntimeError(f"Tonic BS violated across legs at t_ms={t_ms}: L=({l_be}, {l_bf}), R=({r_be}, {r_bf})")
+                    raise RuntimeError(
+                        f"Tonic BS violated across legs at t_ms={t_ms}: L=({l_be},{l_bf}), R=({r_be},{r_bf})")
             log_weights(t_ms, done_steps)
             book_accum += (time.perf_counter() - t_book0)
 
-            if rank == 0 and (
-                    (done_steps % int(args.print_every) == 0) or (done_steps == total_steps) or (local_chunk == 0)):
-                print(f"[Sim] Phase {phase + 1}/{N_PHASES} | chunk {done_steps}/{total_steps} | "
-                      f"phase_chunk {local_chunk + 1}/{n_chunks_total} | t={t_ms:.1f} ms | chunk_ms={cur_chunk_ms:.1f}")
+    if PACED_GAIT:
+        # MOD_PACED_GAIT: explicit trot-pattern gait cycle.
+        # Each half-cycle = HALF_MS (500 ms). L and R legs alternate 180°.
+        # Stance leg: CUT ON + sequential Ia-E heel→toe activation.
+        # Swing leg: CUT OFF, no ext-Ia → RGF bursts freely via IB + strong InF→RGE suppression.
+        for hc in range(n_half_cycles):
+            if t_ms >= SIM_MS:
+                break
+            stance = "L" if hc % 2 == 0 else "R"
+            swing  = "R" if hc % 2 == 0 else "L"
+
+            # Swing leg: clear all external drive
+            nest.SetStatus(leg[swing]["cut_pg"], {"rate": CUT_RATE_OFF_HZ})
+            for g in leg[swing]["ia_ext_pg_e"]:
+                nest.SetStatus(g, {"rate": 0.0})
+
+            # Stance leg: CUT ON
+            nest.SetStatus(leg[stance]["cut_pg"], {"rate": CUT_RATE_ON_HZ})
+
+            # Sequential Ia-E sub-groups: heel (60 Hz) → mid (80 Hz) → toe (100 Hz)
+            for g_idx in range(N_IA_GROUPS_PACED):
+                ia_hz = IA_EXT_HZ[g_idx]
+                nest.SetStatus(leg[stance]["ia_ext_pg_e"][g_idx], {"rate": ia_hz})
+                if g_idx > 0:
+                    nest.SetStatus(leg[stance]["ia_ext_pg_e"][g_idx - 1], {"rate": 0.0})
+                sub_rem = min(SUB_STANCE_MS, SIM_MS - t_ms)
+                if sub_rem <= 0.0:
+                    break
+                run_window(sub_rem, cut_active_frac=1.0)
+
+            # Turn off all ext-Ia on stance leg (it becomes swing next half-cycle)
+            for g in leg[stance]["ia_ext_pg_e"]:
+                nest.SetStatus(g, {"rate": 0.0})
+
+            # Residual swing window within this half-cycle (non-zero only when STANCE_FRAC < 0.5)
+            if SWING_MS > 0.0:
+                nest.SetStatus(leg[stance]["cut_pg"], {"rate": CUT_RATE_OFF_HZ})
+                swing_rem = min(SWING_MS, SIM_MS - t_ms)
+                if swing_rem > 0.0:
+                    run_window(swing_rem, cut_active_frac=0.0)
+
+            if rank == 0 and (hc % max(1, int(args.print_every)) == 0 or hc == n_half_cycles - 1):
+                print(f"[Paced] hc {hc + 1}/{n_half_cycles} stance={stance} "
+                      f"t={t_ms:.0f}/{SIM_MS:.0f} ms step={done_steps}/{total_steps}")
+    else:
+        # Original N_PHASES rotating CUT loop
+        chunk_cut = max(1, int(N_CUT / N_PHASES))
+        for phase in range(N_PHASES):
+            for side in LEGS:
+                nest.SetStatus(leg[side]["cut_pg"], {"rate": CUT_RATE_OFF_HZ})
+
+            start = phase * chunk_cut
+            end = min(N_CUT, (phase + 1) * chunk_cut)
+            for side in LEGS:
+                nest.SetStatus(leg[side]["cut_pg"][start:end], {"rate": CUT_RATE_ON_HZ})
+            cut_active_frac = float(end - start) / float(N_CUT)
+
+            n_chunks = int(PHASE_MS // CHUNK_MS)
+            tail_ms = q_ms(PHASE_MS - n_chunks * CHUNK_MS)
+            n_chunks_total = n_chunks + (1 if tail_ms > 1e-9 else 0)
+
+            for local_chunk in range(n_chunks_total):
+                cur_chunk_ms = q_ms(CHUNK_MS if local_chunk < n_chunks else tail_ms)
+                if cur_chunk_ms <= 0.0:
+                    continue
+
+                t_sim0 = time.perf_counter()
+                nest.Simulate(cur_chunk_ms)
+                sim_accum += (time.perf_counter() - t_sim0)
+
+                t_ms += cur_chunk_ms
+                done_steps += 1
+
+                t_book0 = time.perf_counter()
+                do_rate_update = (done_steps % rate_every == 0)
+                for side in LEGS:
+                    update_leg(side, t_ms, cur_chunk_ms, cut_active_frac, do_rate_update)
+                if ENFORCE_TONIC_BS:
+                    l_be = float(logs["L"]["bs_e"][-1]); r_be = float(logs["R"]["bs_e"][-1])
+                    l_bf = float(logs["L"]["bs_f"][-1]); r_bf = float(logs["R"]["bs_f"][-1])
+                    if abs(l_be - r_be) > 1e-9 or abs(l_bf - r_bf) > 1e-9:
+                        raise RuntimeError(
+                            f"Tonic BS violated across legs at t_ms={t_ms}: L=({l_be},{l_bf}), R=({r_be},{r_bf})")
+                log_weights(t_ms, done_steps)
+                book_accum += (time.perf_counter() - t_book0)
+
+                if rank == 0 and (
+                        (done_steps % int(args.print_every) == 0) or (done_steps == total_steps) or (local_chunk == 0)):
+                    print(f"[Sim] Phase {phase + 1}/{N_PHASES} | chunk {done_steps}/{total_steps} | "
+                          f"phase_chunk {local_chunk + 1}/{n_chunks_total} | t={t_ms:.1f} ms | chunk_ms={cur_chunk_ms:.1f}")
 
     if rank == 0:
         wall = time.time() - t0
@@ -1392,6 +1533,11 @@ def main():
         h5.attrs["bs_rate_base_hz"] = float(BS_RATE_BASE_HZ)
         h5.attrs["bs_noise_std_hz"] = float(BS_NOISE_STD_HZ)
         h5.attrs["enforce_tonic_bs"] = bool(ENFORCE_TONIC_BS)
+        h5.attrs["paced_gait"] = bool(PACED_GAIT)
+        if PACED_GAIT:
+            h5.attrs["step_period_ms"] = float(STEP_PERIOD_MS)
+            h5.attrs["half_ms"] = float(HALF_MS)
+            h5.attrs["n_ia_groups"] = int(N_IA_GROUPS_PACED)
         h5.attrs["local_threads"] = int(args.threads)
         h5.attrs["mpi_processes"] = int(nproc)
         h5.attrs["save_weights_mode"] = str(args.save_weights)

@@ -15,8 +15,13 @@ THREADS=${THREADS:-4}
 
 python3 -u cpg_2legs_fast.py \
     --debug-small \
+    --paced-gait \
+    --step-period-ms 1000 \
+    --stance-fraction 0.5 \
+    --n-ia-groups 3 \
+    --ia-ext-hz 60 80 100 \
     --out results/debug.h5 \
-    --sim-ms 5000 \
+    --sim-ms 10000 \
     --dt-ms 10 \
     --threads "$THREADS" \
     --sweep-pairs "22:0.30" \
