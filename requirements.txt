@@ -1,0 +1,12 @@
+# tinyCPG dependencies
+#
+# NEST is the spiking simulator. It is NOT pip-installable on most platforms —
+# install via conda or build from source: https://nest-simulator.readthedocs.io/
+# Tested on NEST 3.9.0. MN5 modulefile typically provides this.
+#
+# nest >= 3.9
+#
+# The pip-installable runtime + plotting dependencies:
+numpy>=1.24
+h5py>=3.8
+matplotlib>=3.6
