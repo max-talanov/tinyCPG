@@ -6,7 +6,7 @@
 #SBATCH --ntasks=1
 #SBATCH --array=0-9
 #SBATCH --cpus-per-task=64
-#SBATCH --time=06:00:00
+#SBATCH --time=12:00:00
 #SBATCH --partition=acc
 
 export LANG=${LANG:-C.UTF-8}
@@ -27,7 +27,7 @@ PY
 # 10 diagnostic (mu,CV) pairs (Option C)
 SWEEP_PAIRS="0:0,0.5:0.8,1.0:0.6,2.0:0.45,3.5:0.30,5.0:0.20,7.0:0.15,9.0:0.10,12.0:0.08,16.0:0.05"
 OUTDIR="results/"
-TAG="bursting_paced"
+TAG="bursting_paced_120s"
 BASE_SEED=12345
 
 srun --cpu-bind=cores --distribution=block:block \
@@ -39,7 +39,7 @@ srun --cpu-bind=cores --distribution=block:block \
     --sweep-pairs "$SWEEP_PAIRS" \
     --sweep-run-idx ${SLURM_ARRAY_TASK_ID} \
     --sweep-dist lognormal_cv \
-    --sim-ms 30000 \
+    --sim-ms 120000 \
     --dt-ms 10 \
     --threads $SLURM_CPUS_PER_TASK \
     --nest-verbosity M_ERROR \
