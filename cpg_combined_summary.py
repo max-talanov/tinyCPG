@@ -181,6 +181,116 @@ def _build_portrait(args, runs, colors, rep):
         r["h5"].close()
 
 
+def _build_landscape(args, runs, colors, rep):
+    """Landscape-orientation summary suitable for 16:9 widescreen slides.
+
+    Single page, 16 × 10 inches. Same five content units as the portrait
+    layout, rearranged into a 3-row × 3-col grid:
+      Row 1: [leg L last-5s zoom] | [RG last-5s zoom (spans 2 cols)]
+      Row 2: [leg L full 120 s    (spans 2 cols)] | [leg R full 120 s]
+      Row 3: STDP — cut->rge | bs->rge | bs->rgf
+    """
+    plt.rcParams.update({
+        "font.size": 10,
+        "axes.titlesize": 11,
+        "axes.labelsize": 10,
+        "legend.fontsize": 8,
+        "xtick.labelsize": 9,
+        "ytick.labelsize": 9,
+    })
+
+    fig = plt.figure(figsize=(16, 10))
+    gs = gridspec.GridSpec(3, 3, figure=fig,
+                           height_ratios=[1.0, 1.0, 1.2],
+                           hspace=0.50, wspace=0.28)
+
+    sim_ms = rep["sim_ms"]
+    zoom_start = max(0.0, sim_ms - 5000.0)
+    t_rep = rep["times_ms"]
+    mask = t_rep >= zoom_start
+
+    # Row 1, col 0: leg L force E+F, last 5 s zoom
+    ax_zoom_l = fig.add_subplot(gs[0, 0])
+    ax_zoom_l.plot(t_rep[mask], rep["h5"]["leg_L/force_e"][:][mask],
+                   color="#1f77b4", linewidth=1.4, label="Force E")
+    ax_zoom_l.plot(t_rep[mask], rep["h5"]["leg_L/force_f"][:][mask],
+                   color="#ff7f0e", linewidth=1.4, label="Force F")
+    ax_zoom_l.set_title(f"Muscle activity — leg L, last 5 s  ({rep['label']})\nE↔F counter-phase")
+    ax_zoom_l.set_ylabel("force (a.u.)")
+    ax_zoom_l.set_xlim(zoom_start, sim_ms)
+    ax_zoom_l.legend(loc="upper right", ncol=2)
+    ax_zoom_l.grid(alpha=0.2)
+
+    # Row 1, cols 1-2: RG activity zoom (wider)
+    ax_rg = fig.add_subplot(gs[0, 1:])
+    ax_rg.plot(t_rep[mask], rep["h5"]["leg_L/rge"][:][mask],
+               color="#1f77b4", linewidth=1.2, label="RG-E rate")
+    ax_rg.plot(t_rep[mask], rep["h5"]["leg_L/rgf"][:][mask],
+               color="#ff7f0e", linewidth=1.2, label="RG-F rate")
+    ax_rg.set_title(f"Rhythm-generator activity — leg L, last 5 s zoom  ({rep['label']})")
+    ax_rg.set_ylabel("RG rate (Hz/neuron)")
+    ax_rg.set_xlim(zoom_start, sim_ms)
+    ax_rg.legend(loc="upper right", ncol=2)
+    ax_rg.grid(alpha=0.2)
+
+    # Row 2, cols 0-1: leg L full 120 s (wider — primary stability panel)
+    ax_full_l = fig.add_subplot(gs[1, :2])
+    ax_full_l.plot(t_rep, rep["h5"]["leg_L/force_e"][:],
+                   color="#1f77b4", linewidth=0.5, label="Force E")
+    ax_full_l.plot(t_rep, rep["h5"]["leg_L/force_f"][:],
+                   color="#ff7f0e", linewidth=0.5, label="Force F")
+    ax_full_l.set_title(f"Muscle activity — leg L, full 120 s  ({rep['label']})  —  long-term stability")
+    ax_full_l.set_ylabel("force (a.u.)")
+    ax_full_l.set_xlim(0, sim_ms)
+    ax_full_l.grid(alpha=0.2)
+
+    # Row 2, col 2: leg R full 120 s — shows L vs R 180° offset
+    ax_full_r = fig.add_subplot(gs[1, 2])
+    ax_full_r.plot(t_rep, rep["h5"]["leg_R/force_e"][:],
+                   color="#2ca02c", linewidth=0.5, label="Force E (leg R)")
+    ax_full_r.plot(t_rep, rep["h5"]["leg_R/force_f"][:],
+                   color="#d62728", linewidth=0.5, label="Force F (leg R)")
+    ax_full_r.set_title(f"Leg R, full 120 s\nL vs R = 180° trot offset")
+    ax_full_r.set_ylabel("force (a.u.)")
+    ax_full_r.set_xlim(0, sim_ms)
+    ax_full_r.grid(alpha=0.2)
+
+    # Row 3: STDP — 3 side-by-side subpanels
+    proj_keys = ["cut->rge", "bs->rge", "bs->rgf"]
+    win = max(1, int(args.smooth_sec * 1000.0 / max(1.0, runs[0]["dt_ms"])))
+    stdp_axes = [fig.add_subplot(gs[2, i]) for i in range(3)]
+
+    for ax, proj in zip(stdp_axes, proj_keys):
+        for r, col in zip(runs, colors):
+            w = r["h5"]["leg_L/weights"]
+            mk = f"{proj}_mean"
+            sk = f"{proj}_std"
+            if mk not in w:
+                continue
+            m = _moving_average(np.asarray(w[mk][:]), win)
+            ax.plot(r["times_ms"], m, color=col, label=r["label"], linewidth=1.0)
+            if sk in w:
+                s = _moving_average(np.asarray(w[sk][:]), win)
+                ax.fill_between(r["times_ms"], m - s, m + s, color=col, alpha=0.10)
+        ax.set_title(f"STDP — {proj}")
+        ax.set_xlabel("time (ms)")
+        ax.grid(alpha=0.2)
+    stdp_axes[0].set_ylabel("weight (pA)")
+    stdp_axes[0].legend(loc="lower right", fontsize=7, ncol=2)
+
+    fig.suptitle(
+        f"tinyCPG paced-gait — 120 s long-term stability  (N={len(runs)} sweep points)",
+        fontsize=13, y=0.998,
+    )
+
+    fig.savefig(args.out, dpi=160, bbox_inches="tight")
+    plt.close(fig)
+    print(f"[combined] saved {args.out}  (landscape, 16x10 inches)")
+
+    for r in runs:
+        r["h5"].close()
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--files", nargs="+", required=True)
@@ -189,9 +299,10 @@ def main():
                     help="Sweep idx used for the single-trace RG-rate panel.")
     ap.add_argument("--smooth-sec", type=float, default=1.0)
     ap.add_argument("--layout", type=str, default="full",
-                    choices=["full", "portrait"],
+                    choices=["full", "portrait", "landscape"],
                     help="full = wide 16x22 detailed layout; portrait = compact 9x14 "
-                         "layout sized for portrait-orientation presentation slides.")
+                         "layout for portrait slides; landscape = 16x10 layout for "
+                         "16:9 widescreen slides (same content as portrait, rearranged).")
     args = ap.parse_args()
 
     # Expand glob patterns
@@ -229,6 +340,9 @@ def main():
     # ---- Build figure ----
     if args.layout == "portrait":
         _build_portrait(args, runs, colors, rep)
+        return
+    if args.layout == "landscape":
+        _build_landscape(args, runs, colors, rep)
         return
     fig = plt.figure(figsize=(16, 22))
     gs = gridspec.GridSpec(7, 3, figure=fig, hspace=0.45, wspace=0.25)
