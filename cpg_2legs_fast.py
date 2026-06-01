@@ -460,7 +460,32 @@ def main():
     ap.add_argument("--ia-ext-hz", type=float, nargs="+", default=[60.0, 80.0, 100.0],
                     help="Peak Ia rate (Hz) for each sequential extensor sub-group. "
                          "Mimics heel→mid→toe pressure ramp. Must have --n-ia-groups values.")
+    # ---- ablation flags (paper Figure: necessity of each component) ----
+    ap.add_argument("--ablate-ia-loop", action="store_true",
+                    help="ABLATION: zero Ia→InE/InF closed-loop (W_IA2IN=0). Tests "
+                         "whether closed-loop sensory feedback is required.")
+    ap.add_argument("--ablate-asym", action="store_true",
+                    help="ABLATION: symmetric reciprocal inhibition "
+                         "(W_INF2RGE = W_INE2RGF = -28). Tests whether Zhang 2022 "
+                         "6:1 asymmetry is required.")
+    ap.add_argument("--ablate-comm", action="store_true",
+                    help="ABLATION: zero L↔R commissural inhibition "
+                         "(W_COMM_F_INH = W_COMM_E_INH = 0). Tests L/R desync mechanism.")
     args = ap.parse_args()
+    # ---- apply ablation overrides (must happen before connect-time uses these constants) ----
+    global W_IA2IN, W_INF2RGE, W_INE2RGF, W_COMM_F_INH, W_COMM_E_INH
+    ablation_tag = []
+    if args.ablate_ia_loop:
+        W_IA2IN = 0.0
+        ablation_tag.append("noIa")
+    if args.ablate_asym:
+        W_INF2RGE = -28.0   # mean of -48 and -8
+        W_INE2RGF = -28.0
+        ablation_tag.append("symInh")
+    if args.ablate_comm:
+        W_COMM_F_INH = 0.0
+        W_COMM_E_INH = 0.0
+        ablation_tag.append("noComm")
     BS_RATE_BASE_HZ = float(args.bs_base_hz)
     BS_NOISE_STD_HZ = float(args.bs_noise_std_hz)
     BS_DRIVE_NORM_HZ = max(BS_RATE_BASE_HZ, 1e-9)
@@ -1538,6 +1563,10 @@ def main():
             h5.attrs["step_period_ms"] = float(STEP_PERIOD_MS)
             h5.attrs["half_ms"] = float(HALF_MS)
             h5.attrs["n_ia_groups"] = int(N_IA_GROUPS_PACED)
+        h5.attrs["ablate_ia_loop"] = bool(args.ablate_ia_loop)
+        h5.attrs["ablate_asym"] = bool(args.ablate_asym)
+        h5.attrs["ablate_comm"] = bool(args.ablate_comm)
+        h5.attrs["ablation_tag"] = ",".join(ablation_tag) if ablation_tag else "baseline"
         h5.attrs["local_threads"] = int(args.threads)
         h5.attrs["mpi_processes"] = int(nproc)
         h5.attrs["save_weights_mode"] = str(args.save_weights)
