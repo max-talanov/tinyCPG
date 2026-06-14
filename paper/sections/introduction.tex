@@ -1,0 +1,70 @@
+% Introduction — target 600-900 words for PLOS Comp Bio.
+% Funnel: broad CPG context  →  Rybak/Danner/Zhang lineage  →
+%        their stated limitations  →  our four extensions  →  paper roadmap.
+
+\todo{4-6 paragraphs. Suggested outline below.}
+
+\paragraph{$\bullet$ Paragraph 1 --- CPG context.}
+Coordinated rhythmic limb movement in mammals is controlled primarily by
+spinal cord circuitry~\cite{grahamBrown1911,kiehn2006,kiehn2016}.
+Rhythm-generating (RG) circuits in the cervical and lumbar enlargements
+produce flexor and extensor bursts that drive locomotor output, with the
+characteristic flexor--extensor counter-phase pattern preserved across
+species. \emph{The remainder of P1: a sentence on why a quantitative
+computational understanding matters (e.g.\ for neural prosthetics,
+recovery-after-injury models, robotics-of-locomotion).}
+
+\paragraph{$\bullet$ Paragraph 2 --- Rybak/Danner/Zhang model lineage.}
+A succession of biophysically detailed computational models has
+progressively refined the architecture of the central spinal
+CPG~\cite{rybak2006,shevtsova2015,danner2017,zhang2022}. These models use
+Hodgkin--Huxley dynamics with persistent-sodium-driven intrinsic bursting,
+typed genetic interneuron populations (V0V, V0D, V1, V2a, V3, Shox2), and
+hand-curated synaptic weights. The most recent extension~\cite{zhang2022}
+adds ascending long-propriospinal V3 neurons to reproduce
+speed-dependent gait expression (walk, trot, gallop, bound) in mice.
+
+\paragraph{$\bullet$ Paragraph 3 --- Acknowledged limitations.}
+This lineage of models, however, makes three deliberate
+simplifications, explicitly listed by~\cite{zhang2022}: (i)
+\emph{``the model does not include motoneurons''}; (ii) \emph{``the
+model focuses exclusively on central interactions within the spinal cord,
+without considering biomechanics and the role of sensory feedback from the
+limbs''}; (iii) reflex circuits mediated by Ia and Ib interneurons,
+Renshaw cells, and pattern-formation interneurons are absent. In
+addition, all synaptic weights in these models are \emph{hand-tuned}; no
+form of synaptic plasticity is considered.
+
+\paragraph{$\bullet$ Paragraph 4 --- Our extensions.}
+Here we extend this lineage with four mechanisms:
+(1) STDP-driven self-organisation of descending (BS$\to$RG) and
+cutaneous (CUT$\to$RG) synapses, removing the need to hand-tune
+afferent weights;
+(2) closed-loop force-driven Ia spindle feedback projecting back into
+the reciprocal-inhibition interneurons (InE, InF);
+(3) motoneuron pools and Hill-style muscle proxies producing
+graded force and length traces;
+(4) externally paced sequential Ia activation modelling
+heel$\to$mid$\to$toe pressure transfer during the stance phase.
+
+\paragraph{$\bullet$ Paragraph 5 --- Scope and non-scope.}
+We deliberately retain the present-paper scope to a two-leg
+(left/right hindlimb) system. The four-limb fore--hindlimb
+coordination captured by V3 ascending long-propriospinal neurons
+in~\cite{zhang2022} is beyond the present scope. We do not attempt
+to reproduce gait \emph{transitions} (walk$\to$trot$\to$gallop$\to$bound)
+either: the present focus is on stability of a single paced gait under
+self-organised weights, across the rat locomotor speed range
+(\SIrange{600}{1400}{\milli\second} step period).
+
+\paragraph{$\bullet$ Paragraph 6 --- Paper roadmap.}
+Section~\ref{sec:methods} describes the model architecture, Izhikevich
+neuron parameters, STDP rule, sensory pathways, and the paced gait
+protocol. Section~\ref{sec:results} presents (i) STDP convergence and
+long-term stability of the paced locomotor pattern over
+\SI{120}{\second}, (ii) an ablation budget identifying which components
+are necessary, and (iii) a speed sweep showing that the gait tracks
+commanded step period within tens of microseconds across the rat
+locomotor range. Section~\ref{sec:discussion} positions the work
+relative to the Rybak lineage and discusses limitations and future
+extensions.

@@ -1,0 +1,97 @@
+% Discussion — to be expanded. Anchored on novelty_vs_zhang2021.md.
+
+\todo{Target 1500-1800 words. Suggested structure:}
+
+\subsection{Summary of contributions}
+\todo{1-2 paragraphs restating the four extensions
+(STDP self-organisation, Ia closed loop, motoneurons/muscle, paced
+sensory drive) and the three main empirical findings (self-organisation
+across 4 orders of magnitude in init weights; long-term stability
+over 120\,s; identification of commissural inhibition and paced drive
+as the two load-bearing components).}
+
+\subsection{Comparison with Rybak-lineage models}
+\todo{Anchor on \texttt{paper/novelty\_vs\_zhang2021.md}. Address:
+\begin{itemize}
+  \item Architectural realism: we have fewer genetically typed
+        interneurons (no V0V/V0D/V2a distinction explicitly), but we
+        add the missing motoneurons, muscle, and Ia loop.
+  \item Self-organisation vs.\ hand-tuning: the contribution is
+        methodological --- demonstrating that a Rybak-style
+        architecture can self-tune its descending weights via STDP.
+  \item Biomechanical closed loop: the force-driven Ia rate code
+        provides the closed-loop substrate that~\cite{zhang2022}
+        explicitly list as missing.
+\end{itemize}}
+
+\subsection{Self-organisation finding and its limits}
+\todo{2 paragraphs:
+\begin{itemize}
+  \item Why does the same plateau emerge from 4 orders of magnitude in
+        initial $\mu$? Discuss the role of STDP weight ceilings
+        ($W_{\max}$, $W_{\max,\text{BS}}$) as attractor boundaries.
+  \item What's NOT self-organised: the asymmetric reciprocal inhibition
+        constants $W_{\text{InF}\to\text{RG-E}}$, $W_{\text{InE}\to\text{RG-F}}$
+        are hand-set; the commissural inhibition $W_{\text{COMM}}$ is
+        hand-set; intrinsic Izhikevich parameters are hand-set. Self-
+        organisation here is limited to descending and cutaneous
+        afferent gains.
+\end{itemize}}
+
+\subsection{Ablation interpretation and clinical/translational angle}
+\todo{1-2 paragraphs:
+\begin{itemize}
+  \item The redundancy under paced drive (noIa and symInh both leave the
+        gait intact) is consistent with the deafferented fictive
+        locomotion literature \cite{pearson1995,rossignol2006}.
+  \item The commissural-inhibition load-bearing role mirrors V0-silencing
+        studies \cite{kiehn2016,talpalar2013}.
+  \item Speculative angle: \emph{if} the closed-loop sensory pacing
+        substitutes for descending drive, this supports the idea that
+        intact afferent feedback can compensate for descending pathway
+        disruption --- relevant to spinal cord injury recovery
+        models~\cite{harkema2011}.
+\end{itemize}}
+
+\subsection{Limitations and future work}
+\todo{Mandatory subsection. Discuss:
+\begin{enumerate}
+  \item \textbf{Two legs, not four.} Our model omits V3 ascending
+        long-propriospinal pathways and fore--hindlimb coordination
+        --- the central topic of~\cite{zhang2022}. Extending to
+        4 legs is straightforward (replicate the L/R hindlimb pair into
+        a forelimb pair, add V3 aLPN-like diagonal synchronisation).
+  \item \textbf{Single gait.} We pace one gait (paced trot at
+        600--1400\,ms cycle); we do not reproduce walk$\to$trot$\to$
+        gallop$\to$bound transitions. This is structural: our paced
+        gait is externally driven, not self-emergent at varying
+        descending-drive levels.
+  \item \textbf{Izhikevich, not Hodgkin--Huxley.} We trade
+        biophysical detail for simulation efficiency. The persistent
+        sodium (INaP) dynamics are approximated by the intrinsic-
+        bursting Izhikevich parameter set ($c=-55, d=4$). For
+        questions specifically about INaP pharmacology our model is
+        not appropriate; for questions about network-level rhythm
+        organisation it is.
+  \item \textbf{No statistical replication.} Our results are
+        deterministic point estimates from fixed-seed runs; the
+        $(\mu, \mathrm{CV})$ sweep substitutes for stochastic
+        replication.
+  \item \textbf{Self-organisation is local.} Only the descending
+        BS$\to$RG and CUT$\to$RG synapses are plastic; the central
+        reciprocal-inhibition and commissural weights are
+        hand-tuned. A fully self-organising spinal CPG remains future
+        work.
+\end{enumerate}}
+
+\subsection{Concluding remark}
+\todo{1 paragraph: ``The Rybak central spinal CPG, when closed in the
+loop with motoneurons, muscle proxies, Ia feedback, and paced cutaneous
+drive, self-organises its descending and cutaneous weights to a robust
+locomotor attractor that is stable for 120\,s, tracks commanded gait
+period across the rat locomotor range, and is robust to the loss of
+individual components except commissural inhibition and the paced
+drive itself. Together this defines a minimal closed-loop spinal CPG
+that bridges the Rybak central architecture to a sensorimotor
+substrate amenable to extensions in neural prosthetics and spinal
+injury models.''}

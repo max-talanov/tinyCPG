@@ -1,0 +1,79 @@
+% =============================================================
+%  tinyCPG paper — main LaTeX file
+%
+%  Compile with:  latexmk -pdf main.tex
+%  (or)           pdflatex main && bibtex main && pdflatex main && pdflatex main
+%
+%  Generic preamble suitable for either PLOS Computational Biology
+%  or Frontiers in Computational Neuroscience. Switch to the
+%  publisher's template at submission time by replacing the
+%  `\documentclass` and `\bibliographystyle` lines.
+% =============================================================
+
+\documentclass[11pt,letterpaper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath, amssymb}
+\usepackage{graphicx}
+\graphicspath{{figures/}}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=blue!50!black,
+            citecolor=blue!50!black, urlcolor=blue!70!black}
+\usepackage{booktabs}
+\usepackage{caption}
+\captionsetup{font=small, labelfont=bf, format=plain}
+\usepackage{siunitx}        % for SI units in tables
+\usepackage{enumitem}
+\setlist{nosep}
+
+% TODO / margin-note macros to make scaffold work visible
+\newcommand{\todo}[1]{\textcolor{red}{\textbf{[TODO: #1]}}}
+\newcommand{\xref}[1]{\textcolor{purple}{[\textsc{#1}]}}  % cross-ref placeholders
+
+\title{Self-organisation of a closed-loop spinal locomotor pattern: \\
+       extending the Rybak-style central pattern generator with STDP,
+       motoneurons, and Ia sensory feedback}
+
+\author{Maxim Talanov\textsuperscript{1,*} \\
+        \textit{\small \textsuperscript{1}Affiliation (TODO)} \\
+        \textit{\small \textsuperscript{*}Correspondence: max.talanov@gmail.com}}
+
+\date{}
+
+% =============================================================
+\begin{document}
+\maketitle
+
+\input{sections/abstract}
+
+\section{Introduction}\label{sec:intro}
+\input{sections/introduction}
+
+\section{Methods}\label{sec:methods}
+\input{sections/methods}
+
+\section{Results}\label{sec:results}
+\input{sections/results}
+
+\section{Discussion}\label{sec:discussion}
+\input{sections/discussion}
+
+% --- Data, code, reproducibility ---
+\section*{Code and data availability}
+All source code is available at
+\href{https://github.com/max-talanov/tinyCPG}{github.com/max-talanov/tinyCPG}.
+Raw HDF5 simulation outputs underlying Figures~\ref{fig:main}--\ref{fig:speed}
+are deposited at \todo{Zenodo DOI}.
+
+\section*{Acknowledgements}
+\todo{add funding, computational allocation MN5/BSC, collaborators.}
+
+% --- Bibliography ---
+\bibliographystyle{unsrt}   % switch to PLOS or Frontiers style at submission
+\bibliography{refs}
+
+\end{document}
