@@ -140,6 +140,21 @@ constants are overridden: $\tau_a=40$\,ms, $\tau_F=80$\,ms. The latter
 sits within the rat fast-twitch fibre rise-time
 range~\cite{zajac1989,winters1995}.
 
+\paragraph{Force units and SI calibration.}
+Force is reported in arbitrary units (a.u.). The dimensionless ceiling
+$F_{\max}=25$\,a.u.\ in Eq.~(6) was chosen so the activation--force
+cascade operates in a numerically convenient range; absolute Newton
+calibration is not intrinsic to the present model and is conventional
+in CPG-modelling reports~\cite{rybak2006,danner2017,zhang2022}. A
+first-order linear rescaling maps a.u.\ to Newtons by anchoring on
+\emph{in vivo} rat hindlimb data: the peak isometric tetanic force of
+rat medial gastrocnemius is approximately
+$5$--$7$\,N~\cite{roy1991,burkholderLieber2001}. Treating our reported
+peak Force-E of $17.4$\,a.u.\ as representing peak ankle-extensor
+tetanic force gives a conversion of $1$\,a.u.\ $\approx$
+$0.30$--$0.40$\,N. Nothing in the model dynamics depends on this
+choice of units; we use a.u.\ throughout for transparency.
+
 \subsection{Paced gait protocol}\label{sec:methods:paced}
 \todo{1 paragraph.}
 Each step period (\verb|--step-period-ms|, default 1000\,ms) is divided
@@ -162,6 +177,96 @@ Barcelona Supercomputing Center). Initial-weight sweeps were run as
 10-task SLURM job arrays; ablation and speed-sweep experiments used
 5-task arrays. A 30\,s simulation completes in $\sim$30\,min wall-clock;
 a 120\,s simulation in $\sim$2\,h.
+
+\subsection{Experimental protocols}\label{sec:methods:protocols}
+Three classes of in-silico experiments are reported in this paper. Each
+is encoded as a stand-alone shell script that submits a single
+multi-task SLURM array and writes one HDF5 file per array task.
+Algorithms~\ref{alg:main}--\ref{alg:speed} give the pseudocode.
+
+\paragraph{Main experiment: long-term self-organisation.}
+A 10-point sweep over the initial-weight distribution $(\mu,\mathrm{CV})$
+for the STDP synapses, run as a SLURM job array. Each task simulates
+\SI{120}{\second} of paced locomotion at $\mu, \mathrm{CV}$ drawn from
+Table~\ref{tab:sweep}. Used in Section~\ref{sec:results:stdp} and
+Section~\ref{sec:results:stability}.
+
+\begin{algorithm}[h]
+\caption{Main experiment --- long-term self-organisation sweep over
+$(\mu,\mathrm{CV})$.}\label{alg:main}
+\begin{algorithmic}[1]
+\Require Ten $(\mu_i,\mathrm{CV}_i)$ pairs from Table~\ref{tab:sweep}; base seed $S_0=12345$
+\Ensure Ten HDF5 files \texttt{cpg\_bursting\_paced\_120s\_idx<i>\_*.h5}
+\For{$i \in \{0, 1, \dots, 9\}$ \textbf{in parallel} (SLURM array task $i$)}
+  \State $\text{seed} \gets S_0 + 10007 \cdot i$
+  \State Initialise STDP weights $w_{\text{init}} \sim \mathrm{Lognormal}(\mu_i, \mathrm{CV}_i)$
+  \State Configure BS$=60$\,Hz tonic, paced gait
+         (\verb|--step-period-ms 1000|, \verb|--n-ia-groups 3|, \verb|--ia-ext-hz 60 80 100|)
+  \For{half-cycle $h = 0, 1, \dots, 239$ \Comment{$120$\,s / $500$\,ms}}
+    \State $L \gets$ stance leg, $R \gets$ swing leg (alternates each $h$)
+    \For{Ia sub-group $g \in \{0, 1, 2\}$} \Comment{heel, mid, toe}
+      \State Set Ia-E rate of leg $L$, group $g$ to $\{60, 80, 100\}$\,Hz
+      \State Simulate $167$\,ms; update activation, force, length, $r_{\text{Ia}}$ (Eq.~\ref{eq:ia})
+      \State Sample STDP weights every $1000$\,ms; record force/RG-rate every $100$\,ms
+    \EndFor
+  \EndFor
+  \State Write HDF5 with rates, weights, attrs (sim\_ms, $\mu_i$, $\mathrm{CV}_i$, seed, paced\_gait)
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+
+\paragraph{Ablation experiment: necessity of each component.}
+Five conditions at the same operating point ($\mu=3.5$,
+$\mathrm{CV}=0.30$). Used in Section~\ref{sec:results:ablation}.
+
+\begin{algorithm}[h]
+\caption{Ablation experiment --- necessity of each model component.}\label{alg:ablation}
+\begin{algorithmic}[1]
+\Require Operating point $(\mu, \mathrm{CV}) = (3.5, 0.30)$, $\mathrm{seed} = 12345$
+\Ensure Five HDF5 files \texttt{cpg\_ablate\_<tag>\_idx00\_*.h5}
+\For{condition $c \in \{\text{baseline},\ \text{noIa},\ \text{symInh},\ \text{noComm},\ \text{noPaced}\}$ \textbf{in parallel}}
+  \State Apply override:
+  \State \quad \emph{baseline}: no override (control)
+  \State \quad \emph{noIa}: $W_{\text{IA2IN}} \gets 0$
+  \State \quad \emph{symInh}: $W_{\text{InF}\to\text{RG-E}} \gets -28$, $W_{\text{InE}\to\text{RG-F}} \gets -28$
+  \State \quad \emph{noComm}: $W_{\text{COMM\_F\_INH}} \gets 0$, $W_{\text{COMM\_E\_INH}} \gets 0$
+  \State \quad \emph{noPaced}: disable paced gait, fall back to rotating-CUT (legacy)
+  \State Simulate $30$\,s at BS$=60$\,Hz, paced gait (except \emph{noPaced})
+  \State Write HDF5 with all rates, weights, and \texttt{ablation\_tag}=$c$
+\EndFor
+\State Compute per-condition metrics: cycle period, $n_{\text{cycles}}$,
+       peak Force-E, $\mathrm{corr}(F_E, F_F)$ over the last $20$\,s
+\end{algorithmic}
+\end{algorithm}
+
+\paragraph{Speed-sweep experiment: gait tracking across the rat
+locomotor range.}
+Five step periods at the same operating point. Used in
+Section~\ref{sec:results:speed}.
+
+\begin{algorithm}[h]
+\caption{Speed-sweep experiment --- gait tracks commanded step period.}\label{alg:speed}
+\begin{algorithmic}[1]
+\Require Operating point $(\mu, \mathrm{CV}) = (3.5, 0.30)$, $\mathrm{seed} = 12345$
+\Ensure Five HDF5 files \texttt{cpg\_speed\_period<P>ms\_idx00\_*.h5}
+\For{$P \in \{600, 800, 1000, 1200, 1400\}$\,ms \textbf{in parallel}}
+  \State Configure paced gait with \verb|--step-period-ms| $= P$
+  \State Simulate $30$\,s at BS$=60$\,Hz with the standard 3-group Ia
+         ramp (60, 80, 100\,Hz)
+  \State Write HDF5 with \texttt{step\_period\_ms}=$P$ attribute
+\EndFor
+\State For each $P$, compute measured cycle period from Force-E
+       peak-to-peak intervals over the last $20$\,s
+\State Report: identity check $P_{\text{measured}}$ vs.\ $P_{\text{commanded}}$,
+       peak force, $\mathrm{corr}(F_E, F_F)$
+\end{algorithmic}
+\end{algorithm}
+
+\noindent All three scripts (\texttt{run.sh}, \texttt{run\_ablation.sh},
+\texttt{run\_speed.sh}) are publicly available in the repository. Each
+single 30\,s task runs in $\sim$30\,min wall-clock on a 64-thread MN5
+node; the 120\,s task takes $\sim$2\,h. Total compute for all three
+experiments: $\sim$60 core-hours.
 
 \subsection{Data analysis}\label{sec:methods:analysis}
 \todo{1 paragraph.}
