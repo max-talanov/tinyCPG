@@ -471,9 +471,19 @@ def main():
     ap.add_argument("--ablate-comm", action="store_true",
                     help="ABLATION: zero L↔R commissural inhibition "
                          "(W_COMM_F_INH = W_COMM_E_INH = 0). Tests L/R desync mechanism.")
+    # ---- graded sensory feedback (Courtine/Lavrov SCI paradigm) ----
+    ap.add_argument("--ia-feedback-gain", type=float, default=1.0,
+                    help="Multiplicative gain on the closed-loop Ia rate "
+                         "(force/stretch → spindle Hz). Default 1.0 = full weight-bearing; "
+                         "0.5 = toe stepping (partial weight); 0.1 = air stepping "
+                         "(near-deafferented). Bio reference: Lavrov 2008; Edgerton 2008.")
+    # ---- STDP learning rate override ----
+    ap.add_argument("--stdp-lambda", type=float, default=None,
+                    help="Override the STDP learning-rate constant LAMBDA. Default None "
+                         "uses the global LAMBDA = 0.001. Bio-plausible range 5e-4 to 5e-3.")
     args = ap.parse_args()
     # ---- apply ablation overrides (must happen before connect-time uses these constants) ----
-    global W_IA2IN, W_INF2RGE, W_INE2RGF, W_COMM_F_INH, W_COMM_E_INH
+    global W_IA2IN, W_INF2RGE, W_INE2RGF, W_COMM_F_INH, W_COMM_E_INH, LAMBDA
     ablation_tag = []
     if args.ablate_ia_loop:
         W_IA2IN = 0.0
@@ -486,6 +496,11 @@ def main():
         W_COMM_F_INH = 0.0
         W_COMM_E_INH = 0.0
         ablation_tag.append("noComm")
+    # STDP learning-rate override (kept distinct from ablation tags)
+    if args.stdp_lambda is not None:
+        LAMBDA = float(args.stdp_lambda)
+    # Graded sensory feedback gain (Courtine/Lavrov toe/air stepping)
+    IA_FEEDBACK_GAIN = float(args.ia_feedback_gain)
     BS_RATE_BASE_HZ = float(args.bs_base_hz)
     BS_NOISE_STD_HZ = float(args.bs_noise_std_hz)
     BS_DRIVE_NORM_HZ = max(BS_RATE_BASE_HZ, 1e-9)
@@ -1337,6 +1352,10 @@ def main():
         stretch_f = max(0.0, S["len_f"] - L0)
         ia_e = IA_BASE_HZ + IA_K_FORCE * S["force_e"] + IA_K_STRETCH * stretch_e
         ia_f = IA_BASE_HZ + IA_K_FORCE * S["force_f"] + IA_K_STRETCH * stretch_f
+        # Graded sensory feedback: scale by Ia gain (1.0 baseline / 0.5 toe / 0.1 air).
+        # Mimics partial loading after SCI rehab (Lavrov 2008; Edgerton 2008).
+        ia_e = IA_FEEDBACK_GAIN * ia_e
+        ia_f = IA_FEEDBACK_GAIN * ia_f
         ia_e = clamp(ia_e, 0.0, IA_RATE_MAX_HZ)
         ia_f = clamp(ia_f, 0.0, IA_RATE_MAX_HZ)
         if do_rate_update:
@@ -1567,6 +1586,8 @@ def main():
         h5.attrs["ablate_asym"] = bool(args.ablate_asym)
         h5.attrs["ablate_comm"] = bool(args.ablate_comm)
         h5.attrs["ablation_tag"] = ",".join(ablation_tag) if ablation_tag else "baseline"
+        h5.attrs["ia_feedback_gain"] = float(IA_FEEDBACK_GAIN)
+        h5.attrs["stdp_lambda"] = float(LAMBDA)
         h5.attrs["local_threads"] = int(args.threads)
         h5.attrs["mpi_processes"] = int(nproc)
         h5.attrs["save_weights_mode"] = str(args.save_weights)
