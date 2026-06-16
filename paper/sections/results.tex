@@ -131,7 +131,7 @@ $[-0.90, -0.77]$ across the full $3 \times 3$ matrix
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=0.97\linewidth]{fig5_speed_stdp.png}
+  \includegraphics[width=0.95\linewidth]{fig5_speed_stdp.png}
   \caption{\textbf{Phase A --- speed $\times$ STDP learning-rate matrix.}
     Rows = walking speed (slow / medium / fast walk;
     Courtine/Lavrov rat treadmill range~\cite{lavrov2008,courtine2009}).
@@ -141,28 +141,66 @@ $[-0.90, -0.77]$ across the full $3 \times 3$ matrix
     \textbf{Rows 1--3:} Force-E (blue) and Force-F (orange) leg L, last
     5\,s of each 120\,s simulation. Counter-phase alternation is
     preserved across the entire matrix.
-    \textbf{Row 4:} Quantitative summary heat-tiles across the
-    $3 \times 3$ matrix: (a) measured cycle period (ms) versus commanded;
-    (b) peak Force-E amplitude (95th percentile, a.u.);
-    (c) E$\leftrightarrow$F counter-phase Pearson correlation.}
+    \textbf{Row 4:} Time-domain summary heat-tiles: (a) measured cycle
+    period (ms) versus commanded; (b) peak Force-E (95th percentile,
+    a.u.); (c) E$\leftrightarrow$F counter-phase Pearson correlation.
+    Heat-tiles (a--c) are essentially flat across $\lambda$ because the
+    paced rhythm is externally clocked: time-domain metrics saturate
+    on the converged asymptote.
+    \textbf{Row 5:} The $\lambda$-dependent effect that the asymptotic
+    metrics hide. (d, e) STDP weight trajectories at the medium-walk
+    anchor for the two strongest plastic projections: faster $\lambda$
+    (red) reaches plateau visibly earlier than slow $\lambda$ (blue);
+    BS$\to$RG-E (panel e) saturates at the $w_{\max}=30$\,pA cap (dashed).
+    (f) Spectral concentration --- fraction of total PSD power within
+    $\pm 10\%$ of the fundamental cycle frequency. Higher = sharper
+    rhythm peak; less saturated than period s.d.}
   \label{fig:speed_stdp}
 \end{figure}
 
-\paragraph{Interpretation: gait tracking is rate-of-learning-invariant.}
+\paragraph{Interpretation: gait tracking is asymptotically
+rate-invariant.}
 The measured cycle period equals the commanded step period to within
 the sampling resolution (sub-millisecond) across all nine cells, with
 the only exception being the fastest gait (350\,ms commanded period)
 where cycle jitter rises to $\approx 15$\,ms\,s.d.\ This is consistent
 with the rat fast-twitch fibre rise-time limit ($\tau_F=80$\,ms)
-becoming a non-negligible fraction of the 175\,ms stance window: the
+becoming a non-negligible fraction of the 175\,ms stance window:
 Hill-style saturation~\cite{zajac1989} prevents force from fully
 developing every stride. Peak Force-E correspondingly drops from
 $17.46$ to $15.52$\,a.u.\ as the step period shortens from 1200 to
-350\,ms --- a $\approx 11\%$ compression. Crucially, varying $\lambda$
-across four orders of magnitude of cortical STDP plausibility does
-\emph{not} change tracking accuracy or counter-phase strength: by
-120\,s the descending and cutaneous weights have converged regardless
-of the learning rate.
+350\,ms --- a $\approx 11\%$ compression.
+
+\paragraph{Interpretation: $\lambda$ acts on the transient, not the
+asymptote.}
+The time-domain summary heat-tiles (Fig.~\ref{fig:speed_stdp}, Row 4)
+are nearly flat across $\lambda$: by $t=120$\,s, all three learning
+rates have reached the same converged weight distribution, and the
+externally clocked paced gait masks any residual variability. The
+$\lambda$-effect is instead visible in the convergence transient
+(Fig.~\ref{fig:speed_stdp}, Row 5, panels d and e): at $\lambda =
+2{\times}10^{-3}$ (fast) the CUT$\to$RG-E weight reaches its plateau
+within $\sim$3--5\,s, while at $\lambda = 5{\times}10^{-4}$ (slow) the
+trajectory takes $\sim$15--25\,s. The BS$\to$RG-E weight reaches its
+$w_{\max}=30$\,pA ceiling in roughly the same ratio. We deliberately
+ran 120\,s simulations to demonstrate the post-convergence stability
+claim of \autoref{sec:results:stability}; the $\lambda$-dependent
+behaviour the paced gait does \emph{not} probe is recovered in
+Phase~B (\autoref{sec:results:ablation}) where attenuating the
+closed-loop Ia exposes a $\lambda$-dependent rescue effect.
+
+\paragraph{Interpretation: spectral concentration as a sensitive
+irregularity metric.}
+Cycle-period s.d. is essentially zero for the externally paced rhythm
+($\ll$\,1\,ms in 7 of 9 cells), and is therefore an insensitive index
+of irregularity. The spectral concentration (Fig.~\ref{fig:speed_stdp},
+panel f) measures the fraction of total PSD power within $\pm$10\% of
+the fundamental cycle frequency $f_0=1/P$. It ranges from $0.85$ at
+medium walk to $0.95$ at fast walk, reflecting the gradual loss of
+sub-harmonic energy at faster gaits as the rhythm becomes more
+tightly locked to the external clock. Importantly, this metric does
+not saturate at the converged plateau and so provides a finer-grained
+diagnostic for future studies that probe sub-millisecond timing.
 
 \paragraph{Interpretation: bio-plausible mapping.}
 Our three speed conditions cover the canonical rat treadmill locomotor
@@ -246,24 +284,49 @@ This gradation mirrors experimental findings in SCI-rehabilitation
 studies where progressively unloading the hindlimbs degrades step
 rhythm quality~\cite{lavrov2008,edgerton2008,hagglund2013}.
 
-\paragraph{Interpretation: STDP rescues air stepping.}
+\paragraph{What our ``ablation'' actually maps to: epidural-stimulation
+paradigm.}
+A crucial framing point: the \verb|--ia-feedback-gain| knob attenuates
+only the \emph{closed-loop, force-driven} Ia rate; the externally paced
+cutaneous CUT pattern and the sequential Ia-E heel$\to$mid$\to$toe
+ramp remain at full amplitude in all three ablation conditions. The
+paced external drive in our model is therefore the computational
+analogue of \emph{epidural electrical
+stimulation}~\cite{lavrov2008,courtine2009,harkema2011}, which
+supplies a rhythmic afferent volley to the spinal cord independently
+of intact sensory feedback. Phase B is thus not a model of unassisted
+deafferentation but of \emph{SCI plus epidural stimulation under
+progressively unloaded weight-bearing}. This is precisely the
+experimental paradigm pioneered by Lavrov, Courtine, and Edgerton: rats
+with complete spinal transection, lying on a treadmill with epidural
+stimulation, can step stably from full weight-bearing through partial
+weight-bearing to limb-suspended air stepping when stimulation is
+intact.
+
+\paragraph{STDP rescues air stepping under epidural-style drive.}
 The strongest result of Phase B is along the bottom row of
 Fig.~\ref{fig:ablgrad}: at the maximally degraded condition (air
 stepping, $G_{\text{Ia}}=0.1$), increasing the STDP rate from
 $\lambda=5{\times}10^{-4}$ to $\lambda=2{\times}10^{-3}$ fully restores
 cycle-period regularity (s.d.\ drops from $129.6$ to $0$\,ms) and the
 E$\leftrightarrow$F counter-phase correlation strengthens from $-0.70$
-to $-0.93$ --- exceeding the baseline value of $-0.81$. We interpret
-this as a Hebbian compensation effect: faster STDP allows the
-descending and cutaneous afferent weights to re-equilibrate more
-rapidly against the reduced closed-loop sensory drive, restoring stable
-rhythm via increased reliance on the BS$\to$RG-\{E,F\} and
-CUT$\to$RG-E pathways. This finding maps directly onto the central
-hypothesis underlying epidural-stimulation-driven SCI
-rehabilitation~\cite{lavrov2008,harkema2011}: even when proprioceptive
-feedback is severely attenuated, the spinal CPG can re-organise its
-descending and cutaneous afferent weights to recover locomotor
-function, provided synaptic plasticity is sufficiently fast.
+to $-0.93$. Reframed in the epidural-stim paradigm of the previous
+paragraph, this finding states: when descending rhythmic drive
+(epidural stimulation, in vivo; paced CUT $+$ external Ia-E, in our
+model) is intact and synaptic plasticity is sufficiently fast, the
+spinal CPG re-weights its descending and cutaneous afferent inputs to
+ignore the noisy attenuated closed-loop Ia and lock onto the cleaner
+external clock --- producing a rhythm that is in fact \emph{more}
+regular than the baseline weight-bearing condition. This matches the
+clinical observations of Courtine 2009 and Harkema
+2011~\cite{courtine2009,harkema2011}: in chronic SCI rats and humans
+with motor-complete paraplegia, epidural lumbar stimulation enables
+treadmill stepping that improves over training sessions, suggesting
+Hebbian-type plasticity at the descending--spinal interface. We
+explicitly do \emph{not} claim that unassisted air stepping (without
+any external drive) would yield the same result; testing that would
+require switching off the paced cutaneous and external Ia ramps as
+well, which we leave for future work.
 
 % =============================================================
 \subsection{Summary of results}\label{sec:results:summary}

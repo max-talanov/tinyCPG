@@ -84,6 +84,37 @@ def _safe_corr(a: np.ndarray, b: np.ndarray) -> float:
     return float(np.dot(a, b) / d) if d > 1e-12 else np.nan
 
 
+def _spectral_concentration(t_ms: np.ndarray, signal: np.ndarray,
+                            period_ms: float, band_frac: float = 0.15) -> float:
+    """Fraction of total PSD power concentrated within ±band_frac around the
+    fundamental cycle frequency f0 = 1000/period_ms.
+
+    Higher = sharper rhythm peak = cleaner pacing. Less saturated than
+    period s.d. (which is ≈0 for paced gait), so detects subtle STDP
+    differences invisible in time-domain metrics.
+    """
+    if signal.size < 16 or period_ms <= 0:
+        return np.nan
+    # Mean-detrend, regular-grid resample assumed (already at chunk rate).
+    x = signal - signal.mean()
+    if t_ms.size > 1:
+        dt_s = float(np.median(np.diff(t_ms))) / 1000.0
+    else:
+        dt_s = 0.1
+    if dt_s <= 0:
+        return np.nan
+    n = x.size
+    freqs = np.fft.rfftfreq(n, d=dt_s)         # Hz
+    psd = np.abs(np.fft.rfft(x)) ** 2
+    total = float(psd.sum())
+    if total <= 0:
+        return np.nan
+    f0 = 1000.0 / period_ms                    # fundamental Hz
+    lo, hi = f0 * (1.0 - band_frac), f0 * (1.0 + band_frac)
+    band_mask = (freqs >= lo) & (freqs <= hi)
+    return float(psd[band_mask].sum() / total)
+
+
 def _resolve_files(indir: str) -> Dict[Tuple[str, str], str]:
     """Map (speed_tag, lambda_tag) → file path."""
     files = sorted(glob.glob(os.path.join(indir, "cpg_speed_stdp_*.h5")))
@@ -111,14 +142,27 @@ def _load(path: str) -> Dict:
     fe_w = fe[mask]; ff_w = ff[mask]; t_w = t[mask]
     periods = _find_cycle_periods(t_w, fe_w, min_peak_height=5.0,
                                   min_gap_ms=max(150.0, period_ms * 0.4))
+    spec_conc = _spectral_concentration(t_w, fe_w, period_ms, band_frac=0.10)
+    # Weight trajectories — dense (per-chunk) means
+    weights = {}
+    try:
+        wg = h["leg_L/weights"]
+        for key in ("cut->rge_mean", "bs->rge_mean", "bs->rgf_mean"):
+            if key in wg:
+                weights[key] = np.asarray(wg[key])
+    except Exception:
+        pass
     return {
         "h5": h, "t": t, "fe": fe, "ff": ff, "sim_ms": sim_ms,
         "period_ms": period_ms,
+        "stdp_lambda": float(h.attrs.get("stdp_lambda", 1e-3)),
+        "weights": weights,
         "measured_period_mean": float(np.mean(periods)) if periods.size else np.nan,
         "measured_period_std":  float(np.std(periods))  if periods.size else np.nan,
         "peak_e":  float(np.percentile(fe_w, 95)),
         "peak_f":  float(np.percentile(ff_w, 95)),
         "corr_ef": _safe_corr(fe_w, ff_w),
+        "spec_conc": spec_conc,
     }
 
 
@@ -151,9 +195,11 @@ def main():
     })
 
     n_rows, n_cols = 3, 3
-    fig = plt.figure(figsize=(13, 14))
-    # 4 rows: 3 for traces, 1 for metrics. Metrics row a bit taller for ticks/colorbars.
-    gs = fig.add_gridspec(4, 3, height_ratios=[1.0, 1.0, 1.0, 1.25],
+    fig = plt.figure(figsize=(13, 18))
+    # 5 rows: 3 for traces, 1 for time-domain metric heat-tiles, 1 for STDP
+    # convergence trajectories + spectral-concentration heat-tile (addresses
+    # Q1: STDP-rate effect is in the *transient*, not the asymptote).
+    gs = fig.add_gridspec(5, 3, height_ratios=[1.0, 1.0, 1.0, 1.25, 1.20],
                           hspace=0.55, wspace=0.28)
 
     # Rows 1-3: Force traces (last 5 s zoom), rows = speed, cols = lambda
@@ -186,7 +232,7 @@ def main():
     # Row 4: three summary heat-tiles across the 3×3 matrix
     metric_keys = ["measured_period_mean", "peak_e", "corr_ef"]
     metric_titles = [
-        "(a) Measured cycle period (ms)\nvs.\ commanded",
+        "(a) Measured cycle period (ms)\nvs. commanded",
         "(b) Peak Force-E (95th pct., a.u.)",
         "(c) E↔F counter-phase r",
     ]
@@ -229,6 +275,68 @@ def main():
             )
         plt.colorbar(im, ax=ax, fraction=0.05, pad=0.04)
 
+    # ----- Row 5: STDP convergence trajectories + spectral concentration -----
+    # Panel (d): CUT->RG-E mean weight vs time for medium-walk speed,
+    #            3 λ overlaid. Shows the learning transient that the
+    #            steady-state force trace hides.
+    # Panel (e): BS->RG-E mean weight vs time (saturating projection).
+    # Panel (f): Spectral concentration heat-tile across the 3×3 matrix
+    #            (alternative irregularity metric; not saturated by paced clock).
+    lam_color = {"lam5em4": "#1f77b4", "lam1em3": "#2ca02c", "lam2em3": "#d62728"}
+    anchor_speed = "13_5cms"   # medium walk — show transient clearly
+
+    ax_d = fig.add_subplot(gs[4, 0])
+    for l in LAMBDA_ORDER:
+        d = data.get((anchor_speed, l))
+        if d is None or "cut->rge_mean" not in d["weights"]:
+            continue
+        w = d["weights"]["cut->rge_mean"]
+        tt = d["t"][: w.size]
+        ax_d.plot(tt / 1000.0, w, color=lam_color[l], linewidth=1.2,
+                  label=LAMBDA_LABEL[l].split("\n")[0])
+    ax_d.set_xlabel("time (s)"); ax_d.set_ylabel("mean weight (pA)")
+    ax_d.set_title("(d) CUT→RG-E weight trajectory\n(medium walk; λ-dependent transient)")
+    ax_d.legend(loc="lower right", fontsize=7)
+    ax_d.grid(alpha=0.2)
+
+    ax_e = fig.add_subplot(gs[4, 1])
+    for l in LAMBDA_ORDER:
+        d = data.get((anchor_speed, l))
+        if d is None or "bs->rge_mean" not in d["weights"]:
+            continue
+        w = d["weights"]["bs->rge_mean"]
+        tt = d["t"][: w.size]
+        ax_e.plot(tt / 1000.0, w, color=lam_color[l], linewidth=1.2,
+                  label=LAMBDA_LABEL[l].split("\n")[0])
+    ax_e.axhline(30.0, linestyle="--", color="grey", alpha=0.6,
+                 label="W_max (BS) = 30 pA")
+    ax_e.set_xlabel("time (s)"); ax_e.set_ylabel("mean weight (pA)")
+    ax_e.set_title("(e) BS→RG-E weight trajectory\n(medium walk; saturates at W_max)")
+    ax_e.legend(loc="lower right", fontsize=7)
+    ax_e.grid(alpha=0.2)
+
+    ax_f = fig.add_subplot(gs[4, 2])
+    M = np.full((n_rows, n_cols), np.nan)
+    for r, s in enumerate(SPEED_ORDER):
+        for c, l in enumerate(LAMBDA_ORDER):
+            if (s, l) in data:
+                M[r, c] = data[(s, l)]["spec_conc"]
+    im = ax_f.imshow(M, aspect="auto", cmap="cividis", vmin=0.0, vmax=1.0)
+    ax_f.set_xticks(range(n_cols))
+    ax_f.set_xticklabels([LAMBDA_LABEL[l].split("\n")[0] for l in LAMBDA_ORDER],
+                         fontsize=8)
+    ax_f.set_yticks(range(n_rows))
+    ax_f.set_yticklabels([SPEED_LABEL[s].split("\n")[0] for s in SPEED_ORDER],
+                         fontsize=8)
+    ax_f.set_title("(f) Spectral concentration in\n±10% band around f₀ (higher = sharper)")
+    for r in range(n_rows):
+        for c in range(n_cols):
+            if np.isfinite(M[r, c]):
+                ax_f.text(c, r, f"{M[r, c]:.2f}", ha="center", va="center",
+                          color="white" if M[r, c] < 0.6 else "black",
+                          fontsize=9)
+    plt.colorbar(im, ax=ax_f, fraction=0.05, pad=0.04)
+
     fig.suptitle(
         "Phase A — Speed × STDP learning-rate matrix\n"
         "Self-organisation across rat locomotor range and bio-plausible λ"
@@ -243,7 +351,7 @@ def main():
     csv_path = os.path.splitext(out_path)[0] + "_metrics.csv"
     with open(csv_path, "w") as fh:
         fh.write("speed,lambda,commanded_period_ms,measured_period_ms,period_std_ms,"
-                 "peak_force_e,peak_force_f,corr_ef\n")
+                 "peak_force_e,peak_force_f,corr_ef,spec_conc\n")
         for s in SPEED_ORDER:
             for l in LAMBDA_ORDER:
                 if (s, l) not in data:
@@ -251,7 +359,8 @@ def main():
                 d = data[(s, l)]
                 fh.write(f"{s},{l},{SPEED_PERIOD_MS[s]},"
                          f"{d['measured_period_mean']:.2f},{d['measured_period_std']:.2f},"
-                         f"{d['peak_e']:.3f},{d['peak_f']:.3f},{d['corr_ef']:.3f}\n")
+                         f"{d['peak_e']:.3f},{d['peak_f']:.3f},"
+                         f"{d['corr_ef']:.3f},{d['spec_conc']:.4f}\n")
     print(f"[speed_stdp] metrics CSV: {csv_path}")
 
     for d in data.values():
