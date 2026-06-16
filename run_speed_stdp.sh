@@ -6,7 +6,7 @@
 #SBATCH --ntasks=1
 #SBATCH --array=0-8
 #SBATCH --cpus-per-task=64
-#SBATCH --time=04:00:00
+#SBATCH --time=10:00:00
 #SBATCH --partition=acc
 #
 # Phase A — speed × STDP learning rate matrix.
