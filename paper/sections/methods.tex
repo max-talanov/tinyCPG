@@ -91,17 +91,27 @@ who vary tonic drive $\alpha$ to vary gait speed, we hold BS tonic and
 pace the rhythm via sensory feedback (see \autoref{sec:methods:paced}).
 
 \subsection{Spike-timing-dependent plasticity}\label{sec:methods:stdp}
-\todo{1-2 paragraphs.}
 Two projections --- cutaneous CUT$\to$RG-E and brainstem
 BS$\to$RG-\{E,F\} --- carry multiplicative STDP synapses (NEST
-\verb|stdp_synapse|; $\tau_+=20$\,ms, $\lambda=10^{-3}$, $\alpha=0.95$,
-$\mu_+=\mu_-=0.4$, $w_{\max}=120$\,pA for CUT and $w_{\max}=30$\,pA for
-BS)~\cite{biPoo1998,morrison2007}. Initial weights are drawn from a
-lognormal distribution with mean $\mu$ and coefficient of variation CV.
-We swept $(\mu,\text{CV})$ across ten diagnostic points (Table~\ref{tab:sweep})
-spanning four orders of magnitude to verify that the post-training weight
-distribution converges to the same plateau regardless of initialisation
-(see Section~\ref{sec:results:stdp}).
+\verb|stdp_synapse|; $\tau_+=20$\,ms, default $\lambda=10^{-3}$,
+$\alpha=0.95$, $\mu_+=\mu_-=0.4$, $w_{\max}=120$\,pA for CUT and
+$w_{\max}=30$\,pA for BS)~\cite{biPoo1998,morrison2007}. Initial
+weights are drawn from a lognormal distribution with mean $\mu$ and
+coefficient of variation CV. We swept $(\mu,\text{CV})$ across ten
+diagnostic points (Table~\ref{tab:sweep}) spanning four orders of
+magnitude to verify that the post-training weight distribution
+converges to the same plateau regardless of initialisation (see
+Section~\ref{sec:results:stdp}).
+
+\paragraph{Learning-rate variation.}
+For the speed-by-STDP and graded-ablation matrices
+(\autoref{sec:methods:protocols}), the STDP learning rate $\lambda$ was
+varied across three bio-plausible values spanning the cortical
+STDP range~\cite{biPoo1998,morrison2007}: $\lambda \in \{5{\times}10^{-4},\,
+1{\times}10^{-3},\,2{\times}10^{-3}\}$. We refer to these as
+\emph{slow}, \emph{baseline}, and \emph{fast} STDP, respectively. The
+parameter is exposed via the \verb|--stdp-lambda| CLI flag and recorded
+to the HDF5 output as \verb|stdp_lambda|.
 
 \subsection{Sensory feedback and Ia rate coding}\label{sec:methods:ia}
 \todo{1 paragraph + equation.}
@@ -117,6 +127,21 @@ $r_{\max}=500$\,Hz~\cite{loeb1981,prochazka1999}. This rate drives the
 classical Ia-INT$\to$antagonist motor-pool
 pathway~\cite{jankowska1992} and the closed-loop Ia$\to$recip-IN pathway
 introduced in this work.
+
+\paragraph{Graded sensory ablation (Courtine/Lavrov paradigm).}
+To emulate the partial-weight-bearing and limb-unloaded preparations
+used in rat spinal cord injury (SCI) rehabilitation
+experiments~\cite{lavrov2008,courtine2009,edgerton2008}, we expose a
+multiplicative Ia-feedback gain $G_{\text{Ia}} \in [0, 1]$ via the
+\verb|--ia-feedback-gain| CLI flag, applied after Eq.~\ref{eq:ia}:
+$\tilde{r}_{\text{Ia}} = G_{\text{Ia}}\cdot r_{\text{Ia}}$. The three
+operating regimes used in Section~\ref{sec:results:ablation} are:
+$G_{\text{Ia}}=1.0$ (\emph{baseline}, full weight-bearing);
+$G_{\text{Ia}}=0.5$ (\emph{toe stepping}, partial weight); and
+$G_{\text{Ia}}=0.1$ (\emph{air stepping}, limb unloaded, residual
+spindle background only). The classical Ia-INT$\to$antagonist pathway
+inherits the same gain, so the manipulation reduces \emph{all} Ia
+output uniformly.
 
 \subsection{Activation and force dynamics}\label{sec:methods:muscle}
 \todo{Equations + 1 paragraph.}
@@ -215,52 +240,65 @@ $(\mu,\mathrm{CV})$.}\label{alg:main}
 \end{algorithmic}
 \end{algorithm}
 
-\paragraph{Ablation experiment: necessity of each component.}
-Five conditions at the same operating point ($\mu=3.5$,
-$\mathrm{CV}=0.30$). Used in Section~\ref{sec:results:ablation}.
+\paragraph{Phase A --- speed-by-STDP matrix.}
+Nine 120\,s runs spanning three walking speeds (rat locomotor range,
+\cite{lavrov2008,courtine2009}) crossed with three bio-plausible STDP
+learning rates. Used in Section~\ref{sec:results:speed}.
 
 \begin{algorithm}[h]
-\caption{Ablation experiment --- necessity of each model component.}\label{alg:ablation}
+\caption{Phase A --- speed $\times$ STDP learning rate matrix.}\label{alg:speed_stdp}
 \begin{algorithmic}[1]
 \Require Operating point $(\mu, \mathrm{CV}) = (3.5, 0.30)$, $\mathrm{seed} = 12345$
-\Ensure Five HDF5 files \texttt{cpg\_ablate\_<tag>\_idx00\_*.h5}
-\For{condition $c \in \{\text{baseline},\ \text{noIa},\ \text{symInh},\ \text{noComm},\ \text{noPaced}\}$ \textbf{in parallel}}
-  \State Apply override:
-  \State \quad \emph{baseline}: no override (control)
-  \State \quad \emph{noIa}: $W_{\text{IA2IN}} \gets 0$
-  \State \quad \emph{symInh}: $W_{\text{InF}\to\text{RG-E}} \gets -28$, $W_{\text{InE}\to\text{RG-F}} \gets -28$
-  \State \quad \emph{noComm}: $W_{\text{COMM\_F\_INH}} \gets 0$, $W_{\text{COMM\_E\_INH}} \gets 0$
-  \State \quad \emph{noPaced}: disable paced gait, fall back to rotating-CUT (legacy)
-  \State Simulate $30$\,s at BS$=60$\,Hz, paced gait (except \emph{noPaced})
-  \State Write HDF5 with all rates, weights, and \texttt{ablation\_tag}=$c$
-\EndFor
-\State Compute per-condition metrics: cycle period, $n_{\text{cycles}}$,
-       peak Force-E, $\mathrm{corr}(F_E, F_F)$ over the last $20$\,s
-\end{algorithmic}
-\end{algorithm}
-
-\paragraph{Speed-sweep experiment: gait tracking across the rat
-locomotor range.}
-Five step periods at the same operating point. Used in
-Section~\ref{sec:results:speed}.
-
-\begin{algorithm}[h]
-\caption{Speed-sweep experiment --- gait tracks commanded step period.}\label{alg:speed}
-\begin{algorithmic}[1]
-\Require Operating point $(\mu, \mathrm{CV}) = (3.5, 0.30)$, $\mathrm{seed} = 12345$
-\Ensure Five HDF5 files \texttt{cpg\_speed\_period<P>ms\_idx00\_*.h5}
-\For{$P \in \{600, 800, 1000, 1200, 1400\}$\,ms \textbf{in parallel}}
-  \State Configure paced gait with \verb|--step-period-ms| $= P$
-  \State Simulate $30$\,s at BS$=60$\,Hz with the standard 3-group Ia
+\Ensure Nine HDF5 files \texttt{cpg\_speed\_stdp\_<spd>\_<lam>\_*.h5}
+\For{$i \in \{0, 1, \dots, 8\}$ \textbf{in parallel} (SLURM array task $i$)}
+  \State $\mathrm{speed\_idx} \gets \lfloor i / 3 \rfloor$;\ \ $\mathrm{lambda\_idx} \gets i \bmod 3$
+  \State $P \gets \{1200,\ 520,\ 350\}[\mathrm{speed\_idx}]$ \Comment{ms; $\approx$ 6 / 13.5 / 21 cm/s}
+  \State $\lambda \gets \{5{\times}10^{-4},\ 1{\times}10^{-3},\ 2{\times}10^{-3}\}[\mathrm{lambda\_idx}]$
+  \State Configure paced gait with \verb|--step-period-ms|$=P$,
+         \verb|--stdp-lambda|$=\lambda$
+  \State Simulate $120$\,s at BS$=60$\,Hz with the standard 3-group Ia
          ramp (60, 80, 100\,Hz)
-  \State Write HDF5 with \texttt{step\_period\_ms}=$P$ attribute
+  \State Write HDF5 with \texttt{step\_period\_ms}=$P$, \texttt{stdp\_lambda}=$\lambda$
 \EndFor
-\State For each $P$, compute measured cycle period from Force-E
-       peak-to-peak intervals over the last $20$\,s
-\State Report: identity check $P_{\text{measured}}$ vs.\ $P_{\text{commanded}}$,
-       peak force, $\mathrm{corr}(F_E, F_F)$
+\State Report metrics over the last 20\,s of each cell: measured cycle
+       period, peak Force-E, $\mathrm{corr}(F_E, F_F)$
 \end{algorithmic}
 \end{algorithm}
+
+\paragraph{Phase B --- graded sensory ablation by STDP matrix
+(Courtine/Lavrov SCI paradigm).}
+Nine 30\,s runs at the medium-walk anchor ($P=520$\,ms) crossing three
+Ia feedback gains with three STDP rates. Used in
+Section~\ref{sec:results:ablation}.
+
+\begin{algorithm}[h]
+\caption{Phase B --- graded Ia ablation $\times$ STDP learning rate
+matrix (SCI-rehab paradigm).}\label{alg:ablgrad}
+\begin{algorithmic}[1]
+\Require Operating point $(\mu, \mathrm{CV}) = (3.5, 0.30)$,
+$P=520$\,ms, $\mathrm{seed} = 12345$
+\Ensure Nine HDF5 files \texttt{cpg\_ablgrad\_<gain>\_<lam>\_*.h5}
+\For{$i \in \{0, 1, \dots, 8\}$ \textbf{in parallel} (SLURM array task $i$)}
+  \State $\mathrm{gain\_idx} \gets \lfloor i / 3 \rfloor$;\ \ $\mathrm{lambda\_idx} \gets i \bmod 3$
+  \State $G_{\text{Ia}} \gets \{1.0,\ 0.5,\ 0.1\}[\mathrm{gain\_idx}]$
+         \Comment{baseline / toe step / air step}
+  \State $\lambda \gets \{5{\times}10^{-4},\ 1{\times}10^{-3},\ 2{\times}10^{-3}\}[\mathrm{lambda\_idx}]$
+  \State Configure paced gait with \verb|--step-period-ms|$=520$,
+         \verb|--ia-feedback-gain|$=G_{\text{Ia}}$, \verb|--stdp-lambda|$=\lambda$
+  \State Simulate $30$\,s; write HDF5 with the two new attrs
+\EndFor
+\State Report metrics over the last 20\,s of each cell: cycle period
+       (mean $\pm$ s.d.), peak Force-E, $\mathrm{corr}(F_E, F_F)$
+\end{algorithmic}
+\end{algorithm}
+
+\paragraph{Legacy ablation experiment (supplementary).}
+For completeness we retain the earlier 5-condition ablation experiment
+(\emph{baseline}, \emph{noIa}, \emph{symInh}, \emph{noComm},
+\emph{noPaced}) that demonstrated which architectural components are
+load-bearing. The Phase B graded ablation is the principal ablation
+result of the paper; the binary ablation is reported in supplementary
+Fig.~S1.
 
 \noindent All three scripts (\texttt{run.sh}, \texttt{run\_ablation.sh},
 \texttt{run\_speed.sh}) are publicly available in the repository. Each
