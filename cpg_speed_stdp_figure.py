@@ -47,13 +47,30 @@ SPEED_LABEL = {
 }
 SPEED_PERIOD_MS = {"06cms": 1200, "13_5cms": 520, "21cms": 350}
 
-LAMBDA_ORDER = ["lam5em4", "lam1em3", "lam2em3"]
-LAMBDA_LABEL = {
-    "lam5em4": "λ = 5·10⁻⁴\n(slow STDP)",
-    "lam1em3": "λ = 1·10⁻³\n(baseline)",
-    "lam2em3": "λ = 2·10⁻³\n(fast STDP)",
-}
-LAMBDA_VAL = {"lam5em4": 5e-4, "lam1em3": 1e-3, "lam2em3": 2e-3}
+# Lambda tags are auto-discovered from filenames (see _resolve_files). The
+# helpers below convert a tag such as "lam1em4" → value 1e-4 and a display
+# label, so the figure adapts to whatever λ set was actually run.
+_SUPERSCRIPT = {"-": "⁻", "0": "⁰", "1": "¹", "2": "²", "3": "³",
+                "4": "⁴", "5": "⁵", "6": "⁶", "7": "⁷", "8": "⁸", "9": "⁹"}
+
+
+def _lambda_tag_to_value(tag: str) -> float:
+    """'lam1em4' → 1e-4 ;  'lam5em4' → 5e-4 ;  'lam2em3' → 2e-3."""
+    m = re.match(r"lam(\d+)em(\d+)", tag)
+    if not m:
+        return float("nan")
+    return float(m.group(1)) * (10.0 ** (-int(m.group(2))))
+
+
+def _lambda_label(tag: str, role: str = "") -> str:
+    """Render 'lam1em4' → 'λ = 1·10⁻⁴\\n(role)'."""
+    m = re.match(r"lam(\d+)em(\d+)", tag)
+    if not m:
+        return tag
+    mant, exp = m.group(1), m.group(2)
+    sup = "".join(_SUPERSCRIPT.get(ch, ch) for ch in f"-{exp}")
+    base = f"λ = {mant}·10{sup}"
+    return f"{base}\n({role})" if role else base
 
 
 def _find_cycle_periods(t_ms: np.ndarray, signal: np.ndarray,
@@ -115,19 +132,27 @@ def _spectral_concentration(t_ms: np.ndarray, signal: np.ndarray,
     return float(psd[band_mask].sum() / total)
 
 
-def _resolve_files(indir: str) -> Dict[Tuple[str, str], str]:
-    """Map (speed_tag, lambda_tag) → file path."""
+def _resolve_files(indir: str):
+    """Discover (speed_tag, lambda_tag) → path, plus the ordered λ tag list.
+
+    The λ tags are read from the filenames and sorted ascending by value, so
+    the figure adapts to whatever λ set was actually run (3, 4, 5, ... values).
+    Returns (files_dict, lambda_order_list).
+    """
     files = sorted(glob.glob(os.path.join(indir, "cpg_speed_stdp_*.h5")))
     out: Dict[Tuple[str, str], str] = {}
     # Match any of the known speed tags (06cms, 13_5cms, 21cms) explicitly.
     # Using "[^_]+" fails for "13_5cms" because of the underscore inside.
     speed_re = "|".join(re.escape(s) for s in SPEED_ORDER)
     rgx = re.compile(rf"cpg_speed_stdp_({speed_re})_(lam\d+em\d+)_")
+    lam_tags = set()
     for f in files:
         m = rgx.search(os.path.basename(f))
         if m:
             out[(m.group(1), m.group(2))] = f
-    return out
+            lam_tags.add(m.group(2))
+    lam_order = sorted(lam_tags, key=_lambda_tag_to_value)
+    return out, lam_order
 
 
 def _load(path: str) -> Dict:
@@ -171,18 +196,45 @@ def main():
     ap.add_argument("--indir", type=str, default="results/2026-06-16")
     ap.add_argument("--outdir", type=str, default="plots/paper")
     ap.add_argument("--out", type=str, default=None)
+    ap.add_argument("--trace-window", choices=["first", "last"], default="first",
+                    help="Show the force traces from the FIRST window (default; "
+                         "reveals the STDP-rate-dependent self-organisation of the "
+                         "gait) or the LAST window (converged steady state).")
+    ap.add_argument("--trace-window-ms", type=float, default=20000.0,
+                    help="Width of the force-trace window in ms (default 20000 = "
+                         "20 s, matching the STDP convergence transient).")
     args = ap.parse_args()
 
     os.makedirs(args.outdir, exist_ok=True)
     out_path = args.out or os.path.join(args.outdir, "fig5_speed_stdp.png")
 
-    files = _resolve_files(args.indir)
+    files, LAMBDA_ORDER = _resolve_files(args.indir)
+    if not LAMBDA_ORDER:
+        raise SystemExit(f"No cpg_speed_stdp_*.h5 files found in {args.indir}")
+
+    # Build display label dict; assign roles by position (slowest=slow STDP,
+    # fastest=fast STDP, the rest baseline/intermediate).
+    LAMBDA_LABEL: Dict[str, str] = {}
+    for i, l in enumerate(LAMBDA_ORDER):
+        if len(LAMBDA_ORDER) == 1:
+            role = ""
+        elif i == 0:
+            role = "slow STDP"
+        elif i == len(LAMBDA_ORDER) - 1:
+            role = "fast STDP"
+        elif _lambda_tag_to_value(l) == 1e-3:
+            role = "baseline"
+        else:
+            role = "intermediate"
+        LAMBDA_LABEL[l] = _lambda_label(l, role)
+    LAMBDA_VAL = {l: _lambda_tag_to_value(l) for l in LAMBDA_ORDER}
+
     missing = [(s, l) for s in SPEED_ORDER for l in LAMBDA_ORDER if (s, l) not in files]
     if missing:
         print(f"[speed_stdp] WARNING: missing cells: {missing}")
-    print(f"[speed_stdp] resolved {len(files)} files in {args.indir}")
+    print(f"[speed_stdp] resolved {len(files)} files; λ tags = {LAMBDA_ORDER}")
 
-    # Pre-load 3×3 matrix
+    # Pre-load matrix
     data: Dict[Tuple[str, str], Dict] = {}
     for s in SPEED_ORDER:
         for l in LAMBDA_ORDER:
@@ -194,15 +246,22 @@ def main():
         "legend.fontsize": 8, "xtick.labelsize": 8, "ytick.labelsize": 8,
     })
 
-    n_rows, n_cols = 3, 3
-    fig = plt.figure(figsize=(13, 18))
+    n_rows, n_cols = len(SPEED_ORDER), len(LAMBDA_ORDER)
+    fig = plt.figure(figsize=(4.3 * n_cols, 18))
     # 5 rows: 3 for traces, 1 for time-domain metric heat-tiles, 1 for STDP
     # convergence trajectories + spectral-concentration heat-tile (addresses
     # Q1: STDP-rate effect is in the *transient*, not the asymptote).
-    gs = fig.add_gridspec(5, 3, height_ratios=[1.0, 1.0, 1.0, 1.25, 1.20],
+    gs = fig.add_gridspec(5, n_cols, height_ratios=[1.0, 1.0, 1.0, 1.25, 1.20],
                           hspace=0.55, wspace=0.28)
 
-    # Rows 1-3: Force traces (last 5 s zoom), rows = speed, cols = lambda
+    # Rows 1-3: Force traces, rows = speed, cols = lambda.
+    # Default window = FIRST 20 s, which is where the STDP-rate-dependent
+    # self-organisation of the gait is visible (weights saturate by ~20 s,
+    # so the converged last-5 s window shows no λ effect).
+    win_ms = float(args.trace_window_ms)
+
+    def _panel_tag(r, c):
+        return f"A{r * n_cols + c + 1}"
     for r, s in enumerate(SPEED_ORDER):
         for c, l in enumerate(LAMBDA_ORDER):
             ax = fig.add_subplot(gs[r, c])
@@ -213,12 +272,20 @@ def main():
                 ax.set_xticks([]); ax.set_yticks([])
                 continue
             d = data[(s, l)]
-            z = max(0.0, d["sim_ms"] - 5000.0)
-            mask = d["t"] >= z
-            ax.plot(d["t"][mask], d["fe"][mask], color="#1f77b4", linewidth=1.0, label="E")
-            ax.plot(d["t"][mask], d["ff"][mask], color="#ff7f0e", linewidth=1.0, label="F")
-            ax.set_xlim(z, d["sim_ms"])
+            if args.trace_window == "first":
+                z0, z1 = 0.0, min(win_ms, d["sim_ms"])
+            else:
+                z0, z1 = max(0.0, d["sim_ms"] - win_ms), d["sim_ms"]
+            mask = (d["t"] >= z0) & (d["t"] <= z1)
+            ax.plot(d["t"][mask], d["fe"][mask], color="#1f77b4", linewidth=0.9, label="E")
+            ax.plot(d["t"][mask], d["ff"][mask], color="#ff7f0e", linewidth=0.9, label="F")
+            ax.set_xlim(z0, z1)
             ax.grid(alpha=0.2)
+            # Panel index tag, top-left corner inside the axes
+            ax.text(0.015, 0.97, _panel_tag(r, c), transform=ax.transAxes,
+                    fontsize=10, fontweight="bold", va="top", ha="left",
+                    bbox=dict(boxstyle="round,pad=0.18", fc="white", ec="grey",
+                              alpha=0.85, lw=0.6))
             # Column headers on row 0
             if r == 0:
                 ax.set_title(LAMBDA_LABEL[l], fontsize=9)
@@ -337,10 +404,12 @@ def main():
                           fontsize=9)
     plt.colorbar(im, ax=ax_f, fraction=0.05, pad=0.04)
 
+    win_desc = (f"first {win_ms/1000:.0f} s" if args.trace_window == "first"
+                else f"last {win_ms/1000:.0f} s")
     fig.suptitle(
         "Phase A — Speed × STDP learning-rate matrix\n"
-        "Self-organisation across rat locomotor range and bio-plausible λ"
-        "  (μ=3.5, CV=0.30, 120 s each)",
+        f"Self-organisation across rat locomotor range and bio-plausible λ "
+        f"(force traces = {win_desc};  μ=3.5, CV=0.30, 120 s each)",
         fontsize=12, y=0.997,
     )
     fig.savefig(out_path, dpi=180, bbox_inches="tight")

@@ -20,9 +20,15 @@
 #   speed_idx 1 → step_period_ms= 520,  ≈ 13.5 cm/s (med walk)   Courtine 2009 mid
 #   speed_idx 2 → step_period_ms= 350,  ≈ 21 cm/s (fast walk)    Courtine 2009 high
 #
-#   lambda_idx 0 → λ = 5e-4 (slow STDP, conservative)
-#   lambda_idx 1 → λ = 1e-3 (baseline; Morrison 2007)
-#   lambda_idx 2 → λ = 2e-3 (fast STDP, still bio-plausible)
+#   lambda_idx 0 → λ = 1e-4 (slow STDP; converges ~75 s — transient visible
+#                            across the whole 120 s run)
+#   lambda_idx 1 → λ = 1e-3 (baseline; Morrison 2007; converges ~7 s)
+#   lambda_idx 2 → λ = 1e-2 (fast STDP; converges ~1 s; above the strict
+#                            cortical range, probes accelerated learning)
+# Decade-spanning range chosen because the earlier 5e-4..2e-3 set all
+# saturated within the first ~20 s, leaving the converged 115-120 s window
+# λ-indistinguishable. With this wider range the first-20 s force profiles
+# (and the weight transients) clearly separate by learning rate.
 #
 # Output: results/cpg_speed_stdp_spd<P>_lam<L>_idx00_*.h5
 
@@ -51,9 +57,9 @@ case $SPD_IDX in
 esac
 
 case $LAM_IDX in
-    0) LAMBDA=5e-4; LAM_LABEL="lam5em4" ;;
+    0) LAMBDA=1e-4; LAM_LABEL="lam1em4" ;;
     1) LAMBDA=1e-3; LAM_LABEL="lam1em3" ;;
-    2) LAMBDA=2e-3; LAM_LABEL="lam2em3" ;;
+    2) LAMBDA=1e-2; LAM_LABEL="lam1em2" ;;
     *) echo "Unknown LAM_IDX=$LAM_IDX"; exit 1 ;;
 esac
 
