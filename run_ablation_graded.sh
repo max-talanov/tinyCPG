@@ -6,13 +6,17 @@
 #SBATCH --ntasks=1
 #SBATCH --array=0-8
 #SBATCH --cpus-per-task=64
-#SBATCH --time=02:00:00
+#SBATCH --time=10:00:00
 #SBATCH --partition=acc
 #
 # Phase B — graded sensory ablation × STDP learning rate matrix.
 # 3 Ia-feedback gains (Courtine/Lavrov SCI rehab paradigm)
 #   × 3 STDP learning rates λ
-# = 9 tasks, 30 s each, paced gait at medium-walk speed (520 ms).
+# = 9 tasks, 120 s each, paced gait at medium-walk speed (520 ms).
+#
+# Sim length raised from 30 s to 120 s so the slow λ=1e-4 condition
+# (~75 s to converge) reaches steady state — a fair comparison across the
+# wider decade-spanning λ range that matches Phase A.
 #
 # array_task = 3 * gain_idx + lambda_idx
 #
@@ -22,9 +26,11 @@
 #   gain_idx 2 → Ia gain = 0.1  (air stepping; lifted hindlimb, ≈deafferented)
 #                              Lavrov 2008; Hägglund 2013
 #
-#   lambda_idx 0 → λ = 5e-4 (slow STDP)
-#   lambda_idx 1 → λ = 1e-3 (baseline)
-#   lambda_idx 2 → λ = 2e-3 (fast STDP)
+#   lambda_idx 0 → λ = 1e-4 (slow STDP; converges ~75 s)
+#   lambda_idx 1 → λ = 1e-3 (baseline; converges ~7 s)
+#   lambda_idx 2 → λ = 1e-2 (fast STDP; converges ~1 s; above strict
+#                            cortical range, probes accelerated learning)
+# Decade-spanning λ matches Phase A (run_speed_stdp.sh).
 #
 # Output: results/cpg_ablgrad_g<G>_lam<L>_idx00_*.h5
 
@@ -38,7 +44,7 @@ echo "[Slurm] ntasks=$SLURM_NTASKS cpus-per-task=$SLURM_CPUS_PER_TASK array_task
 OUTDIR="results/"
 BASE_SEED=12345
 SWEEP_PAIRS="3.5:0.30"
-SIM_MS=30000
+SIM_MS=120000            # 120 s — long enough for slow λ=1e-4 to converge
 PERIOD=520               # medium walk (≈13.5 cm/s) — Lavrov's typical condition
 
 T=${SLURM_ARRAY_TASK_ID:-0}
@@ -53,9 +59,9 @@ case $GAIN_IDX in
 esac
 
 case $LAM_IDX in
-    0) LAMBDA=5e-4; LAM_LABEL="lam5em4" ;;
+    0) LAMBDA=1e-4; LAM_LABEL="lam1em4" ;;
     1) LAMBDA=1e-3; LAM_LABEL="lam1em3" ;;
-    2) LAMBDA=2e-3; LAM_LABEL="lam2em3" ;;
+    2) LAMBDA=1e-2; LAM_LABEL="lam1em2" ;;
     *) echo "Unknown LAM_IDX=$LAM_IDX"; exit 1 ;;
 esac
 

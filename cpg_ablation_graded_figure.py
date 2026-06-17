@@ -152,8 +152,8 @@ def main():
                          "STDP-rate-dependent self-organisation) or the LAST window "
                          "(converged steady state).")
     ap.add_argument("--trace-window-ms", type=float, default=20000.0,
-                    help="Width of the force-trace window in ms (default 20000 = 20 s; "
-                         "the runs are 30 s, so this covers the convergence transient).")
+                    help="Width of the force-trace window in ms (default 20000 = 20 s, "
+                         "covering the STDP convergence transient).")
     args = ap.parse_args()
 
     os.makedirs(args.outdir, exist_ok=True)
