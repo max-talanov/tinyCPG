@@ -26,11 +26,11 @@
 #   gain_idx 2 → Ia gain = 0.1  (air stepping; lifted hindlimb, ≈deafferented)
 #                              Lavrov 2008; Hägglund 2013
 #
-#   lambda_idx 0 → λ = 1e-4 (slow STDP; converges ~75 s)
-#   lambda_idx 1 → λ = 1e-3 (baseline; converges ~7 s)
-#   lambda_idx 2 → λ = 1e-2 (fast STDP; converges ~1 s; above strict
-#                            cortical range, probes accelerated learning)
-# Decade-spanning λ matches Phase A (run_speed_stdp.sh).
+#   lambda_idx 0 → λ = 1e-5 (very slow STDP; τ ≈ 250 s, climbs throughout)
+#   lambda_idx 1 → λ = 1e-4 (slow STDP; converges ~75 s)
+#   lambda_idx 2 → λ = 1e-3 (baseline; converges ~7 s)
+# λ shifted down one decade to match Phase A (run_speed_stdp.sh): the
+# fast 1e-2 only fluctuated around its plateau, so it was dropped for 1e-5.
 #
 # Output: results/cpg_ablgrad_g<G>_lam<L>_idx00_*.h5
 
@@ -59,9 +59,9 @@ case $GAIN_IDX in
 esac
 
 case $LAM_IDX in
-    0) LAMBDA=1e-4; LAM_LABEL="lam1em4" ;;
-    1) LAMBDA=1e-3; LAM_LABEL="lam1em3" ;;
-    2) LAMBDA=1e-2; LAM_LABEL="lam1em2" ;;
+    0) LAMBDA=1e-5; LAM_LABEL="lam1em5" ;;
+    1) LAMBDA=1e-4; LAM_LABEL="lam1em4" ;;
+    2) LAMBDA=1e-3; LAM_LABEL="lam1em3" ;;
     *) echo "Unknown LAM_IDX=$LAM_IDX"; exit 1 ;;
 esac
 

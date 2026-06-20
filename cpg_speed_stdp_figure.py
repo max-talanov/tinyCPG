@@ -218,12 +218,12 @@ def main():
     for i, l in enumerate(LAMBDA_ORDER):
         if len(LAMBDA_ORDER) == 1:
             role = ""
+        elif _lambda_tag_to_value(l) == 1e-3:
+            role = "baseline"            # literature reference, any position
         elif i == 0:
             role = "slow STDP"
         elif i == len(LAMBDA_ORDER) - 1:
             role = "fast STDP"
-        elif _lambda_tag_to_value(l) == 1e-3:
-            role = "baseline"
         else:
             role = "intermediate"
         LAMBDA_LABEL[l] = _lambda_label(l, role)
