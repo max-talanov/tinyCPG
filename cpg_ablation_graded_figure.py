@@ -129,9 +129,20 @@ def _load(path: str) -> Dict:
     fe_w = fe[mask]; ff_w = ff[mask]; t_w = t[mask]
     periods = _find_cycle_periods(t_w, fe_w, min_peak_height=3.0,
                                   min_gap_ms=max(120.0, period_ms * 0.4))
+    # STDP weight trajectories (dense per-chunk mean & std)
+    weights = {}
+    try:
+        wg = h["leg_L/weights"]
+        for key in ("cut->rge_mean", "cut->rge_std",
+                    "bs->rge_mean", "bs->rge_std", "bs->rgf_mean"):
+            if key in wg:
+                weights[key] = np.asarray(wg[key])
+    except Exception:
+        pass
     return {
         "h5": h, "t": t, "fe": fe, "ff": ff, "sim_ms": sim_ms,
         "period_ms": period_ms,
+        "weights": weights,
         "ia_gain": float(h.attrs.get("ia_feedback_gain", 1.0)),
         "stdp_lambda": float(h.attrs.get("stdp_lambda", 1e-3)),
         "measured_period_mean": float(np.mean(periods)) if periods.size else np.nan,
@@ -196,8 +207,11 @@ def main():
     })
 
     n_rows, n_cols = len(GAIN_ORDER), len(LAMBDA_ORDER)
-    fig = plt.figure(figsize=(4.3 * n_cols, 14))
-    gs = fig.add_gridspec(4, n_cols, height_ratios=[1.0, 1.0, 1.0, 1.25],
+    fig = plt.figure(figsize=(4.3 * n_cols, 18))
+    # 5 rows: 3 force-trace rows, 1 metric-heat-tile row, 1 STDP
+    # weight-trajectory row (the rescue mechanism: how fast the descending /
+    # cutaneous weights re-equilibrate under air stepping at each λ).
+    gs = fig.add_gridspec(5, n_cols, height_ratios=[1.0, 1.0, 1.0, 1.25, 1.20],
                           hspace=0.55, wspace=0.28)
 
     # Rows 1-3: Force traces, rows = gain, cols = lambda.
@@ -275,6 +289,73 @@ def main():
                             color="white" if (cmap_name in ("viridis", "plasma") and r >= 1) else "black",
                             fontsize=9)
         plt.colorbar(im, ax=ax, fraction=0.05, pad=0.04)
+
+    # ----- Row 5: STDP weight trajectories (the rescue mechanism) -----
+    # (d) CUT->RG-E weight vs time at AIR stepping, 3 λ overlaid — faster λ
+    #     re-equilibrates the cutaneous weight sooner, explaining the rescue.
+    # (e) BS->RG-E weight vs time at AIR stepping, 3 λ overlaid (saturating).
+    # (f) CUT->RG-E weight vs time at BASELINE λ, 3 Ia gains overlaid —
+    #     compensation check: does reduced sensory feedback drive the
+    #     descending weight to a different plateau?
+    _traj_palette = ["#1f77b4", "#2ca02c", "#d62728", "#9467bd", "#ff7f0e"]
+    lam_color = {l: _traj_palette[i % len(_traj_palette)]
+                 for i, l in enumerate(LAMBDA_ORDER)}
+    anchor_gain = "air"            # degraded condition where λ matters most
+
+    ax_d = fig.add_subplot(gs[4, 0])
+    for l in LAMBDA_ORDER:
+        d = data.get((anchor_gain, l))
+        if d is None or "cut->rge_mean" not in d["weights"]:
+            continue
+        w = d["weights"]["cut->rge_mean"]
+        tt = d["t"][: w.size]
+        ax_d.plot(tt / 1000.0, w, color=lam_color[l], linewidth=1.2,
+                  label=LAMBDA_LABEL[l].split("\n")[0])
+    ax_d.set_xlabel("time (s)"); ax_d.set_ylabel("mean weight (pA)")
+    ax_d.set_title("(d) CUT→RG-E weight trajectory\n(air stepping; λ-dependent transient)")
+    ax_d.legend(loc="lower right", fontsize=7)
+    ax_d.grid(alpha=0.2)
+
+    if n_cols > 1:
+        ax_e = fig.add_subplot(gs[4, 1])
+        for l in LAMBDA_ORDER:
+            d = data.get((anchor_gain, l))
+            if d is None or "bs->rge_mean" not in d["weights"]:
+                continue
+            w = d["weights"]["bs->rge_mean"]
+            tt = d["t"][: w.size]
+            ax_e.plot(tt / 1000.0, w, color=lam_color[l], linewidth=1.2,
+                      label=LAMBDA_LABEL[l].split("\n")[0])
+        ax_e.axhline(30.0, linestyle="--", color="grey", alpha=0.6,
+                     label="W_max (BS) = 30 pA")
+        ax_e.set_xlabel("time (s)"); ax_e.set_ylabel("mean weight (pA)")
+        ax_e.set_title("(e) BS→RG-E weight trajectory\n(air stepping; saturates at W_max)")
+        ax_e.legend(loc="lower right", fontsize=7)
+        ax_e.grid(alpha=0.2)
+
+    if n_cols > 2:
+        # (f) CUT->RG-E mean ± std band at air stepping, λ overlaid. Reveals
+        # the rescue mechanism: faster λ settles at a LOWER mean with a much
+        # BROADER weight distribution (heterogeneous), which supports cleaner
+        # counter-phase under degraded sensory feedback — the opposite of a
+        # simple "stronger descending weight" account.
+        ax_f = fig.add_subplot(gs[4, 2])
+        for l in LAMBDA_ORDER:
+            d = data.get((anchor_gain, l))
+            if d is None or "cut->rge_mean" not in d["weights"]:
+                continue
+            w = d["weights"]["cut->rge_mean"]
+            tt = d["t"][: w.size]
+            ax_f.plot(tt / 1000.0, w, color=lam_color[l], linewidth=1.2,
+                      label=LAMBDA_LABEL[l].split("\n")[0])
+            if "cut->rge_std" in d["weights"]:
+                sd = d["weights"]["cut->rge_std"][: w.size]
+                ax_f.fill_between(tt / 1000.0, w - sd, w + sd,
+                                  color=lam_color[l], alpha=0.15)
+        ax_f.set_xlabel("time (s)"); ax_f.set_ylabel("weight (pA)")
+        ax_f.set_title("(f) CUT→RG-E mean ± std — air stepping\n(fast λ: lower mean, broader distribution)")
+        ax_f.legend(loc="lower right", fontsize=7)
+        ax_f.grid(alpha=0.2)
 
     win_desc = (f"first {win_ms/1000:.0f} s" if args.trace_window == "first"
                 else f"last {win_ms/1000:.0f} s")
