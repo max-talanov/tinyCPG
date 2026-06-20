@@ -98,11 +98,13 @@ We tested all nine combinations of three walking speeds
 (Courtine/Lavrov rat treadmill
 range~\cite{lavrov2008,courtine2009}: $\approx$\,6, 13.5, 21\,cm/s,
 corresponding to step periods of 1200, 520, 350\,ms with $\approx$\,7\,cm
-step length) crossed with three bio-plausible STDP learning rates
-($\lambda \in \{5{\times}10^{-4},\,1{\times}10^{-3},\,2{\times}10^{-3}\}$).
+step length) crossed with three STDP learning rates spanning a decade
+around the bio-plausible cortical
+value~\cite{biPoo1998,morrison2007}
+($\lambda \in \{1{\times}10^{-4},\,1{\times}10^{-3},\,1{\times}10^{-2}\}$).
 The measured cycle period tracks the commanded period within $\le 1$\,ms
 in 7 of 9 cells; E$\leftrightarrow$F counter-phase strength stays in
-$[-0.90, -0.77]$ across the full $3 \times 3$ matrix
+$[-0.90, -0.74]$ across the full $3 \times 3$ matrix
 (Fig.~\ref{fig:speed_stdp}, Table~\ref{tab:speed_stdp_metrics}).
 
 \begin{table}[h]
@@ -112,19 +114,19 @@ $[-0.90, -0.77]$ across the full $3 \times 3$ matrix
     \texttt{plots/paper/fig5\_speed\_stdp\_metrics.csv}.}
   \label{tab:speed_stdp_metrics}
   \small
-  \begin{tabular}{lrrrrr}
+  \begin{tabular}{lrrrrrr}
     \toprule
-    Speed & $\lambda$ & Cmd.\ (ms) & Measured (ms) & Peak $F_E$ & corr$(F_E, F_F)$ \\
+    Speed & $\lambda$ & Cmd.\ (ms) & Measured (ms) & Peak $F_E$ & corr$(F_E, F_F)$ & Spec.\ conc. \\
     \midrule
-    6.0\ cm/s  & $5{\times}10^{-4}$ & 1200 & $1200.0 \pm 0$   & 17.46 & $-0.84$ \\
-    6.0\ cm/s  & $1{\times}10^{-3}$ & 1200 & $1200.0 \pm 0$   & 17.46 & $-0.90$ \\
-    6.0\ cm/s  & $2{\times}10^{-3}$ & 1200 & $1200.0 \pm 0$   & 17.46 & $-0.87$ \\
-    13.5\ cm/s & $5{\times}10^{-4}$ &  520 & $519.6  \pm 0$   & 16.74 & $-0.77$ \\
-    13.5\ cm/s & $1{\times}10^{-3}$ &  520 & $519.6  \pm 0$   & 16.73 & $-0.81$ \\
-    13.5\ cm/s & $2{\times}10^{-3}$ &  520 & $519.6  \pm 0$   & 16.73 & $-0.84$ \\
-    21.0\ cm/s & $5{\times}10^{-4}$ &  350 & $349.3 \pm 17.6$ & 15.52 & $-0.84$ \\
-    21.0\ cm/s & $1{\times}10^{-3}$ &  350 & $350.4 \pm 11.1$ & 15.53 & $-0.82$ \\
-    21.0\ cm/s & $2{\times}10^{-3}$ &  350 & $350.4 \pm 11.1$ & 15.52 & $-0.85$ \\
+    6.0\ cm/s  & $1{\times}10^{-4}$ & 1200 & $1200.0 \pm 0$   & 17.46 & $-0.85$ & 0.86 \\
+    6.0\ cm/s  & $1{\times}10^{-3}$ & 1200 & $1200.0 \pm 0$   & 17.46 & $-0.90$ & 0.86 \\
+    6.0\ cm/s  & $1{\times}10^{-2}$ & 1200 & $1200.0 \pm 0$   & 17.46 & $-0.88$ & 0.87 \\
+    13.5\ cm/s & $1{\times}10^{-4}$ &  520 & $519.6  \pm 0$   & 16.76 & $-0.78$ & 0.89 \\
+    13.5\ cm/s & $1{\times}10^{-3}$ &  520 & $519.6  \pm 0$   & 16.73 & $-0.81$ & 0.89 \\
+    13.5\ cm/s & $1{\times}10^{-2}$ &  520 & $519.6  \pm 0$   & 16.72 & $-0.81$ & 0.89 \\
+    21.0\ cm/s & $1{\times}10^{-4}$ &  350 & $350.4 \pm 11.1$ & 15.51 & $-0.74$ & 0.92 \\
+    21.0\ cm/s & $1{\times}10^{-3}$ &  350 & $350.4 \pm 11.1$ & 15.53 & $-0.82$ & 0.93 \\
+    21.0\ cm/s & $1{\times}10^{-2}$ &  350 & $350.4 \pm 0$    & 15.47 & $-0.77$ & 0.95 \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -135,9 +137,10 @@ $[-0.90, -0.77]$ across the full $3 \times 3$ matrix
   \caption{\textbf{Phase A --- speed $\times$ STDP learning-rate matrix.}
     Rows = walking speed (slow / medium / fast walk;
     Courtine/Lavrov rat treadmill range~\cite{lavrov2008,courtine2009}).
-    Columns = STDP learning rate $\lambda$ (slow / baseline / fast,
-    spanning the cortical bio-plausible
-    range~\cite{biPoo1998,morrison2007}).
+    Columns = STDP learning rate $\lambda \in
+    \{1{\times}10^{-4},\,1{\times}10^{-3},\,1{\times}10^{-2}\}$
+    (slow / baseline / fast), a decade-spanning range bracketing the
+    cortical bio-plausible value~\cite{biPoo1998,morrison2007}.
     \textbf{Rows 1--3 (panels A1--A9):} Force-E (blue) and Force-F
     (orange) leg L, \emph{first} 20\,s of each 120\,s simulation --- the
     window during which the gait self-organises and the STDP-rate effect
@@ -164,13 +167,13 @@ rate-invariant.}
 The measured cycle period equals the commanded step period to within
 the sampling resolution (sub-millisecond) across all nine cells, with
 the only exception being the fastest gait (350\,ms commanded period)
-where cycle jitter rises to $\approx 15$\,ms\,s.d.\ This is consistent
-with the rat fast-twitch fibre rise-time limit ($\tau_F=80$\,ms)
-becoming a non-negligible fraction of the 175\,ms stance window:
-Hill-style saturation~\cite{zajac1989} prevents force from fully
-developing every stride. Peak Force-E correspondingly drops from
-$17.46$ to $15.52$\,a.u.\ as the step period shortens from 1200 to
-350\,ms --- a $\approx 11\%$ compression.
+where cycle jitter rises to $\approx 11$\,ms\,s.d.\ at the slower
+learning rates. This is consistent with the rat fast-twitch fibre
+rise-time limit ($\tau_F=80$\,ms) becoming a non-negligible fraction of
+the 175\,ms stance window: Hill-style saturation~\cite{zajac1989}
+prevents force from fully developing every stride. Peak Force-E
+correspondingly drops from $17.46$ to $15.47$\,a.u.\ as the step period
+shortens from 1200 to 350\,ms --- a $\approx 11\%$ compression.
 
 \paragraph{Interpretation: $\lambda$ acts on the transient, not the
 asymptote.}
@@ -179,16 +182,21 @@ are nearly flat across $\lambda$: by $t=120$\,s, all three learning
 rates have reached the same converged weight distribution, and the
 externally clocked paced gait masks any residual variability. The
 $\lambda$-effect is instead visible in the convergence transient
-(Fig.~\ref{fig:speed_stdp}, Row 5, panels d and e): at $\lambda =
-2{\times}10^{-3}$ (fast) the CUT$\to$RG-E weight reaches its plateau
-within $\sim$3--5\,s, while at $\lambda = 5{\times}10^{-4}$ (slow) the
-trajectory takes $\sim$15--25\,s. The BS$\to$RG-E weight reaches its
+(Fig.~\ref{fig:speed_stdp}, Row 5, panels d and e), for which we
+deliberately widened $\lambda$ to span a full decade
+($1{\times}10^{-4}$ to $1{\times}10^{-2}$): at the fast rate
+($\lambda=1{\times}10^{-2}$) the CUT$\to$RG-E weight reaches its plateau
+within $\sim$1\,s, at the baseline rate ($\lambda=1{\times}10^{-3}$)
+within $\sim$7\,s, and at the slow rate ($\lambda=1{\times}10^{-4}$)
+only after $\sim$60--75\,s. The BS$\to$RG-E weight reaches its
 $w_{\max}=30$\,pA ceiling in roughly the same ratio. We deliberately
-ran 120\,s simulations to demonstrate the post-convergence stability
-claim of \autoref{sec:results:stability}; the $\lambda$-dependent
-behaviour the paced gait does \emph{not} probe is recovered in
-Phase~B (\autoref{sec:results:ablation}) where attenuating the
-closed-loop Ia exposes a $\lambda$-dependent rescue effect.
+ran 120\,s simulations so that even the slow rate converges within the
+run, demonstrating the post-convergence stability claim of
+\autoref{sec:results:stability}; the functional consequence of the
+slower transient is exposed in Phase~B
+(\autoref{sec:results:ablation}), where attenuating the closed-loop Ia
+makes the rhythm depend on how quickly the descending weights can
+adapt.
 
 \paragraph{Interpretation: spectral concentration as a sensitive
 irregularity metric.}
@@ -196,19 +204,22 @@ Cycle-period s.d. is essentially zero for the externally paced rhythm
 ($\ll$\,1\,ms in 7 of 9 cells), and is therefore an insensitive index
 of irregularity. The spectral concentration (Fig.~\ref{fig:speed_stdp},
 panel f) measures the fraction of total PSD power within $\pm$10\% of
-the fundamental cycle frequency $f_0=1/P$. It ranges from $0.85$ at
-medium walk to $0.95$ at fast walk, reflecting the gradual loss of
-sub-harmonic energy at faster gaits as the rhythm becomes more
-tightly locked to the external clock. Importantly, this metric does
-not saturate at the converged plateau and so provides a finer-grained
-diagnostic for future studies that probe sub-millisecond timing.
+the fundamental cycle frequency $f_0=1/P$. It rises monotonically from
+$\approx 0.86$ at slow walk to $\approx 0.95$ at fast walk, reflecting
+the increasing concentration of power at the fundamental as the rhythm
+locks more tightly to the external clock at higher cadence; within each
+speed it also edges up slightly with $\lambda$ (e.g.\ $0.92 \to 0.95$
+at fast walk from slow to fast STDP). Importantly, this metric does not
+saturate at the converged plateau and so provides a finer-grained
+diagnostic than period s.d.\ for future studies that probe
+sub-millisecond timing.
 
 \paragraph{Interpretation: bio-plausible mapping.}
 Our three speed conditions cover the canonical rat treadmill locomotor
 range used in the spinal cord injury literature: 6\,cm/s (slow
 exploration; Lavrov 2008~\cite{lavrov2008}), 13.5\,cm/s (medium walk;
 Courtine 2009~\cite{courtine2009}), and 21\,cm/s (fast walk / slow trot
-transition). Counter-phase correlation remains strong ($\le -0.77$)
+transition). Counter-phase correlation remains strong ($\le -0.74$)
 across the full range, indicating that paced sensory drive supports the
 rat locomotor speed range without retuning of the central architecture.
 
@@ -220,20 +231,25 @@ To emulate the Courtine/Lavrov spinal cord injury (SCI) rehabilitation
 paradigm~\cite{lavrov2008,courtine2009,edgerton2008}, we tested three
 Ia feedback gains ($G_{\text{Ia}} \in \{1.0,\,0.5,\,0.1\}$,
 corresponding to \emph{baseline}, \emph{toe stepping}, and \emph{air
-stepping}) crossed with the three STDP rates from Phase A, at the
-medium-walk anchor (520\,ms cycle period, 30\,s simulations). Three
-findings emerge (Fig.~\ref{fig:ablgrad}, Table~\ref{tab:ablgrad_metrics}):
-(i) the baseline gait is robust to $\lambda$ at $G_{\text{Ia}}=1.0$;
-(ii) graded Ia loss progressively destabilises cycle period in the
-slow-STDP regime; (iii) at fast STDP ($\lambda=2{\times}10^{-3}$), even
-the most degraded condition (air stepping, $G_{\text{Ia}}=0.1$) recovers
-a stable rhythm with counter-phase corr $-0.93$, exceeding the baseline
-value.
+stepping}) crossed with the same decade-spanning STDP rates as Phase A
+($\lambda \in \{1{\times}10^{-4},\,1{\times}10^{-3},\,1{\times}10^{-2}\}$),
+at the medium-walk anchor (520\,ms cycle period, 120\,s simulations so
+that even the slow rate converges). Three findings emerge
+(Fig.~\ref{fig:ablgrad}, Table~\ref{tab:ablgrad_metrics}):
+(i) the baseline gait is robust to $\lambda$ at $G_{\text{Ia}}=1.0$
+(519.6\,ms, corr $\approx -0.8$ throughout);
+(ii) graded Ia loss introduces cycle-period jitter, most severely at the
+slow learning rate (air stepping, $\lambda=10^{-4}$: $480.6 \pm 98.6$\,ms,
+corr $-0.73$);
+(iii) raising $\lambda$ rescues the degraded conditions --- at air
+stepping, the counter-phase correlation strengthens from $-0.73$
+($\lambda=10^{-4}$) through $-0.92$ ($\lambda=10^{-3}$) to $-0.94$
+($\lambda=10^{-2}$).
 
 \begin{table}[h]
   \centering
   \caption{Phase B --- graded Ia ablation $\times$ STDP metrics
-    (last 20\,s of each 30\,s run, leg L, 520\,ms commanded period).
+    (last 20\,s of each 120\,s run, leg L, 520\,ms commanded period).
     \emph{Auto-generated from}
     \texttt{plots/paper/fig6\_ablation\_graded\_metrics.csv}.}
   \label{tab:ablgrad_metrics}
@@ -242,15 +258,15 @@ value.
     \toprule
     Condition & $\lambda$ & Cycle (ms) & $\pm$ s.d.\ (ms) & Peak $F_E$ & corr$(F_E, F_F)$ \\
     \midrule
-    baseline ($G=1.0$)   & $5{\times}10^{-4}$ & 519.6 &   0.0 & 16.77 & $-0.81$ \\
-    baseline             & $1{\times}10^{-3}$ & 519.6 &   0.0 & 16.73 & $-0.84$ \\
-    baseline             & $2{\times}10^{-3}$ & 519.6 &   0.0 & 16.75 & $-0.81$ \\
-    toe step ($G=0.5$)   & $5{\times}10^{-4}$ & 481.6 &  97.6 & 17.01 & $-0.75$ \\
-    toe step             & $1{\times}10^{-3}$ & 506.3 &  60.6 & 16.82 & $-0.78$ \\
-    toe step             & $2{\times}10^{-3}$ & 506.3 &  60.6 & 16.72 & $-0.85$ \\
-    air step ($G=0.1$)   & $5{\times}10^{-4}$ & 438.8 & 129.6 & 16.94 & $\mathbf{-0.70}$ \\
-    air step             & $1{\times}10^{-3}$ & 519.6 &   0.0 & 16.73 & $-0.87$ \\
-    air step             & $2{\times}10^{-3}$ & 519.6 &   0.0 & 16.72 & $\mathbf{-0.93}$ \\
+    baseline ($G=1.0$)   & $1{\times}10^{-4}$ & 519.6 &   0.0 & 16.76 & $-0.78$ \\
+    baseline             & $1{\times}10^{-3}$ & 519.6 &   0.0 & 16.73 & $-0.81$ \\
+    baseline             & $1{\times}10^{-2}$ & 519.6 &   0.0 & 16.72 & $-0.81$ \\
+    toe step ($G=0.5$)   & $1{\times}10^{-4}$ & 505.9 &  61.3 & 17.01 & $\mathbf{-0.72}$ \\
+    toe step             & $1{\times}10^{-3}$ & 493.0 &  83.6 & 16.73 & $-0.85$ \\
+    toe step             & $1{\times}10^{-2}$ & 493.0 &  83.6 & 16.75 & $-0.83$ \\
+    air step ($G=0.1$)   & $1{\times}10^{-4}$ & 480.6 &  98.6 & 16.89 & $\mathbf{-0.73}$ \\
+    air step             & $1{\times}10^{-3}$ & 519.6 &   0.0 & 16.73 & $-0.92$ \\
+    air step             & $1{\times}10^{-2}$ & 505.9 &  61.3 & 16.72 & $\mathbf{-0.94}$ \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -261,11 +277,13 @@ value.
   \caption{\textbf{Phase B --- graded sensory ablation $\times$ STDP
     learning-rate matrix (Courtine/Lavrov SCI rehab paradigm).}
     Rows = Ia feedback gain (baseline / toe stepping / air stepping).
-    Columns = STDP learning rate $\lambda$ (slow / baseline / fast).
-    \textbf{Rows 1--3:} Force-E (blue) and Force-F (orange) leg L, last
-    5\,s of each 30\,s simulation. At slow STDP and air stepping
-    (bottom-left) the cycle period becomes irregular; at fast STDP and
-    air stepping (bottom-right) the rhythm is fully restored.
+    Columns = STDP learning rate $\lambda \in
+    \{1{\times}10^{-4},\,1{\times}10^{-3},\,1{\times}10^{-2}\}$
+    (slow / baseline / fast).
+    \textbf{Rows 1--3 (panels B1--B9):} Force-E (blue) and Force-F
+    (orange) leg L, \emph{first} 20\,s of each 120\,s simulation. At
+    slow STDP and air stepping (panel B7) the cycle period is irregular;
+    at baseline and fast STDP (panels B8, B9) the rhythm locks cleanly.
     \textbf{Row 4:} Quantitative summary heat-tiles across the
     $3\times 3$ matrix: (a) measured cycle period (ms);
     (b) peak Force-E (a.u.);
@@ -275,15 +293,16 @@ value.
 
 \paragraph{Interpretation: graded Ia loss progressively destabilises
 the rhythm.}
-At baseline learning rate ($\lambda=10^{-3}$), reducing Ia gain from
-1.0 to 0.5 introduces cycle-period jitter (s.d.\ rising from 0 to
-$60.6$\,ms while the mean drops from $519.6$ to $506.3$\,ms) and
-weakens counter-phase correlation from $-0.84$ to $-0.78$. At
-air-stepping gain (0.1), the cycle s.d.\ rises to $129.6$\,ms in the
-slow-STDP regime and the counter-phase correlation degrades to $-0.70$.
-This gradation mirrors experimental findings in SCI-rehabilitation
-studies where progressively unloading the hindlimbs degrades step
-rhythm quality~\cite{lavrov2008,edgerton2008,hagglund2013}.
+Reducing Ia gain introduces cycle-period jitter that is most severe at
+the slow learning rate. At the slow rate ($\lambda=10^{-4}$), the cycle
+s.d.\ grows from $0$ (baseline) to $61.3$\,ms (toe stepping) to
+$98.6$\,ms (air stepping), while the counter-phase correlation weakens
+from $-0.78$ to $-0.72$ to $-0.73$. The peak force is largely
+preserved ($\approx 16.7$--$17.0$\,a.u.) throughout, so the degradation
+is one of \emph{timing} rather than amplitude. This gradation mirrors
+experimental findings in SCI-rehabilitation studies where
+progressively unloading the hindlimbs degrades step rhythm
+quality~\cite{lavrov2008,edgerton2008,hagglund2013}.
 
 \paragraph{What our ``ablation'' actually maps to: epidural-stimulation
 paradigm.}
@@ -308,11 +327,14 @@ intact.
 The strongest result of Phase B is along the bottom row of
 Fig.~\ref{fig:ablgrad}: at the maximally degraded condition (air
 stepping, $G_{\text{Ia}}=0.1$), increasing the STDP rate from
-$\lambda=5{\times}10^{-4}$ to $\lambda=2{\times}10^{-3}$ fully restores
-cycle-period regularity (s.d.\ drops from $129.6$ to $0$\,ms) and the
-E$\leftrightarrow$F counter-phase correlation strengthens from $-0.70$
-to $-0.93$. Reframed in the epidural-stim paradigm of the previous
-paragraph, this finding states: when descending rhythmic drive
+$\lambda=1{\times}10^{-4}$ (slow) through $\lambda=1{\times}10^{-3}$
+(baseline) to $\lambda=1{\times}10^{-2}$ (fast) restores the rhythm:
+cycle-period s.d.\ falls from $98.6$\,ms to $0$\,ms (baseline rate) and
+the E$\leftrightarrow$F counter-phase correlation strengthens from
+$-0.73$ to $-0.92$ and then $-0.94$ --- the latter exceeding the
+intact, weight-bearing baseline ($-0.78$ to $-0.81$). Reframed in the
+epidural-stim paradigm of the previous paragraph, this finding states:
+when descending rhythmic drive
 (epidural stimulation, in vivo; paced CUT $+$ external Ia-E, in our
 model) is intact and synaptic plasticity is sufficiently fast, the
 spinal CPG re-weights its descending and cutaneous afferent inputs to

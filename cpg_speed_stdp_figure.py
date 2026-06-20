@@ -349,7 +349,10 @@ def main():
     # Panel (e): BS->RG-E mean weight vs time (saturating projection).
     # Panel (f): Spectral concentration heat-tile across the 3×3 matrix
     #            (alternative irregularity metric; not saturated by paced clock).
-    lam_color = {"lam5em4": "#1f77b4", "lam1em3": "#2ca02c", "lam2em3": "#d62728"}
+    # Colour each λ by position: slowest = blue, middle = green, fastest = red.
+    _traj_palette = ["#1f77b4", "#2ca02c", "#d62728", "#9467bd", "#ff7f0e"]
+    lam_color = {l: _traj_palette[i % len(_traj_palette)]
+                 for i, l in enumerate(LAMBDA_ORDER)}
     anchor_speed = "13_5cms"   # medium walk — show transient clearly
 
     ax_d = fig.add_subplot(gs[4, 0])
