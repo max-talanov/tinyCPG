@@ -106,12 +106,15 @@ Section~\ref{sec:results:stdp}).
 \paragraph{Learning-rate variation.}
 For the speed-by-STDP and graded-ablation matrices
 (\autoref{sec:methods:protocols}), the STDP learning rate $\lambda$ was
-varied across three bio-plausible values spanning the cortical
-STDP range~\cite{biPoo1998,morrison2007}: $\lambda \in \{1{\times}10^{-4},\,
-1{\times}10^{-3},\,1{\times}10^{-2}\}$. We refer to these as
-\emph{slow}, \emph{baseline}, and \emph{fast} STDP, respectively. The
-parameter is exposed via the \verb|--stdp-lambda| CLI flag and recorded
-to the HDF5 output as \verb|stdp_lambda|.
+varied across three values spanning two decades at and below the
+cortical bio-plausible STDP rate~\cite{biPoo1998,morrison2007}:
+$\lambda \in \{1{\times}10^{-5},\,1{\times}10^{-4},\,1{\times}10^{-3}\}$.
+We refer to these as \emph{slow}, \emph{intermediate}, and
+\emph{baseline} STDP, respectively. With a 120\,s run the slow rate does
+not fully converge (time constant $\approx 250$\,s), which lets us probe
+the regime of weak, still-developing descending weights. The parameter
+is exposed via the \verb|--stdp-lambda| CLI flag and recorded to the
+HDF5 output as \verb|stdp_lambda|.
 
 \subsection{Sensory feedback and Ia rate coding}\label{sec:methods:ia}
 \todo{1 paragraph + equation.}
@@ -253,7 +256,7 @@ learning rates. Used in Section~\ref{sec:results:speed}.
 \For{$i \in \{0, 1, \dots, 8\}$ \textbf{in parallel} (SLURM array task $i$)}
   \State $\mathrm{speed\_idx} \gets \lfloor i / 3 \rfloor$;\ \ $\mathrm{lambda\_idx} \gets i \bmod 3$
   \State $P \gets \{1200,\ 520,\ 350\}[\mathrm{speed\_idx}]$ \Comment{ms; $\approx$ 6 / 13.5 / 21 cm/s}
-  \State $\lambda \gets \{1{\times}10^{-4},\ 1{\times}10^{-3},\ 1{\times}10^{-2}\}[\mathrm{lambda\_idx}]$
+  \State $\lambda \gets \{1{\times}10^{-5},\ 1{\times}10^{-4},\ 1{\times}10^{-3}\}[\mathrm{lambda\_idx}]$
   \State Configure paced gait with \verb|--step-period-ms|$=P$,
          \verb|--stdp-lambda|$=\lambda$
   \State Simulate $120$\,s at BS$=60$\,Hz with the standard 3-group Ia
@@ -282,7 +285,7 @@ $P=520$\,ms, $\mathrm{seed} = 12345$
   \State $\mathrm{gain\_idx} \gets \lfloor i / 3 \rfloor$;\ \ $\mathrm{lambda\_idx} \gets i \bmod 3$
   \State $G_{\text{Ia}} \gets \{1.0,\ 0.5,\ 0.1\}[\mathrm{gain\_idx}]$
          \Comment{baseline / toe step / air step}
-  \State $\lambda \gets \{1{\times}10^{-4},\ 1{\times}10^{-3},\ 1{\times}10^{-2}\}[\mathrm{lambda\_idx}]$
+  \State $\lambda \gets \{1{\times}10^{-5},\ 1{\times}10^{-4},\ 1{\times}10^{-3}\}[\mathrm{lambda\_idx}]$
   \State Configure paced gait with \verb|--step-period-ms|$=520$,
          \verb|--ia-feedback-gain|$=G_{\text{Ia}}$, \verb|--stdp-lambda|$=\lambda$
   \State Simulate $120$\,s; write HDF5 with the two new attrs
