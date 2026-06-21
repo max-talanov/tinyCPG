@@ -38,8 +38,23 @@ sbatch run.sh
 | `cpg_2legs_fast.py` | The model. Neurons, connections, sim loop, HDF5 export. |
 | `cpg_plot_from_hdf5.py` | Reads HDF5, makes per-leg PNGs. |
 | `run.sh` | MN5 SLURM array script (N=100, 10-point μ:CV sweep). |
+| `run_speed_stdp.sh` | Phase A: 3 speeds × 3 λ {1e-5,1e-4,1e-3}, 120 s. |
+| `run_ablation_graded.sh` | Phase B: 3 Ia gains × 3 λ, 120 s. |
+| `run_frozen.sh` | Frozen-weight control: STDP off, air stepping, (mean,CV) sweep. |
 | `debug.sh` | Local single-config run with `--debug-small`. |
 | `CLAUDE.md` | This file. |
+
+## Frozen-weight control (`run_frozen.sh`)
+
+Tests the Phase B two-regime hypothesis: that the descending-weight
+*distribution* (not the learning dynamics) carries the counter-phase quality.
+Sets STDP frozen (`--stdp-lambda 0`) and imposes a lognormal CUT→RGE
+distribution of prescribed (mean, CV) via `--stdp-winit-dist lognormal_cv
+--stdp-winit-mean <M> --stdp-winit-std <CV> --stdp-winit-bs-mean-mul 0.25`,
+all at air stepping (`--ia-feedback-gain 0.1`). Two sweeps isolate the
+mechanisms: **mean** sweep at fixed CV=0.02 (weakness), **CV** sweep at fixed
+mean=63 (heterogeneity). Plot with `cpg_frozen_figure.py`. No `--sweep-pairs`
+(non-sweep mode uses `--out` directly).
 
 ## Current model state (as of this debug session)
 
