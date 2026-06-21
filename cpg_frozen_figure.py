@@ -157,11 +157,11 @@ def main():
         return cand[0] if cand else None
     reps = [
         (_pick(lambda r: abs(r["mean"] - 15) < 1e-9), "#2ca02c",
-         "weak (mean=15, CV=0.02)\nexpect: clean"),
+         "weak (mean=15, CV=0.02)"),
         (_pick(lambda r: abs(r["mean"] - 63) < 1e-9 and abs(r["cv"] - 0.02) < 1e-9), "#ff7f0e",
-         "full + tight (mean=63, CV=0.02)\nexpect: degraded"),
+         "full + tight (mean=63, CV=0.02)"),
         (_pick(lambda r: abs(r["mean"] - 63) < 1e-9 and abs(r["cv"] - 0.10) < 1e-9), "#1f77b4",
-         "full + broad (mean=63, CV=0.10)\nexpect: clean"),
+         "full + broad (mean=63, CV=0.10)"),
     ]
     for c, (d, col, title) in enumerate(reps):
         ax = fig.add_subplot(gs[2, c])
@@ -177,8 +177,9 @@ def main():
             ax.legend(loc="upper right", ncol=2, fontsize=7)
 
     fig.suptitle(
-        "Frozen-weight control — distribution shape reproduces the two-regime "
-        "counter-phase\n(STDP off, air stepping G$_{Ia}$=0.1, 520 ms paced, 30 s)",
+        "Frozen-weight control — does the imposed CUT→RG-E distribution "
+        "reproduce the two-regime counter-phase?\n"
+        "(STDP off, air stepping G$_{Ia}$=0.1, 520 ms paced, 30 s)",
         fontsize=12, y=0.99)
     fig.savefig(out_path, dpi=180, bbox_inches="tight")
     plt.close(fig)
