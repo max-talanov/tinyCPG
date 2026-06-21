@@ -100,6 +100,50 @@ def _force_matrix(indir, rows, file_fn, row_colors, outpath, suptitle, zoom_ms):
     print(f"[gallery] saved {outpath}")
 
 
+def _weight_matrix(indir, cols, file_fn, outpath, suptitle):
+    """Matrix of weight trajectories: rows = the 3 plastic projections,
+    columns = states (speeds or ablation gains); 3 λ overlaid per panel.
+
+    cols: list of (tag, label).  file_fn(tag, lam) -> path.
+    """
+    palette = {"lam1em5": "#1f77b4", "lam1em4": "#2ca02c", "lam1em3": "#d62728"}
+    projs = [("cut->rge_mean", "CUT→RG-E"), ("bs->rge_mean", "BS→RG-E"),
+             ("bs->rgf_mean", "BS→RG-F")]
+    nr, nc = len(projs), len(cols)
+    fig, axes = plt.subplots(nr, nc, figsize=(4.6 * nc, 3.0 * nr),
+                             squeeze=False, sharey="row")
+    for r, (key, plabel) in enumerate(projs):
+        for c, (tag, clabel) in enumerate(cols):
+            ax = axes[r][c]
+            for lam in LAMBDA_ORDER:
+                f = file_fn(tag, lam)
+                if f is None:
+                    continue
+                with h5py.File(f, "r") as h:
+                    wg = h["leg_L/weights"]
+                    if key not in wg:
+                        continue
+                    w = np.asarray(wg[key]); t = np.asarray(h["times_ms"])[: w.size]
+                ax.plot(t / 1000.0, w, color=palette[lam], linewidth=1.3,
+                        label=_lam_label(lam))
+            if key == "bs->rge_mean":
+                ax.axhline(30.0, ls="--", color="grey", alpha=0.5, label="W$_{max}$=30")
+            ax.grid(alpha=0.2)
+            if r == 0:
+                ax.set_title(clabel, fontsize=10)
+            if c == 0:
+                ax.set_ylabel(f"{plabel}\nmean weight (pA)", fontsize=10)
+            if r == nr - 1:
+                ax.set_xlabel("time (s)")
+            if r == 0 and c == nc - 1:
+                ax.legend(loc="lower right", fontsize=7)
+    fig.suptitle(suptitle, fontsize=12, y=1.00)
+    fig.tight_layout(rect=(0, 0, 1, 0.97))
+    fig.savefig(outpath, dpi=170, bbox_inches="tight")
+    plt.close(fig)
+    print(f"[gallery] saved {outpath}")
+
+
 def _weight_profiles(indir, anchor_speed, anchor_gain, outpath):
     """CUT->RGE, BS->RGE, BS->RGF mean-weight trajectories, 3 λ overlaid,
     for a speed anchor (top row) and an ablation anchor (bottom row)."""
@@ -175,6 +219,23 @@ def main():
 
     _weight_profiles(args.indir, "13_5cms", "air",
                      os.path.join(args.outdir, "fig11_weight_profiles.png"))
+
+    # Full weight matrices: 3 projections × 3 states, 3 λ overlaid per panel.
+    speed_cols = [(tag, lbl.replace("\n", " ")) for tag, lbl, _per in SPEEDS]
+    _weight_matrix(
+        args.indir, speed_cols,
+        lambda tag, lam: _find(args.indir, f"cpg_speed_stdp_{tag}_{lam}_*.h5"),
+        os.path.join(args.outdir, "fig12_weight_matrix_speed.png"),
+        "Weight-profile matrix across speed — projections (rows) × speed "
+        "(cols), 3 λ overlaid  (Ia intact, μ=3.5, CV=0.30)")
+
+    gain_cols = [(tag, lbl.replace("\n", " ")) for tag, lbl in GAINS]
+    _weight_matrix(
+        args.indir, gain_cols,
+        lambda tag, lam: _find(args.indir, f"cpg_ablgrad_{tag}_{lam}_*.h5"),
+        os.path.join(args.outdir, "fig13_weight_matrix_ablation.png"),
+        "Weight-profile matrix across ablation — projections (rows) × Ia "
+        "gain (cols), 3 λ overlaid  (520 ms, μ=3.5, CV=0.30)")
 
 
 if __name__ == "__main__":
