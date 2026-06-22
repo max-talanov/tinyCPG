@@ -51,10 +51,13 @@ T=${SLURM_ARRAY_TASK_ID:-0}
 GAIN_IDX=$(( T / 3 ))
 LAM_IDX=$(( T % 3 ))
 
+# IA_GAIN drives BOTH the proprioceptive (Ia) and cutaneous (CUT) feedback
+# gains, since both scale with limb loading. The external Ia-E heel→toe ramp
+# (the epidural-stim pacing) stays at full amplitude regardless.
 case $GAIN_IDX in
     0) IA_GAIN=1.0; GAIN_LABEL="baseline" ;;   # full weight-bearing
     1) IA_GAIN=0.5; GAIN_LABEL="toe"      ;;   # toe stepping (partial)
-    2) IA_GAIN=0.1; GAIN_LABEL="air"      ;;   # air stepping (~deafferent)
+    2) IA_GAIN=0.1; GAIN_LABEL="air"      ;;   # air stepping (no paw contact)
     *) echo "Unknown GAIN_IDX=$GAIN_IDX"; exit 1 ;;
 esac
 
@@ -98,5 +101,6 @@ srun --cpu-bind=cores --distribution=block:block \
     --n-ia-groups 3 \
     --ia-ext-hz 60 80 100 \
     --ia-feedback-gain "$IA_GAIN" \
+    --cut-feedback-gain "$IA_GAIN" \
     --stdp-lambda "$LAMBDA" \
     --long-run

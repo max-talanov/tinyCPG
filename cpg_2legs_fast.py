@@ -477,6 +477,13 @@ def main():
                          "(force/stretch → spindle Hz). Default 1.0 = full weight-bearing; "
                          "0.5 = toe stepping (partial weight); 0.1 = air stepping "
                          "(near-deafferented). Bio reference: Lavrov 2008; Edgerton 2008.")
+    ap.add_argument("--cut-feedback-gain", type=float, default=1.0,
+                    help="Multiplicative gain on the cutaneous (CUT) stance drive, "
+                         "scaling the loading-dependent paw-contact feedback. 1.0 = full "
+                         "weight-bearing; 0.5 = toe stepping; 0.1 = air stepping (no paw "
+                         "contact). The external Ia-E heel→toe ramp (the epidural-stim "
+                         "pacing) is NOT scaled, only the cutaneous feedback that drives "
+                         "CUT→RG-E learning.")
     # ---- STDP learning rate override ----
     ap.add_argument("--stdp-lambda", type=float, default=None,
                     help="Override the STDP learning-rate constant LAMBDA. Default None "
@@ -501,6 +508,9 @@ def main():
         LAMBDA = float(args.stdp_lambda)
     # Graded sensory feedback gain (Courtine/Lavrov toe/air stepping)
     IA_FEEDBACK_GAIN = float(args.ia_feedback_gain)
+    # Loading-dependent cutaneous (paw-contact) gain. Scales CUT stance drive;
+    # the external Ia-E pacing (stim analogue) is left at full amplitude.
+    CUT_FEEDBACK_GAIN = float(args.cut_feedback_gain)
     BS_RATE_BASE_HZ = float(args.bs_base_hz)
     BS_NOISE_STD_HZ = float(args.bs_noise_std_hz)
     BS_DRIVE_NORM_HZ = max(BS_RATE_BASE_HZ, 1e-9)
@@ -1464,8 +1474,10 @@ def main():
             for g in leg[swing]["ia_ext_pg_e"]:
                 nest.SetStatus(g, {"rate": 0.0})
 
-            # Stance leg: CUT ON
-            nest.SetStatus(leg[stance]["cut_pg"], {"rate": CUT_RATE_ON_HZ})
+            # Stance leg: CUT ON, scaled by loading-dependent cutaneous gain
+            # (full at weight-bearing, attenuated at toe/air stepping).
+            nest.SetStatus(leg[stance]["cut_pg"],
+                           {"rate": CUT_FEEDBACK_GAIN * CUT_RATE_ON_HZ})
 
             # Sequential Ia-E sub-groups: heel (60 Hz) → mid (80 Hz) → toe (100 Hz)
             for g_idx in range(N_IA_GROUPS_PACED):
@@ -1502,7 +1514,8 @@ def main():
             start = phase * chunk_cut
             end = min(N_CUT, (phase + 1) * chunk_cut)
             for side in LEGS:
-                nest.SetStatus(leg[side]["cut_pg"][start:end], {"rate": CUT_RATE_ON_HZ})
+                nest.SetStatus(leg[side]["cut_pg"][start:end],
+                               {"rate": CUT_FEEDBACK_GAIN * CUT_RATE_ON_HZ})
             cut_active_frac = float(end - start) / float(N_CUT)
 
             n_chunks = int(PHASE_MS // CHUNK_MS)
@@ -1587,6 +1600,7 @@ def main():
         h5.attrs["ablate_comm"] = bool(args.ablate_comm)
         h5.attrs["ablation_tag"] = ",".join(ablation_tag) if ablation_tag else "baseline"
         h5.attrs["ia_feedback_gain"] = float(IA_FEEDBACK_GAIN)
+        h5.attrs["cut_feedback_gain"] = float(CUT_FEEDBACK_GAIN)
         h5.attrs["stdp_lambda"] = float(LAMBDA)
         h5.attrs["local_threads"] = int(args.threads)
         h5.attrs["mpi_processes"] = int(nproc)
