@@ -59,21 +59,25 @@ def _find(indir: str, pattern: str) -> Optional[str]:
     return hits[0] if hits else None
 
 
-def _force_panel(ax, path, color, zoom_ms, title=None):
+def _force_panel(ax, path, color, zoom_ms, title=None, window="last"):
     with h5py.File(path, "r") as h:
         t = np.asarray(h["times_ms"])
         fe = np.asarray(h["leg_L/force_e"]); ff = np.asarray(h["leg_L/force_f"])
         sim_ms = float(h.attrs.get("sim_ms", t.max() if t.size else 120000.0))
-    z = max(0.0, sim_ms - zoom_ms)
-    m = t >= z
+    if window == "first":
+        z0, z1 = 0.0, min(zoom_ms, sim_ms)
+    else:
+        z0, z1 = max(0.0, sim_ms - zoom_ms), sim_ms
+    m = (t >= z0) & (t <= z1)
     ax.plot(t[m], fe[m], color=color, linewidth=1.2, label="E")
     ax.plot(t[m], ff[m], color=color, linewidth=0.95, linestyle="--", alpha=0.7, label="F")
-    ax.set_xlim(z, sim_ms); ax.grid(alpha=0.2)
+    ax.set_xlim(z0, z1); ax.grid(alpha=0.2)
     if title:
         ax.set_title(title, fontsize=9)
 
 
-def _force_matrix(indir, rows, file_fn, row_colors, outpath, suptitle, zoom_ms):
+def _force_matrix(indir, rows, file_fn, row_colors, outpath, suptitle, zoom_ms,
+                  window="last"):
     """rows: list of (tag, label); file_fn(tag, lam) -> path; 3 λ columns."""
     nr, nc = len(rows), len(LAMBDA_ORDER)
     fig, axes = plt.subplots(nr, nc, figsize=(4.6 * nc, 3.1 * nr), squeeze=False)
@@ -86,7 +90,7 @@ def _force_matrix(indir, rows, file_fn, row_colors, outpath, suptitle, zoom_ms):
                 ax.text(0.5, 0.5, "missing", ha="center", va="center",
                         transform=ax.transAxes, color="grey")
                 ax.set_xticks([]); ax.set_yticks([]); continue
-            _force_panel(ax, f, row_colors[r], zoom_ms,
+            _force_panel(ax, f, row_colors[r], zoom_ms, window=window,
                          title=(_lam_label(lam) if r == 0 else None))
             if c == 0:
                 ax.set_ylabel(f"{lbl}\nForce E / F (a.u.)", fontsize=9)
@@ -196,26 +200,35 @@ def main():
     ap.add_argument("--indir", type=str, default="results/2026-06-20")
     ap.add_argument("--outdir", type=str, default="plots/paper")
     ap.add_argument("--zoom-ms", type=float, default=10000.0)
+    ap.add_argument("--window", choices=["first", "last"], default="last",
+                    help="Force-gallery window: 'last' (converged tail, default) "
+                         "or 'first' (self-organisation transient).")
     args = ap.parse_args()
+    win = args.window
+    win_desc = (f"first {args.zoom_ms/1000:.0f} s" if win == "first"
+                else f"last {args.zoom_ms/1000:.0f} s")
     os.makedirs(args.outdir, exist_ok=True)
 
     speed_colors = [plt.get_cmap("viridis")(v) for v in (0.05, 0.5, 0.9)]
     gain_colors = ["#1f3b73", "#b5651d", "#c1272d"]
 
+    sfx = "_first" if win == "first" else ""
     speed_rows = [(tag, lbl) for tag, lbl, _per in SPEEDS]
     _force_matrix(
         args.indir, speed_rows,
         lambda tag, lam: _find(args.indir, f"cpg_speed_stdp_{tag}_{lam}_*.h5"),
-        speed_colors, os.path.join(args.outdir, "fig9_speed_lambda_gallery.png"),
-        "Speed × λ gait gallery — converged force profiles "
-        f"(last {args.zoom_ms/1000:.0f} s; μ=3.5, CV=0.30)", args.zoom_ms)
+        speed_colors,
+        os.path.join(args.outdir, f"fig9_speed_lambda_gallery{sfx}.png"),
+        f"Speed × λ gait gallery — force profiles ({win_desc}; μ=3.5, CV=0.30)",
+        args.zoom_ms, window=win)
 
     _force_matrix(
         args.indir, GAINS,
         lambda tag, lam: _find(args.indir, f"cpg_ablgrad_{tag}_{lam}_*.h5"),
-        gain_colors, os.path.join(args.outdir, "fig10_ablation_lambda_gallery.png"),
-        "Graded ablation × λ gait gallery — converged force profiles "
-        f"(last {args.zoom_ms/1000:.0f} s; 520 ms; μ=3.5, CV=0.30)", args.zoom_ms)
+        gain_colors,
+        os.path.join(args.outdir, f"fig10_ablation_lambda_gallery{sfx}.png"),
+        f"Graded ablation × λ gait gallery — force profiles "
+        f"({win_desc}; 520 ms; μ=3.5, CV=0.30)", args.zoom_ms, window=win)
 
     _weight_profiles(args.indir, "13_5cms", "air",
                      os.path.join(args.outdir, "fig11_weight_profiles.png"))
