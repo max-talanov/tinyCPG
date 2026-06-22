@@ -104,11 +104,13 @@ def _force_matrix(indir, rows, file_fn, row_colors, outpath, suptitle, zoom_ms,
     print(f"[gallery] saved {outpath}")
 
 
-def _weight_matrix(indir, cols, file_fn, outpath, suptitle):
+def _weight_matrix(indir, cols, file_fn, outpath, suptitle, xlim_s=None):
     """Matrix of weight trajectories: rows = the 3 plastic projections,
     columns = states (speeds or ablation gains); 3 λ overlaid per panel.
 
     cols: list of (tag, label).  file_fn(tag, lam) -> path.
+    xlim_s: if set, restrict the x-axis to [0, xlim_s] seconds (zoom on the
+            early saturation dynamics).
     """
     palette = {"lam1em5": "#1f77b4", "lam1em4": "#2ca02c", "lam1em3": "#d62728"}
     projs = [("cut->rge_mean", "CUT→RG-E"), ("bs->rge_mean", "BS→RG-E"),
@@ -133,6 +135,8 @@ def _weight_matrix(indir, cols, file_fn, outpath, suptitle):
             if key == "bs->rge_mean":
                 ax.axhline(30.0, ls="--", color="grey", alpha=0.5, label="W$_{max}$=30")
             ax.grid(alpha=0.2)
+            if xlim_s is not None:
+                ax.set_xlim(0, xlim_s)
             if r == 0:
                 ax.set_title(clabel, fontsize=10)
             if c == 0:
@@ -203,6 +207,9 @@ def main():
     ap.add_argument("--window", choices=["first", "last"], default="last",
                     help="Force-gallery window: 'last' (converged tail, default) "
                          "or 'first' (self-organisation transient).")
+    ap.add_argument("--weight-xlim-s", type=float, default=None,
+                    help="If set, zoom the weight-matrix x-axis to [0, X] seconds "
+                         "to show the early saturation (e.g. 20).")
     args = ap.parse_args()
     win = args.window
     win_desc = (f"first {args.zoom_ms/1000:.0f} s" if win == "first"
@@ -234,21 +241,26 @@ def main():
                      os.path.join(args.outdir, "fig11_weight_profiles.png"))
 
     # Full weight matrices: 3 projections × 3 states, 3 λ overlaid per panel.
+    xlim = args.weight_xlim_s
+    wsfx = f"_first{int(xlim)}s" if xlim is not None else ""
+    wdesc = f"first {xlim:.0f} s" if xlim is not None else "full 120 s"
     speed_cols = [(tag, lbl.replace("\n", " ")) for tag, lbl, _per in SPEEDS]
     _weight_matrix(
         args.indir, speed_cols,
         lambda tag, lam: _find(args.indir, f"cpg_speed_stdp_{tag}_{lam}_*.h5"),
-        os.path.join(args.outdir, "fig12_weight_matrix_speed.png"),
+        os.path.join(args.outdir, f"fig12_weight_matrix_speed{wsfx}.png"),
         "Weight-profile matrix across speed — projections (rows) × speed "
-        "(cols), 3 λ overlaid  (Ia intact, μ=3.5, CV=0.30)")
+        f"(cols), 3 λ overlaid  ({wdesc}; Ia intact, μ=3.5, CV=0.30)",
+        xlim_s=xlim)
 
     gain_cols = [(tag, lbl.replace("\n", " ")) for tag, lbl in GAINS]
     _weight_matrix(
         args.indir, gain_cols,
         lambda tag, lam: _find(args.indir, f"cpg_ablgrad_{tag}_{lam}_*.h5"),
-        os.path.join(args.outdir, "fig13_weight_matrix_ablation.png"),
+        os.path.join(args.outdir, f"fig13_weight_matrix_ablation{wsfx}.png"),
         "Weight-profile matrix across ablation — projections (rows) × Ia "
-        "gain (cols), 3 λ overlaid  (520 ms, μ=3.5, CV=0.30)")
+        f"gain (cols), 3 λ overlaid  ({wdesc}; 520 ms, μ=3.5, CV=0.30)",
+        xlim_s=xlim)
 
 
 if __name__ == "__main__":
