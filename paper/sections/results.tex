@@ -227,14 +227,64 @@ across the full range, indicating that paced sensory drive supports the
 rat locomotor speed range without retuning of the central architecture.
 
 % =============================================================
-\subsection{Graded sensory ablation by STDP matrix:\\ a two-regime robustness to sensory loss}\label{sec:results:ablation}
+\subsection{Graded sensory ablation: epidural stimulation rescues stepping under unloading}\label{sec:results:ablation}
 
-\paragraph{Anchor result.}
-To emulate the Courtine/Lavrov spinal cord injury (SCI) rehabilitation
-paradigm~\cite{lavrov2008,courtine2009,edgerton2008}, we tested three
-Ia feedback gains ($G_{\text{Ia}} \in \{1.0,\,0.5,\,0.1\}$,
-corresponding to \emph{baseline}, \emph{toe stepping}, and \emph{air
-stepping}) crossed with the same STDP rates as Phase A
+\paragraph{Two loading models.}
+Limb unloading attenuates two afferent channels at once: proprioceptive
+Ia feedback (force and stretch) and cutaneous feedback (paw contact).
+We therefore ran the graded-ablation experiment in two versions. In the
+\emph{epidural-stim-assisted} version the paced cutaneous drive is held
+at full amplitude regardless of loading --- the computational analogue
+of epidural electrical stimulation, which supplies a rhythmic afferent
+volley independent of limb
+contact~\cite{lavrov2008,courtine2009,harkema2011} --- and only the
+closed-loop Ia is attenuated. In the \emph{natural} (unassisted)
+version both the cutaneous drive (via \verb|--cut-feedback-gain|) and
+the Ia feedback are scaled together by the loading level
+($G \in \{1.0, 0.5, 0.1\}$ for baseline / toe / air stepping). The
+external Ia-E heel$\to$toe ramp that clocks the cycle is left at full
+amplitude in both versions.
+
+\paragraph{Anchor result: the paced cutaneous drive preserves stepping.}
+The two versions are indistinguishable at full weight-bearing
+(baseline: corr $-0.81$ in both) but diverge sharply as the limb is
+unloaded (Fig.~\ref{fig:epidural}, at the baseline learning rate
+$\lambda=10^{-3}$). Under the natural model the counter-phase
+\emph{collapses} --- from $-0.81$ (baseline) through $-0.46$ (toe) to
+$-0.08$ (air stepping) --- with the cycle period becoming highly
+irregular (s.d.\ $168$\,ms at air stepping), the extensor riding
+tonically high and the flexor ceasing to alternate. Under the
+epidural-stim-assisted model the same unloading leaves the rhythm intact
+(air stepping: corr $-0.92$, period s.d.\ $0$\,ms). The paced cutaneous
+drive --- the stimulation analogue --- is therefore what preserves
+stepping once limb-contact feedback is lost, directly reproducing the
+central finding of the Courtine/Lavrov SCI-rehabilitation program:
+epidural lumbar stimulation enables treadmill stepping in spinal animals
+that cannot otherwise step~\cite{lavrov2008,courtine2009,harkema2011}.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.92\linewidth]{fig9_epidural_contrast.png}
+  \caption{\textbf{Epidural-stimulation rescue --- the paced cutaneous
+    drive preserves stepping under unloading.} Air-stepping contrast at
+    $\lambda=10^{-3}$ between the epidural-stim-assisted model (cutaneous
+    drive intact, blue) and the natural model (cutaneous drive gated by
+    loading, red).
+    \textbf{(a)} counter-phase corr$(F_E,F_F)$ versus loading: identical
+    at baseline, the natural model collapses toward zero with unloading
+    while the stim-assisted model stays strong.
+    \textbf{(b)} cycle-period s.d.\ versus loading.
+    \textbf{(c)} air-stepping force trace, stim-assisted --- clean E/F
+    alternation (corr $-0.92$).
+    \textbf{(d)} air-stepping force trace, natural --- collapsed
+    alternation, tonic extensor (corr $-0.08$).}
+  \label{fig:epidural}
+\end{figure}
+
+\paragraph{Robustness within the stim-assisted condition.}
+We now characterise the epidural-stim-assisted condition (cutaneous
+drive intact) in detail, crossing the three loading levels with the
+three STDP rates of Phase A
 ($\lambda \in \{1{\times}10^{-5},\,1{\times}10^{-4},\,1{\times}10^{-3}\}$),
 at the medium-walk anchor (520\,ms cycle period, 120\,s simulations).
 Two findings emerge (Fig.~\ref{fig:ablgrad},
@@ -323,25 +373,6 @@ a \emph{timing} effect, not amplitude. The selective vulnerability at
 intermediate $\lambda$ --- and the robustness flanking it --- is the
 central observation of Phase~B.
 
-\paragraph{What our ``ablation'' actually maps to: epidural-stimulation
-paradigm.}
-A crucial framing point: the \verb|--ia-feedback-gain| knob attenuates
-only the \emph{closed-loop, force-driven} Ia rate; the externally paced
-cutaneous CUT pattern and the sequential Ia-E heel$\to$mid$\to$toe
-ramp remain at full amplitude in all three ablation conditions. The
-paced external drive in our model is therefore the computational
-analogue of \emph{epidural electrical
-stimulation}~\cite{lavrov2008,courtine2009,harkema2011}, which
-supplies a rhythmic afferent volley to the spinal cord independently
-of intact sensory feedback. Phase B is thus not a model of unassisted
-deafferentation but of \emph{SCI plus epidural stimulation under
-progressively unloaded weight-bearing}. This is precisely the
-experimental paradigm pioneered by Lavrov, Courtine, and Edgerton: rats
-with complete spinal transection, lying on a treadmill with epidural
-stimulation, can step stably from full weight-bearing through partial
-weight-bearing to limb-suspended air stepping when stimulation is
-intact.
-
 \paragraph{A weight-distribution hypothesis for the two flanking
 regimes.}
 The weight trajectories (Fig.~\ref{fig:ablgrad}, Row 5) suggest two
@@ -425,26 +456,25 @@ survives only with plasticity engaged.
 \end{figure}
 
 \paragraph{Relation to SCI rehabilitation.}
-Reframed in the epidural-stim paradigm
-(\autoref{sec:results:ablation}), the robustness finding states that
-when descending rhythmic drive (epidural stimulation in vivo; paced
-CUT~$+$~external Ia-E in our model) is intact, the spinal CPG can
-maintain a stable rhythm despite severely attenuated proprioceptive
-feedback across most of the plausible plasticity range. This is
-consistent with the clinical observations of Courtine 2009 and Harkema
-2011~\cite{courtine2009,harkema2011}: in chronic SCI rats and humans
-with motor-complete paraplegia, epidural lumbar stimulation enables
-treadmill stepping that is preserved from full weight-bearing to
-limb-suspended air stepping. We explicitly do \emph{not} claim that
-unassisted air stepping (without any external drive) would yield the
-same result; testing that would require switching off the paced
-cutaneous and external Ia ramps as well, which we leave for future
-work.
+The paired contrast (Fig.~\ref{fig:epidural}) gives the model a direct
+SCI-rehabilitation reading. When the paced cutaneous drive is intact
+(the epidural-stimulation analogue), the spinal CPG maintains a stable
+counter-phase rhythm despite severely attenuated proprioceptive feedback
+across the entire loading range. When that drive is gated by loading
+(the natural, unassisted case), the rhythm collapses as the limb is
+unloaded. This double dissociation reproduces the mechanism underlying
+the clinical observations of Courtine 2009 and Harkema
+2011~\cite{courtine2009,harkema2011}: chronic SCI rats and humans with
+motor-complete paraplegia cannot step unassisted but recover treadmill
+stepping --- from weight-bearing through to limb-suspended air stepping
+--- under epidural lumbar stimulation. In the model, the stimulation
+substitutes for the lost loading-dependent afferent drive, exactly the
+function the cutaneous pacing serves here.
 
 % =============================================================
 \subsection{Summary of results}\label{sec:results:summary}
 
-Five findings emerge across the experiments.
+Six findings emerge across the experiments.
 (1) STDP self-organises the descending and cutaneous weights to the
 same attractor across four orders of magnitude of initialisation
 (\autoref{sec:results:stdp}).
@@ -455,11 +485,17 @@ range (6--21\,cm/s) with sub-millisecond error; counter-phase remains
 strong throughout but depends non-monotonically on the STDP rate,
 being cleanest when the descending plastic weights are weak (slow
 $\lambda$) (\autoref{sec:results:speed}).
-(4) Under graded sensory ablation, the rhythm is robust to severe Ia
-attenuation at both slow and baseline learning rates and degrades only
-at an intermediate rate, directly relevant to the Courtine/Lavrov SCI
-rehabilitation paradigm (\autoref{sec:results:ablation}).
-(5) A frozen-weight control shows that imposing the converged
+(4) A paired loading experiment dissociates the two afferent channels:
+when the paced cutaneous drive is gated by loading (the natural,
+unassisted case) the rhythm collapses under air stepping
+(corr $-0.08$), whereas holding that drive intact (the epidural-stim
+analogue) preserves it (corr $-0.92$) --- a direct model of the
+Courtine/Lavrov epidural-stimulation rescue
+(\autoref{sec:results:ablation}, Fig.~\ref{fig:epidural}).
+(5) Within the stim-assisted condition, the rhythm is robust to severe
+Ia attenuation at both slow and baseline learning rates and degrades
+only at an intermediate rate (\autoref{sec:results:ablation}).
+(6) A frozen-weight control shows that imposing the converged
 \emph{marginal} weight distribution by hand reproduces the
 weak-weight regime but \emph{not} the clean baseline-rate rhythm:
 the latter depends on learning-induced weight structure, indicating
