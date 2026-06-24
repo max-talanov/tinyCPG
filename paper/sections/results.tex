@@ -202,6 +202,32 @@ so the gait is robust across the learning-rate range; the
 non-monotonicity concerns the \emph{degree} of counter-phase, not its
 presence.
 
+\paragraph{Interpretation: the paced core carries gait quality;
+plasticity is extensor-biased.}
+That the counter-phase is \emph{cleanest at the slowest learning rate}
+--- when the descending weights are least developed --- is at first
+counterintuitive, but follows from the model's division of labour. The
+near-perfect anti-phase is a property of the paced heel$\to$toe drive
+and the reciprocal-inhibition core, which are present from $t=0$
+independent of learning (the gait alternates cleanly within the first
+seconds even at $\lambda=10^{-5}$, before any weight has converged).
+The STDP-learned descending drive is an \emph{additional} input layered
+on this core, and crucially it is extensor-biased: the only large
+plastic projection, CUT$\to$RG-E, targets the extensor and has no
+flexor counterpart (\autoref{sec:methods:stdp}). At the medium walk the
+converged extensor drive (CUT$+$BS$\to$RG-E $\approx 78$\,pA) dwarfs the
+flexor drive (BS$\to$RG-F $\approx 16$\,pA). Strong learning therefore
+adds a large, extensor-weighted descending current that perturbs the
+balanced paced rhythm, slightly reducing counter-phase from $-0.99$
+(weak drive) to $-0.80$ (full drive). The same asymmetry leaves the
+flexor half-centre, which is intrinsically generated and never receives
+a comparable learned drive, visibly more variable than the extensor
+across all conditions. We interpret STDP here as self-organising the
+\emph{descending drive} --- the quantity that matters for operation
+without external pacing and for the epidural-stimulation contrast of
+Phase~B --- rather than as the source of counter-phase precision, which
+the paced spinal core already provides.
+
 \paragraph{Interpretation: spectral concentration as a sensitive
 irregularity metric.}
 Cycle-period s.d. is essentially zero for the externally paced rhythm

@@ -103,6 +103,24 @@ magnitude to verify that the post-training weight distribution
 converges to the same plateau regardless of initialisation (see
 Section~\ref{sec:results:stdp}).
 
+\paragraph{Extensor-biased plasticity and stance/swing asymmetry.}
+The plastic and paced drives are deliberately extensor-weighted, mirroring
+the stance/swing organisation of locomotor control. The cutaneous
+afferent --- the only projection with the large ($w_{\max}=120$\,pA)
+plasticity ceiling --- targets the extensor (CUT$\to$RG-E) and has no
+flexor counterpart, reflecting that paw-contact cutaneous feedback fires
+during weight-bearing stance and reinforces the load-bearing
+extensor~\cite{pearson1995,rossignol2006}. Likewise the paced
+heel$\to$toe Ia-E ramp clocks the extensor during stance, whereas the
+flexor receives no external pacing and is generated intrinsically ---
+by the persistent-sodium-like bursting of the RG-F units and by release
+from reciprocal inhibition during swing. As a consequence the extensor
+half-centre is sensory-driven and tightly clocked while the flexor is
+centrally generated and intrinsically more variable; and because the
+dominant plastic projection is extensor-only, increasing $\lambda$
+strengthens the descending drive asymmetrically, in favour of the
+extensor (analysed in Section~\ref{sec:results:speed}).
+
 \paragraph{Learning-rate variation.}
 For the speed-by-STDP and graded-ablation matrices
 (\autoref{sec:methods:protocols}), the STDP learning rate $\lambda$ was
