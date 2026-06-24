@@ -59,7 +59,12 @@ def _find(indir: str, pattern: str) -> Optional[str]:
     return hits[0] if hits else None
 
 
-def _force_panel(ax, path, color, zoom_ms, title=None, window="last"):
+# Dark, high-contrast E/F colours for force-profile comparison.
+DARK_E = "#0b2545"   # very dark navy (extensor, solid)
+DARK_F = "#7a0010"   # dark crimson   (flexor, dashed)
+
+
+def _force_panel(ax, path, color, zoom_ms, title=None, window="last", color_f=None):
     with h5py.File(path, "r") as h:
         t = np.asarray(h["times_ms"])
         fe = np.asarray(h["leg_L/force_e"]); ff = np.asarray(h["leg_L/force_f"])
@@ -69,16 +74,23 @@ def _force_panel(ax, path, color, zoom_ms, title=None, window="last"):
     else:
         z0, z1 = max(0.0, sim_ms - zoom_ms), sim_ms
     m = (t >= z0) & (t <= z1)
+    cf = color_f if color_f is not None else color
+    f_alpha = 0.9 if color_f is not None else 0.7
     ax.plot(t[m], fe[m], color=color, linewidth=1.2, label="E")
-    ax.plot(t[m], ff[m], color=color, linewidth=0.95, linestyle="--", alpha=0.7, label="F")
+    ax.plot(t[m], ff[m], color=cf, linewidth=1.0, linestyle="--", alpha=f_alpha, label="F")
     ax.set_xlim(z0, z1); ax.grid(alpha=0.2)
     if title:
         ax.set_title(title, fontsize=9)
 
 
 def _force_matrix(indir, rows, file_fn, row_colors, outpath, suptitle, zoom_ms,
-                  window="last"):
-    """rows: list of (tag, label); file_fn(tag, lam) -> path; 3 λ columns."""
+                  window="last", dark=False, dpi=170):
+    """rows: list of (tag, label); file_fn(tag, lam) -> path; 3 λ columns.
+
+    dark=True overrides the per-row colour with a uniform dark navy E /
+    dark crimson F, so the force-PROFILE shape is what differs between
+    panels (best for cross-condition comparison).
+    """
     nr, nc = len(rows), len(LAMBDA_ORDER)
     fig, axes = plt.subplots(nr, nc, figsize=(4.6 * nc, 3.1 * nr), squeeze=False)
     for r, (tag, lbl) in enumerate(rows):
@@ -90,7 +102,9 @@ def _force_matrix(indir, rows, file_fn, row_colors, outpath, suptitle, zoom_ms,
                 ax.text(0.5, 0.5, "missing", ha="center", va="center",
                         transform=ax.transAxes, color="grey")
                 ax.set_xticks([]); ax.set_yticks([]); continue
-            _force_panel(ax, f, row_colors[r], zoom_ms, window=window,
+            ce = DARK_E if dark else row_colors[r]
+            cf = DARK_F if dark else None
+            _force_panel(ax, f, ce, zoom_ms, window=window, color_f=cf,
                          title=(_lam_label(lam) if r == 0 else None))
             if c == 0:
                 ax.set_ylabel(f"{lbl}\nForce E / F (a.u.)", fontsize=9)
@@ -99,9 +113,9 @@ def _force_matrix(indir, rows, file_fn, row_colors, outpath, suptitle, zoom_ms,
                 ax.set_xlabel("time (ms)")
     fig.suptitle(suptitle, fontsize=12, y=1.00)
     fig.tight_layout(rect=(0, 0, 1, 0.97))
-    fig.savefig(outpath, dpi=170, bbox_inches="tight")
+    fig.savefig(outpath, dpi=dpi, bbox_inches="tight")
     plt.close(fig)
-    print(f"[gallery] saved {outpath}")
+    print(f"[gallery] saved {outpath}  (dpi={dpi}, dark={dark})")
 
 
 def _weight_matrix(indir, cols, file_fn, outpath, suptitle, xlim_s=None):
@@ -201,12 +215,22 @@ def _weight_profiles(indir, anchor_speed, anchor_gain, outpath):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--indir", type=str, default="results/2026-06-20")
+    ap.add_argument("--indir", type=str, default="results/2026-06-20",
+                    help="Default results dir (used when --speed-dir/--ablation-dir unset).")
+    ap.add_argument("--speed-dir", type=str, default=None,
+                    help="Results dir for the speed figures (defaults to --indir).")
+    ap.add_argument("--ablation-dir", type=str, default=None,
+                    help="Results dir for the ablation figures (defaults to --indir).")
     ap.add_argument("--outdir", type=str, default="plots/paper")
     ap.add_argument("--zoom-ms", type=float, default=10000.0)
     ap.add_argument("--window", choices=["first", "last"], default="last",
                     help="Force-gallery window: 'last' (converged tail, default) "
                          "or 'first' (self-organisation transient).")
+    ap.add_argument("--dark", action="store_true",
+                    help="Use uniform dark navy-E / crimson-F curves (best for "
+                         "cross-condition force-profile comparison).")
+    ap.add_argument("--dpi", type=int, default=170,
+                    help="Output DPI for the force galleries (e.g. 300 for high-res).")
     ap.add_argument("--weight-xlim-s", type=float, default=None,
                     help="If set, zoom the weight-matrix x-axis to [0, X] seconds "
                          "to show the early saturation (e.g. 20).")
@@ -215,29 +239,32 @@ def main():
     win_desc = (f"first {args.zoom_ms/1000:.0f} s" if win == "first"
                 else f"last {args.zoom_ms/1000:.0f} s")
     os.makedirs(args.outdir, exist_ok=True)
+    speed_dir = args.speed_dir or args.indir
+    abl_dir = args.ablation_dir or args.indir
 
     speed_colors = [plt.get_cmap("viridis")(v) for v in (0.05, 0.5, 0.9)]
     gain_colors = ["#1f3b73", "#b5651d", "#c1272d"]
 
-    sfx = "_first" if win == "first" else ""
+    sfx = ("_first" if win == "first" else "") + ("_dark" if args.dark else "")
     speed_rows = [(tag, lbl) for tag, lbl, _per in SPEEDS]
     _force_matrix(
-        args.indir, speed_rows,
-        lambda tag, lam: _find(args.indir, f"cpg_speed_stdp_{tag}_{lam}_*.h5"),
+        speed_dir, speed_rows,
+        lambda tag, lam: _find(speed_dir, f"cpg_speed_stdp_{tag}_{lam}_*.h5"),
         speed_colors,
         os.path.join(args.outdir, f"fig9_speed_lambda_gallery{sfx}.png"),
         f"Speed × λ gait gallery — force profiles ({win_desc}; μ=3.5, CV=0.30)",
-        args.zoom_ms, window=win)
+        args.zoom_ms, window=win, dark=args.dark, dpi=args.dpi)
 
     _force_matrix(
-        args.indir, GAINS,
-        lambda tag, lam: _find(args.indir, f"cpg_ablgrad_{tag}_{lam}_*.h5"),
+        abl_dir, GAINS,
+        lambda tag, lam: _find(abl_dir, f"cpg_ablgrad_{tag}_{lam}_*.h5"),
         gain_colors,
         os.path.join(args.outdir, f"fig10_ablation_lambda_gallery{sfx}.png"),
         f"Graded ablation × λ gait gallery — force profiles "
-        f"({win_desc}; 520 ms; μ=3.5, CV=0.30)", args.zoom_ms, window=win)
+        f"({win_desc}; 520 ms; μ=3.5, CV=0.30)", args.zoom_ms, window=win,
+        dark=args.dark, dpi=args.dpi)
 
-    _weight_profiles(args.indir, "13_5cms", "air",
+    _weight_profiles(abl_dir, "13_5cms", "air",
                      os.path.join(args.outdir, "fig11_weight_profiles.png"))
 
     # Full weight matrices: 3 projections × 3 states, 3 λ overlaid per panel.
@@ -246,8 +273,8 @@ def main():
     wdesc = f"first {xlim:.0f} s" if xlim is not None else "full 120 s"
     speed_cols = [(tag, lbl.replace("\n", " ")) for tag, lbl, _per in SPEEDS]
     _weight_matrix(
-        args.indir, speed_cols,
-        lambda tag, lam: _find(args.indir, f"cpg_speed_stdp_{tag}_{lam}_*.h5"),
+        speed_dir, speed_cols,
+        lambda tag, lam: _find(speed_dir, f"cpg_speed_stdp_{tag}_{lam}_*.h5"),
         os.path.join(args.outdir, f"fig12_weight_matrix_speed{wsfx}.png"),
         "Weight-profile matrix across speed — projections (rows) × speed "
         f"(cols), 3 λ overlaid  ({wdesc}; Ia intact, μ=3.5, CV=0.30)",
@@ -255,8 +282,8 @@ def main():
 
     gain_cols = [(tag, lbl.replace("\n", " ")) for tag, lbl in GAINS]
     _weight_matrix(
-        args.indir, gain_cols,
-        lambda tag, lam: _find(args.indir, f"cpg_ablgrad_{tag}_{lam}_*.h5"),
+        abl_dir, gain_cols,
+        lambda tag, lam: _find(abl_dir, f"cpg_ablgrad_{tag}_{lam}_*.h5"),
         os.path.join(args.outdir, f"fig13_weight_matrix_ablation{wsfx}.png"),
         "Weight-profile matrix across ablation — projections (rows) × Ia "
         f"gain (cols), 3 λ overlaid  ({wdesc}; 520 ms, μ=3.5, CV=0.30)",
