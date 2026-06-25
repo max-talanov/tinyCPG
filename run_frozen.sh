@@ -95,6 +95,7 @@ srun --cpu-bind=cores --distribution=block:block \
     --stance-fraction 0.5 \
     --n-ia-groups 3 \
     --ia-ext-hz 60 80 100 \
+    --ia-ext-f-hz 80 \
     --ia-feedback-gain "$IA_GAIN" \
     --stdp-lambda 0 \
     --stdp-winit-dist lognormal_cv \

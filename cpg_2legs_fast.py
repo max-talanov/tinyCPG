@@ -68,6 +68,9 @@ W_IA_INT2ANT = -10.0  # Ia inhibitory interneuron -> antagonist motor pool (inhi
 # (we don't have INaP in Izhikevich neurons).
 W_IA2IN = 6.0  # moderate increase: reinforces Ia→In feedback without over-speeding cycle (was 5; 8 makes cycles too fast)
 P_IA2IN = 0.25
+# MOD_FLEXOR_AFFERENT: direct excitatory weight, swing flexor-afferent → RG-F.
+# Clocks the flexor burst during swing (Grillner & Rossignol 1978 hip afferent).
+W_FLEX_AFF2RGF = 6.0
 
 # MOD_ZHANG_ASYM: Asymmetric reciprocal inhibition between RG-F and RG-E half-centres.
 # Zhang/Shevtsova/Rybak (eLife 2022) Table 2 shows the F→InF→E inhibition is ~13× stronger
@@ -460,6 +463,12 @@ def main():
     ap.add_argument("--ia-ext-hz", type=float, nargs="+", default=[60.0, 80.0, 100.0],
                     help="Peak Ia rate (Hz) for each sequential extensor sub-group. "
                          "Mimics heel→mid→toe pressure ramp. Must have --n-ia-groups values.")
+    ap.add_argument("--ia-ext-f-hz", type=float, default=0.0,
+                    help="MOD_FLEXOR_AFFERENT: rate (Hz) of the external flexor "
+                         "swing-afferent driven during the swing phase (hip/flexor-"
+                         "stretch signal; Grillner & Rossignol 1978; Pearson 1995). "
+                         "Mirrors the stance Ia-E ramp to clock the flexor. 0 = off "
+                         "(legacy intrinsic-only flexor); 80 is a typical on value.")
     # ---- ablation flags (paper Figure: necessity of each component) ----
     ap.add_argument("--ablate-ia-loop", action="store_true",
                     help="ABLATION: zero Ia→InE/InF closed-loop (W_IA2IN=0). Tests "
@@ -749,6 +758,7 @@ def main():
         IA_EXT_HZ      = list(args.ia_ext_hz)
         while len(IA_EXT_HZ) < N_IA_GROUPS_PACED:
             IA_EXT_HZ.append(float(IA_EXT_HZ[-1]))
+        IA_EXT_F_HZ    = float(args.ia_ext_f_hz)   # MOD_FLEXOR_AFFERENT swing drive
         # Each Ia sub-group window = stance duration / n_groups (e.g. 500/3 ≈ 167ms)
         SUB_STANCE_MS  = q_ms(STANCE_MS / max(1, N_IA_GROUPS_PACED))
         n_half_cycles  = max(2, int(np.ceil(SIM_MS / HALF_MS)))
@@ -967,6 +977,15 @@ def main():
                 ia_ext_pg_e_groups.append(pg)
                 ia_ext_in_e_groups.append(pn)
 
+        # MOD_FLEXOR_AFFERENT: external flexor swing-afferent (hip/flexor-stretch
+        # signal that drives the swing-phase flexor burst; Grillner & Rossignol
+        # 1978; Pearson 1995). A single phasic group active during swing,
+        # mirroring the stance Ia-E ramp; drives InF → reinforces the flexor.
+        ia_ext_pg_f = None
+        if PACED_GAIT and IA_EXT_F_HZ > 0.0:
+            ia_ext_pg_f = nest.Create("poisson_generator", N_IA_F)
+            nest.SetStatus(ia_ext_pg_f, {"rate": 0.0})
+
         rg_e = nest.Create("izhikevich", N_RG_E)
         rg_f = nest.Create("izhikevich", N_RG_F)
         m_e = nest.Create("izhikevich", N_MOTOR_E)
@@ -1007,6 +1026,7 @@ def main():
             ia_pg_e=ia_pg_e, ia_in_e=ia_in_e,
             ia_pg_f=ia_pg_f, ia_in_f=ia_in_f,
             ia_ext_pg_e=ia_ext_pg_e_groups,   # MOD_PACED_GAIT: list of sequential Ia-E groups
+            ia_ext_pg_f=ia_ext_pg_f,          # MOD_FLEXOR_AFFERENT: swing flexor afferent (or None)
             rg_e=rg_e, rg_f=rg_f, m_e=m_e, m_f=m_f,
             ia_int_e=ia_int_e, ia_int_f=ia_int_f, in_e=in_e, in_f=in_f,
             mus_e=mus_e, mus_f=mus_f,
@@ -1109,6 +1129,20 @@ def main():
                 nest.Connect(pn, L["in_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_IA2IN},
                              syn_spec={"synapse_model": "static_synapse", "weight": W_IA2IN,
                                        "delay": delay["ia_path"]})
+        # MOD_FLEXOR_AFFERENT: swing flexor afferent reinforces the flexor phase
+        # symmetrically to the stance extensor drive. Two pathways, mirroring the
+        # extensor's (CUT→RG-E direct + Ia-E→InE antagonist suppression):
+        #   (i)  ia_ext_pg_f → RG-F  (direct excitation, clocks the flexor burst)
+        #   (ii) ia_ext_pg_f → InF   (suppresses RG-E, the antagonist, during swing)
+        if PACED_GAIT and L["ia_ext_pg_f"] is not None:
+            nest.Connect(L["ia_ext_pg_f"], L["rg_f"],
+                         conn_spec={"rule": "pairwise_bernoulli", "p": P_IA2IN},
+                         syn_spec={"synapse_model": "static_synapse", "weight": W_FLEX_AFF2RGF,
+                                   "delay": delay["ia_path"]})
+            nest.Connect(L["ia_ext_pg_f"], L["in_f"],
+                         conn_spec={"rule": "pairwise_bernoulli", "p": P_IA2IN},
+                         syn_spec={"synapse_model": "static_synapse", "weight": W_IA2IN,
+                                   "delay": delay["ia_path"]})
 
         nest.Connect(L["rg_e"], L["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_RG_REC},
                      syn_spec={"synapse_model": "static_synapse", "weight": W_RG_REC_E, "delay": delay["rg_rec"]})  # MOD_FIG10
@@ -1469,15 +1503,21 @@ def main():
             stance = "L" if hc % 2 == 0 else "R"
             swing  = "R" if hc % 2 == 0 else "L"
 
-            # Swing leg: clear all external drive
+            # Swing leg: clear extensor stance drive; engage the flexor swing-
+            # afferent (MOD_FLEXOR_AFFERENT) to clock the swing-phase flexor.
             nest.SetStatus(leg[swing]["cut_pg"], {"rate": CUT_RATE_OFF_HZ})
             for g in leg[swing]["ia_ext_pg_e"]:
                 nest.SetStatus(g, {"rate": 0.0})
+            if leg[swing]["ia_ext_pg_f"] is not None:
+                nest.SetStatus(leg[swing]["ia_ext_pg_f"], {"rate": IA_EXT_F_HZ})
 
             # Stance leg: CUT ON, scaled by loading-dependent cutaneous gain
-            # (full at weight-bearing, attenuated at toe/air stepping).
+            # (full at weight-bearing, attenuated at toe/air stepping); flexor
+            # swing-afferent OFF (this leg is in stance).
             nest.SetStatus(leg[stance]["cut_pg"],
                            {"rate": CUT_FEEDBACK_GAIN * CUT_RATE_ON_HZ})
+            if leg[stance]["ia_ext_pg_f"] is not None:
+                nest.SetStatus(leg[stance]["ia_ext_pg_f"], {"rate": 0.0})
 
             # Sequential Ia-E sub-groups: heel (60 Hz) → mid (80 Hz) → toe (100 Hz)
             for g_idx in range(N_IA_GROUPS_PACED):
@@ -1595,6 +1635,7 @@ def main():
             h5.attrs["step_period_ms"] = float(STEP_PERIOD_MS)
             h5.attrs["half_ms"] = float(HALF_MS)
             h5.attrs["n_ia_groups"] = int(N_IA_GROUPS_PACED)
+            h5.attrs["ia_ext_f_hz"] = float(IA_EXT_F_HZ)
         h5.attrs["ablate_ia_loop"] = bool(args.ablate_ia_loop)
         h5.attrs["ablate_asym"] = bool(args.ablate_asym)
         h5.attrs["ablate_comm"] = bool(args.ablate_comm)

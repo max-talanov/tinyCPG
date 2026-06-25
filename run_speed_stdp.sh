@@ -95,5 +95,6 @@ srun --cpu-bind=cores --distribution=block:block \
     --stance-fraction 0.5 \
     --n-ia-groups 3 \
     --ia-ext-hz 60 80 100 \
+    --ia-ext-f-hz 80 \
     --stdp-lambda "$LAMBDA" \
     --long-run

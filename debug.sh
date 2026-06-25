@@ -20,6 +20,7 @@ python3 -u cpg_2legs_fast.py \
     --stance-fraction 0.5 \
     --n-ia-groups 3 \
     --ia-ext-hz 60 80 100 \
+    --ia-ext-f-hz 80 \
     --out results/debug.h5 \
     --sim-ms 10000 \
     --dt-ms 10 \
