@@ -93,18 +93,25 @@ def main():
     ap.add_argument("--stim-dir", required=True, help="CUT-intact (epidural-stim) results")
     ap.add_argument("--natural-dir", required=True, help="CUT-gated (natural) results")
     ap.add_argument("--lambda-tag", default="lam1em3")
+    ap.add_argument("--stim-prefix", default="cpg_ablstim",
+                    help="Filename prefix for the stim arm (CUT intact). "
+                         "Auto-falls back to cpg_ablgrad if not found.")
+    ap.add_argument("--natural-prefix", default="cpg_ablgrad",
+                    help="Filename prefix for the natural arm (CUT gated).")
     ap.add_argument("--out", default="plots/paper/fig14_epidural_contrast.png")
     args = ap.parse_args()
     lam = args.lambda_tag
 
-    def collect(indir):
+    def collect(indir, prefix):
         out = {}
         for tag, _lbl, _g in GAINS:
-            f = _find(indir, f"cpg_ablgrad_{tag}_{lam}_*.h5")
+            f = _find(indir, f"{prefix}_{tag}_{lam}_*.h5")
+            if f is None and prefix != "cpg_ablgrad":
+                f = _find(indir, f"cpg_ablgrad_{tag}_{lam}_*.h5")  # fallback
             out[tag] = _metrics(f) if f else None
         return out
-    stim = collect(args.stim_dir)
-    nat = collect(args.natural_dir)
+    stim = collect(args.stim_dir, args.stim_prefix)
+    nat = collect(args.natural_dir, args.natural_prefix)
 
     os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
     plt.rcParams.update({"font.size": 10, "axes.titlesize": 11, "axes.labelsize": 10})
