@@ -1000,6 +1000,12 @@ def main():
         ia_int_f = nest.Create("izhikevich", N_IA_INT)  # inhibitory
         in_e = nest.Create("izhikevich", N_INE)  # inhibitory
         in_f = nest.Create("izhikevich", N_INF)  # inhibitory
+        # MOD_NET_RECORD: spike recorders for the interneuron populations so the
+        # combined network-activity figure can show the whole circuit (Zhang-style).
+        rec_ine = nest.Create("spike_recorder");  nest.Connect(in_e, rec_ine)
+        rec_inf = nest.Create("spike_recorder");  nest.Connect(in_f, rec_inf)
+        rec_iainte = nest.Create("spike_recorder"); nest.Connect(ia_int_e, rec_iainte)
+        rec_iaintf = nest.Create("spike_recorder"); nest.Connect(ia_int_f, rec_iaintf)
         for pop in (rg_e, rg_f, m_e, m_f):
             nest.SetStatus(pop, izh_params)
         for pop in (ia_int_e, ia_int_f, in_e, in_f):
@@ -1031,7 +1037,9 @@ def main():
             ia_int_e=ia_int_e, ia_int_f=ia_int_f, in_e=in_e, in_f=in_f,
             mus_e=mus_e, mus_f=mus_f,
             rec_muse=rec_muse, rec_musf=rec_musf,
-            rec_rge=rec_rge, rec_rgf=rec_rgf
+            rec_rge=rec_rge, rec_rgf=rec_rgf,
+            rec_ine=rec_ine, rec_inf=rec_inf,
+            rec_iainte=rec_iainte, rec_iaintf=rec_iaintf
         )
 
     # ---- STDP models ----
@@ -1268,12 +1276,14 @@ def main():
     wstats = {side: {k: ([], []) for k in ["cut->rge", "bs->rge", "bs->rgf"]} for side in LEGS}
     logs = {side: dict(bs_e=[], bs_f=[], mus_e=[], mus_f=[],
                        rge=[], rgf=[],
+                       ine=[], inf=[], iaint_e=[], iaint_f=[],  # MOD_NET_RECORD
                        act_e=[], act_f=[], force_e=[], force_f=[],
                        len_e=[], len_f=[], ia_e=[], ia_f=[]) for side in LEGS}
     state = {side: dict(act_e=0.0, act_f=0.0, force_e=0.0, force_f=0.0,
                         len_e=L0, len_f=L0,
                         last_muse=0, last_musf=0,
-                        last_rge=0, last_rgf=0) for side in LEGS}
+                        last_rge=0, last_rgf=0,
+                        last_ine=0, last_inf=0, last_iainte=0, last_iaintf=0) for side in LEGS}
 
     # Optional full-weight storage (final or snapshots)
     wfull_times = []
@@ -1335,6 +1345,17 @@ def main():
         r_rgf = (sp_rgf / max(1, N_RG_F)) / dt_s_safe
         P["rge"].append(r_rge)
         P["rgf"].append(r_rgf)
+
+        # MOD_NET_RECORD: interneuron population rates (Hz/neuron) for the
+        # combined network-activity figure.
+        sp_ine, cur_ine = new_spikes(L["rec_ine"], S["last_ine"]); S["last_ine"] = cur_ine
+        sp_inf, cur_inf = new_spikes(L["rec_inf"], S["last_inf"]); S["last_inf"] = cur_inf
+        sp_iae, cur_iae = new_spikes(L["rec_iainte"], S["last_iainte"]); S["last_iainte"] = cur_iae
+        sp_iaf, cur_iaf = new_spikes(L["rec_iaintf"], S["last_iaintf"]); S["last_iaintf"] = cur_iaf
+        P["ine"].append((sp_ine / max(1, N_INE)) / dt_s_safe)
+        P["inf"].append((sp_inf / max(1, N_INF)) / dt_s_safe)
+        P["iaint_e"].append((sp_iae / max(1, N_IA_INT)) / dt_s_safe)
+        P["iaint_f"].append((sp_iaf / max(1, N_IA_INT)) / dt_s_safe)
 
         # MOD_ACT_GATE: gate by RG population rate. rg_ref=100 Hz matches typical burst peaks
         # in both debug (BS=20 Hz, N_RG=40) and production after convergence (d_e clamped to 1
