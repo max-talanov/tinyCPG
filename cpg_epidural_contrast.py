@@ -145,8 +145,10 @@ def main():
     ax_b.legend(loc="upper left", fontsize=8); ax_b.grid(alpha=0.2)
 
     # (c, d) air-stepping traces
-    fa = _find(args.stim_dir, f"cpg_ablgrad_air_{lam}_*.h5")
-    fn = _find(args.natural_dir, f"cpg_ablgrad_air_{lam}_*.h5")
+    fa = (_find(args.stim_dir, f"{args.stim_prefix}_air_{lam}_*.h5")
+          or _find(args.stim_dir, f"cpg_ablgrad_air_{lam}_*.h5"))
+    fn = (_find(args.natural_dir, f"{args.natural_prefix}_air_{lam}_*.h5")
+          or _find(args.natural_dir, f"cpg_ablgrad_air_{lam}_*.h5"))
     ax_c = fig.add_subplot(gs[1, 0])
     if fa:
         _trace(ax_c, fa, "(c) Air stepping — epidural stim (CUT intact)")
