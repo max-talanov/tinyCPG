@@ -70,6 +70,43 @@ Data: `results/2026-06-27` (speed×λ, ablation-stim) + `results/2026-06-25`
    flexor clocked, so the failure mode is a tonic-flexor imbalance rather
    than a silent limb. This is a reasonable but untested prediction.
 
+## Network-level analysis (interneuron-recording runs, results/2026-06-28)
+
+### Circuit phase logic (medium walk, λ=1e-3, lag vs RG-E)
+| population | phase | reading |
+|---|---|---|
+| RG-F, mus-F | 180° | flexor/extensor alternation |
+| InF | 180° (with RG-F) | driven by RG-F, suppresses RG-E |
+| InE | 0° (with RG-E)  | driven by RG-E, suppresses RG-F |
+| IaInt-F/E | ~+60° after muscle | force-driven Ia lags motor onset |
+| contralateral RG-E | 180° | L/R trot alternation |
+
+The reciprocal-inhibition interneurons fire in exactly the phase that
+suppresses the antagonist; the half-centre logic propagates RG→In→motor
+correctly. Bio-plausible.
+
+### Epidural-stim rescue dissected at the population level
+Mean firing rate (Hz·neuron⁻¹), baseline → air stepping:
+
+| population | STIM (CUT intact) | NATURAL (CUT gated) |
+|---|---|---|
+| RG-E | 470 → 533 (maintained) | 470 → **132** (collapses) |
+| RG-F | 195 → 213 (stable) | 195 → **272** (takes over) |
+| mus-E | 1213 → 1344 | 1213 → **555** |
+| mus-F | 602 → 668 | 602 → **943** |
+| IaInt-E/F | 287 → 20 (collapses) | 287 → 22 (collapses) |
+
+Two conclusions: (i) the Ia interneurons collapse in *both* arms
+(proprioception gated identically), so they are not what differs;
+(ii) the entire difference is the **extensor** — cutaneous-intact (stim)
+holds RG-E (470→533) and keeps E/F balanced, while cutaneous-gated
+(natural) lets RG-E collapse (470→132) and the un-gated hip-afferent lets
+the flexor take over. The cutaneous CUT→RG-E drive is the single quantity
+that maintains the extensor under unloading; epidural stimulation rescues
+stepping by substituting for it. The flexor-takeover under natural air
+stepping is a testable prediction (unloaded unstimulated stepping should
+show extensor weakening with relative flexor dominance).
+
 ## Bottom line
 The model reproduces the core spinal-CPG phenomenology — flexor/extensor
 alternation, L/R trot coordination, speed tracking across the rat range,
