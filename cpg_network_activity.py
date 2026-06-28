@@ -45,12 +45,16 @@ ABL_COLS = [("baseline", "baseline\nIa,CUT 1.0", 520),
             ("toe", "toe stepping\nIa,CUT 0.5", 520),
             ("air", "air stepping\nIa,CUT 0.1", 520)]
 
+# Full circuit for BOTH legs (Zhang-style, F before E within each population).
 ROWS = [
     ("leg_L/rgf", "L RG-F"), ("leg_L/rge", "L RG-E"),
     ("leg_L/inf", "L InF"),  ("leg_L/ine", "L InE"),
     ("leg_L/iaint_f", "L IaInt-F"), ("leg_L/iaint_e", "L IaInt-E"),
     ("leg_L/mus_f", "L M-F"), ("leg_L/mus_e", "L M-E"),
     ("leg_R/rgf", "R RG-F"), ("leg_R/rge", "R RG-E"),
+    ("leg_R/inf", "R InF"),  ("leg_R/ine", "R InE"),
+    ("leg_R/iaint_f", "R IaInt-F"), ("leg_R/iaint_e", "R IaInt-E"),
+    ("leg_R/mus_f", "R M-F"), ("leg_R/mus_e", "R M-E"),
 ]
 
 
@@ -113,6 +117,9 @@ def main():
                 ax.plot(tt, yy, color="#27408b", linewidth=0.9)
                 ax.set_xlim(0, args.n_cycles * per)
             ax.set_ylim(0, ymax); ax.set_yticks([0, round(ymax)])
+            # faint background tint to separate the two legs (Zhang-style blocks)
+            if rlabel.startswith("R "):
+                ax.set_facecolor("#f3f6fb")
             if c == 0:
                 ax.set_ylabel(rlabel, rotation=0, ha="right", va="center",
                               fontsize=9, labelpad=24)
