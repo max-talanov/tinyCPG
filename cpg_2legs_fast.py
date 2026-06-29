@@ -419,6 +419,10 @@ def main():
                     help="If >0, downsample each projection's connection list to at most this many connections when computing weight mean/std (trend mode speed-up).")
     ap.add_argument("--save-weights", type=str, default="snapshots", choices=["none", "final", "snapshots"],
                     help="Save full weight vectors for plastic projections: none=only mean/std; final=store initial+final full vectors; snapshots=store full vectors at each weight sample tick (can be large).")
+    ap.add_argument("--dump-connectivity", type=str, default="",
+                    help="If set, after building the network dump per-connection WEIGHT and "
+                         "DELAY distributions for every named projection to this HDF5 path, "
+                         "then exit (no simulation). For the connectivity-statistics figure.")
     ap.add_argument("--stdp-winit-dist", type=str, default="lognormal",
                     choices=["const", "normal", "lognormal", "lognormal_cv"],
                     help="Initial weight distribution for STDP synapses. const=all weights=W0_IN; normal/lognormal draw per-connection weights.")
@@ -1205,6 +1209,55 @@ def main():
                      syn_spec={"synapse_model": "static_synapse", "weight": W_COMM_E_INH, "delay": delay["commissural"]})
         nest.Connect(RR["rg_e"], LL["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_COMM_E},
                      syn_spec={"synapse_model": "static_synapse", "weight": W_COMM_E_INH, "delay": delay["commissural"]})
+
+    # ---- optional: dump per-connection weight & delay distributions, then exit ----
+    if str(getattr(args, "dump_connectivity", "")).strip():
+        L = leg["L"]
+        # (name, source population, target population) for every named projection.
+        projset = [
+            ("CUT->RG-E",  L["cut_in"],   L["rg_e"]),
+            ("BS->RG-E",   L["bs_in_e"],  L["rg_e"]),
+            ("BS->RG-F",   L["bs_in_f"],  L["rg_f"]),
+            ("RG-E->InE",  L["rg_e"],     L["in_e"]),
+            ("InE->RG-F",  L["in_e"],     L["rg_f"]),
+            ("RG-F->InF",  L["rg_f"],     L["in_f"]),
+            ("InF->RG-E",  L["in_f"],     L["rg_e"]),
+            ("RG-E->M-E",  L["rg_e"],     L["m_e"]),
+            ("RG-F->M-F",  L["rg_f"],     L["m_f"]),
+            ("M-E->M-F",   L["m_e"],      L["m_f"]),
+            ("M-F->M-E",   L["m_f"],      L["m_e"]),
+            ("M-E->mus-E", L["m_e"],      L["mus_e"]),
+            ("Ia-E->InE",  L["ia_in_e"],  L["in_e"]),
+            ("Ia-F->InF",  L["ia_in_f"],  L["in_f"]),
+            ("IaInt-E->M-F", L["ia_int_e"], L["m_f"]),
+            ("commiss F (L->R)", leg["L"]["rg_f"], leg["R"]["rg_f"]),
+            ("commiss E (L->R)", leg["L"]["rg_e"], leg["R"]["rg_e"]),
+        ]
+        if L["ia_ext_pg_f"] is not None:
+            projset.append(("flexAff->RG-F", L["ia_ext_pg_f"], L["rg_f"]))
+        if rank == 0:
+            with h5py.File(args.dump_connectivity, "w") as hc:
+                hc.attrs["species"] = str(getattr(args, "species", "rat"))
+                hc.attrs["delay_model"] = str(getattr(args, "delay_model", "fixed"))
+                hc.attrs["delay_jitter_ms"] = float(getattr(args, "delay_jitter_ms", 0.0))
+                for name, src, tgt in projset:
+                    try:
+                        conns = nest.GetConnections(source=src, target=tgt)
+                        if conns is None or len(conns) == 0:
+                            continue
+                        w = np.asarray(nest.GetStatus(conns, "weight"), dtype=np.float32)
+                        d = np.asarray(nest.GetStatus(conns, "delay"), dtype=np.float32)
+                    except Exception:
+                        continue
+                    g = hc.create_group(name.replace("/", "_").replace(" ", "_"))
+                    g.attrs["projection"] = name
+                    g.create_dataset("weight", data=w, compression="gzip")
+                    g.create_dataset("delay", data=d, compression="gzip")
+                    g.attrs["n"] = int(w.size)
+                    g.attrs["w_mean"] = float(w.mean()); g.attrs["w_std"] = float(w.std())
+                    g.attrs["d_mean"] = float(d.mean()); g.attrs["d_std"] = float(d.std())
+            print(f"[Connectivity] dumped {len(projset)} projections -> {args.dump_connectivity}")
+        return
 
     # ---- stats (pre-sim) ----
 
