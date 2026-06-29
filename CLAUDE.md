@@ -39,7 +39,8 @@ sbatch run.sh
 | `cpg_plot_from_hdf5.py` | Reads HDF5, makes per-leg PNGs. |
 | `run.sh` | MN5 SLURM array script (N=100, 10-point μ:CV sweep). |
 | `run_speed_stdp.sh` | Phase A: 3 speeds × 3 λ {1e-5,1e-4,1e-3}, 120 s. (descending/BS-plastic arm) |
-| `run_sensory_stdp.sh` | Sensory-learning arm: same 3×3 matrix but `--freeze-bs-rg --stdp-ia-rg --wmax-ia 10`. Pair with `run_speed_stdp.sh` for descending-vs-sensory contrast. |
+| `run_sensory_stdp.sh` | Sensory-learning arm: same 3×3 matrix but `--freeze-bs-rg --stdp-ia-rg --wmax-ia 10`. Pair with `run_speed_stdp.sh` for descending-vs-sensory contrast. Outputs `cpg_sensory_stdp_*`. |
+| `run_ablation_sensory.sh` | Sensory-learning ablation arm: graded loading × λ with frozen BS + plastic Ia→RG (Ia is the *gated* learning drive). Outputs `cpg_ablsens_*`. Plot with `--mode ablsens`. |
 | `run_ablation_graded.sh` | Phase B: 3 Ia gains × 3 λ, 120 s. |
 | `run_frozen.sh` | Frozen-weight control: STDP off, air stepping, (mean,CV) sweep. |
 | `debug.sh` | Local single-config run with `--debug-small`. |

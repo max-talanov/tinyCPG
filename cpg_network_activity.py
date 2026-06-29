@@ -69,7 +69,11 @@ def main():
     ap.add_argument("--indir", required=True)
     ap.add_argument("--lambda-tag", default="lam1em3")
     ap.add_argument("--ablation-prefix", default="cpg_ablgrad",
-                    help="For --mode ablation: cpg_ablgrad (natural) or cpg_ablstim (stim).")
+                    help="For --mode ablation: cpg_ablgrad (natural), cpg_ablstim (stim), "
+                         "or cpg_ablsens (sensory-learning arm).")
+    ap.add_argument("--speed-prefix", default="cpg_speed_stdp",
+                    help="For --mode speed: cpg_speed_stdp (descending arm) or "
+                         "cpg_sensory_stdp (sensory-learning arm).")
     ap.add_argument("--n-cycles", type=int, default=5)
     ap.add_argument("--out", default="plots/paper/fig_network_activity.png")
     ap.add_argument("--dpi", type=int, default=200)
@@ -81,7 +85,7 @@ def main():
 
     def colfile(tag):
         if args.mode == "speed":
-            return _find(args.indir, f"cpg_speed_stdp_{tag}_{lam}_*.h5")
+            return _find(args.indir, f"{args.speed_prefix}_{tag}_{lam}_*.h5")
         return _find(args.indir, f"{args.ablation_prefix}_{tag}_{lam}_*.h5")
 
     files = {tag: colfile(tag) for tag, _l, _p in cols}

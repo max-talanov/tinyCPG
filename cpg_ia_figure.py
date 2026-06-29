@@ -30,10 +30,17 @@ MODE_COLS = {
                  ("13_5cms", "medium walk\n13.5 cm/s (520 ms)", 520),
                  ("21cms", "fast walk\n21 cm/s (350 ms)", 350)],
                 "cpg_speed_stdp", "across speed (Ia intact)"),
+    "sensory": ([("06cms", "slow walk\n6 cm/s (1200 ms)", 1200),
+                 ("13_5cms", "medium walk\n13.5 cm/s (520 ms)", 520),
+                 ("21cms", "fast walk\n21 cm/s (350 ms)", 350)],
+                "cpg_sensory_stdp", "sensory learning (Ia→RG plastic), across speed"),
     "ablstim": ([("baseline", "baseline\nIa,CUT 1.0", 520), ("toe", "toe stepping\nIa,CUT 0.5", 520),
                  ("air", "air stepping\nIa,CUT 0.1", 520)], "cpg_ablstim", "stim arm, across loading"),
     "ablgrad": ([("baseline", "baseline\nIa,CUT 1.0", 520), ("toe", "toe stepping\nIa,CUT 0.5", 520),
                  ("air", "air stepping\nIa,CUT 0.1", 520)], "cpg_ablgrad", "natural arm, across loading"),
+    "ablsens": ([("baseline", "baseline\nIa,CUT 1.0", 520), ("toe", "toe stepping\nIa,CUT 0.5", 520),
+                 ("air", "air stepping\nIa,CUT 0.1", 520)], "cpg_ablsens",
+                "sensory learning, across loading (Ia is the gated learning drive)"),
 }
 
 ROWS = [("leg_L/ia_f", "L Ia-F"), ("leg_L/ia_e", "L Ia-E"),
