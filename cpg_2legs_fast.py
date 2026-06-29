@@ -253,6 +253,13 @@ WMAX = 120.0
 # full STDP potentiation. CUT STDP keeps the full WMAX.
 WMAX_BS = 30.0
 
+# MOD_IA_RG_STDP: plastic homonymous Ia->RG projections (--stdp-ia-rg). The muscle
+# proprioceptive afferents become a learning drive to the rhythm generators. Given the
+# full WMAX headroom (like CUT) so the sensory loop can grow strong enough to carry the
+# rhythm once BS is frozen weak (--freeze-bs-rg).
+WMAX_IA = 120.0
+P_IA2RG_STDP = 0.5  # density of the new Ia->RG plastic projection (matches CUT/BS P_IN_STDP)
+
 # MOD_COACT: static CUT → RGE pathway — immediate cutaneous drive present from t=0,
 # before STDP bootstraps. Weight and density chosen so that CUT alone (100 Hz × W=14
 # × ~35 conns) is still subthreshold, but CUT + BS (60 Hz × ~25) together are supra-
@@ -423,6 +430,15 @@ def main():
                     help="If set, after building the network dump per-connection WEIGHT and "
                          "DELAY distributions for every named projection to this HDF5 path, "
                          "then exit (no simulation). For the connectivity-statistics figure.")
+    ap.add_argument("--freeze-bs-rg", action="store_true",
+                    help="MOD_FREEZE_BS: connect BS->RG-E and BS->RG-F with STATIC synapses "
+                         "(no STDP), held at the weak lognormal init (W_INIT_BS ~3.5 pA). BS "
+                         "becomes a fixed tonic drive; pair with --stdp-ia-rg to shift the "
+                         "learning onto the sensory pathway.")
+    ap.add_argument("--stdp-ia-rg", action="store_true",
+                    help="MOD_IA_RG_STDP: add plastic homonymous Ia->RG projections "
+                         "(Ia-E->RG-E, Ia-F->RG-F) so the muscle proprioceptive afferents "
+                         "become a learning input to the rhythm generators (Wmax=WMAX_IA).")
     ap.add_argument("--stdp-winit-dist", type=str, default="lognormal",
                     choices=["const", "normal", "lognormal", "lognormal_cv"],
                     help="Initial weight distribution for STDP synapses. const=all weights=W0_IN; normal/lognormal draw per-connection weights.")
@@ -848,6 +864,16 @@ def main():
         min(float(args.stdp_winit_max), float(WMAX)),
     )
 
+    # MOD_IA_RG_STDP: initial weight for the plastic Ia->RG projection. Starts at the
+    # base lognormal init (like CUT) and potentiates up under STDP.
+    W_INIT_IA = make_stdp_init_weight_param(
+        args.stdp_winit_dist,
+        args.stdp_winit_mean,
+        args.stdp_winit_std,
+        args.stdp_winit_min,
+        min(float(args.stdp_winit_max), float(WMAX_IA)),
+    )
+
     # Robust rank/proc detection:
     # - under Slurm, SLURM_PROCID/SLURM_NTASKS are the most reliable
     # - otherwise, fall back to NEST helpers if present
@@ -1069,6 +1095,11 @@ def main():
         copy(f"stdp_cut_rge_{side}", stdp_defaults, make_weight_recorder_safe())
         copy(f"stdp_bs_rge_{side}", stdp_bs_defaults, make_weight_recorder_safe())   # MOD_COACT: capped Wmax
         copy(f"stdp_bs_rgf_{side}", stdp_bs_defaults, make_weight_recorder_safe())   # MOD_COACT: capped Wmax
+        if getattr(args, "stdp_ia_rg", False):
+            # MOD_IA_RG_STDP: plastic homonymous Ia->RG models (full WMAX_IA headroom)
+            stdp_ia_defaults = {**stdp_defaults, "Wmax": WMAX_IA}
+            copy(f"stdp_ia_rge_{side}", stdp_ia_defaults, make_weight_recorder_safe())
+            copy(f"stdp_ia_rgf_{side}", stdp_ia_defaults, make_weight_recorder_safe())
 
     # ---- connect per leg ----
     for side in LEGS:
@@ -1083,10 +1114,14 @@ def main():
         nest.Connect(L["cut_in"], L["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_CUT2RGE_STATIC},
                      syn_spec={"synapse_model": "static_synapse", "weight": W_CUT2RGE_STATIC, "delay": delay["cut_to_rg"]})
 
+        # MOD_FREEZE_BS: with --freeze-bs-rg these are static (no STDP), held at the weak
+        # lognormal init so BS is a fixed tonic drive and the learning shifts to Ia->RG.
+        _bs_rge_model = "static_synapse" if getattr(args, "freeze_bs_rg", False) else f"stdp_bs_rge_{side}"
+        _bs_rgf_model = "static_synapse" if getattr(args, "freeze_bs_rg", False) else f"stdp_bs_rgf_{side}"
         nest.Connect(L["bs_in_e"], L["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_IN_STDP},
-                     syn_spec={"synapse_model": f"stdp_bs_rge_{side}", "weight": W_INIT_BS, "delay": delay["bs_to_rg"]})
+                     syn_spec={"synapse_model": _bs_rge_model, "weight": W_INIT_BS, "delay": delay["bs_to_rg"]})
         nest.Connect(L["bs_in_f"], L["rg_f"], conn_spec={"rule": "pairwise_bernoulli", "p": P_IN_STDP},
-                     syn_spec={"synapse_model": f"stdp_bs_rgf_{side}", "weight": W_INIT_BS, "delay": delay["bs_to_rg"]})
+                     syn_spec={"synapse_model": _bs_rgf_model, "weight": W_INIT_BS, "delay": delay["bs_to_rg"]})
 
         nest.Connect(L["base_in"], L["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": BASE_DRIVE_P},
                      syn_spec={"synapse_model": "static_synapse", "weight": BASE_DRIVE_W, "delay": delay["base_to_rg"]})
@@ -1133,6 +1168,15 @@ def main():
                      syn_spec={"synapse_model": "static_synapse", "weight": W_IA2IN, "delay": delay["ia_path"]})
         nest.Connect(L["ia_in_f"], L["in_f"], conn_spec={"rule": "pairwise_bernoulli", "p": P_IA2IN},
                      syn_spec={"synapse_model": "static_synapse", "weight": W_IA2IN, "delay": delay["ia_path"]})
+
+        # MOD_IA_RG_STDP: plastic homonymous Ia->RG excitation. Ia-E (extensor stretch/
+        # force) potentiates onto RG-E, Ia-F onto RG-F — the muscle afferents become a
+        # learning drive to the rhythm generators (replacing the now-frozen BS plasticity).
+        if getattr(args, "stdp_ia_rg", False):
+            nest.Connect(L["ia_in_e"], L["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_IA2RG_STDP},
+                         syn_spec={"synapse_model": f"stdp_ia_rge_{side}", "weight": W_INIT_IA, "delay": delay["ia_path"]})
+            nest.Connect(L["ia_in_f"], L["rg_f"], conn_spec={"rule": "pairwise_bernoulli", "p": P_IA2RG_STDP},
+                         syn_spec={"synapse_model": f"stdp_ia_rgf_{side}", "weight": W_INIT_IA, "delay": delay["ia_path"]})
 
         # MOD_PACED_GAIT: external sequential Ia-E groups → InE → inhibits RGF during stance.
         # Reinforces extensor phase while preserving F→E asymmetry (InF→RGE still 6× stronger).
@@ -1235,6 +1279,9 @@ def main():
         ]
         if L["ia_ext_pg_f"] is not None:
             projset.append(("flexAff->RG-F", L["ia_ext_pg_f"], L["rg_f"]))
+        if getattr(args, "stdp_ia_rg", False):
+            projset.append(("Ia-E->RG-E", L["ia_in_e"], L["rg_e"]))
+            projset.append(("Ia-F->RG-F", L["ia_in_f"], L["rg_f"]))
         if rank == 0:
             with h5py.File(args.dump_connectivity, "w") as hc:
                 hc.attrs["species"] = str(getattr(args, "species", "rat"))
@@ -1279,17 +1326,26 @@ def main():
         print("[Stats] syn_models:", stats_syn_models)
     # ---- cache connection collections for faster weight sampling ----
     # NOTE: in MPI runs, each rank sees (and caches) its local connections.
+    # Plastic projections to track depend on the active flags: BS->RG drops out when
+    # frozen (--freeze-bs-rg), Ia->RG appears with --stdp-ia-rg. (MOD_FREEZE_BS / MOD_IA_RG_STDP)
+    plastic_keys = ["cut->rge"]
+    if not getattr(args, "freeze_bs_rg", False):
+        plastic_keys += ["bs->rge", "bs->rgf"]
+    if getattr(args, "stdp_ia_rg", False):
+        plastic_keys += ["ia->rge", "ia->rgf"]
+
+    def _stdp_model(key, side):
+        return {"cut->rge": f"stdp_cut_rge_{side}", "bs->rge": f"stdp_bs_rge_{side}",
+                "bs->rgf": f"stdp_bs_rgf_{side}", "ia->rge": f"stdp_ia_rge_{side}",
+                "ia->rgf": f"stdp_ia_rgf_{side}"}[key]
+
     conns_cache = {side: {} for side in LEGS}
     for side in LEGS:
         L = leg[side]
         # Plastic (STDP) connections cached by synapse model
-        for key, model in [
-            ("cut->rge", f"stdp_cut_rge_{side}"),
-            ("bs->rge", f"stdp_bs_rge_{side}"),
-            ("bs->rgf", f"stdp_bs_rgf_{side}"),
-        ]:
+        for key in plastic_keys:
             try:
-                conns_cache[side][key] = nest.GetConnections(synapse_model=model)
+                conns_cache[side][key] = nest.GetConnections(synapse_model=_stdp_model(key, side))
             except Exception:
                 conns_cache[side][key] = []
 
@@ -1326,7 +1382,7 @@ def main():
                     pass
     # ---- storage ----
     times = []
-    wstats = {side: {k: ([], []) for k in ["cut->rge", "bs->rge", "bs->rgf"]} for side in LEGS}
+    wstats = {side: {k: ([], []) for k in plastic_keys} for side in LEGS}
     logs = {side: dict(bs_e=[], bs_f=[], mus_e=[], mus_f=[],
                        rge=[], rgf=[],
                        ine=[], inf=[], iaint_e=[], iaint_f=[],  # MOD_NET_RECORD
@@ -1340,7 +1396,7 @@ def main():
 
     # Optional full-weight storage (final or snapshots)
     wfull_times = []
-    wfull = {side: {k: [] for k in ["cut->rge", "bs->rge", "bs->rgf"]} for side in LEGS}
+    wfull = {side: {k: [] for k in plastic_keys} for side in LEGS}
 
     # If only "final" weights are requested, also capture the INITIAL full weight vectors at t=0.
     # This prevents downstream plotting code (e.g., quantile bands over time) from seeing only a
@@ -1348,7 +1404,7 @@ def main():
     if rank == 0 and args.save_weights == "final":
         wfull_times.append(0.0)
         for side in LEGS:
-            for key in ["cut->rge", "bs->rge", "bs->rgf"]:
+            for key in plastic_keys:
                 conns = conns_full_cache[side][key]
                 if conns is None or len(conns) == 0:
                     wfull[side][key].append(np.array([], dtype=np.float32))
@@ -1490,7 +1546,7 @@ def main():
         P["ia_f"].append(ia_f)
 
     # Keep last sampled mean/std so we can append smoothly without resampling every step
-    last_wstats = {side: {k: (np.nan, np.nan) for k in ["cut->rge", "bs->rge", "bs->rgf"]} for side in LEGS}
+    last_wstats = {side: {k: (np.nan, np.nan) for k in plastic_keys} for side in LEGS}
 
     def log_weights(t_ms: float, step_idx: int):
         """Append weight mean/std time series.
@@ -1503,7 +1559,7 @@ def main():
         do_sample = (step_idx % weight_every == 0)
 
         for side in LEGS:
-            for key in ["cut->rge", "bs->rge", "bs->rgf"]:
+            for key in plastic_keys:
                 if do_sample:
                     conns = conns_cache[side][key]
                     if conns is None or len(conns) == 0:
@@ -1519,7 +1575,7 @@ def main():
         if args.save_weights == "snapshots" and do_sample:
             wfull_times.append(float(t_ms))
             for side in LEGS:
-                for key in ["cut->rge", "bs->rge", "bs->rgf"]:
+                for key in plastic_keys:
                     conns = conns_full_cache[side][key]
                     if conns is None or len(conns) == 0:
                         wfull[side][key].append(np.array([], dtype=np.float32))
@@ -1678,7 +1734,7 @@ def main():
     if rank == 0 and args.save_weights == "final":
         wfull_times.append(float(t_ms))
         for side in LEGS:
-            for key in ["cut->rge", "bs->rge", "bs->rgf"]:
+            for key in plastic_keys:
                 conns = conns_full_cache[side][key]
                 if conns is None or len(conns) == 0:
                     wfull[side][key].append(np.array([], dtype=np.float32))
@@ -1717,6 +1773,8 @@ def main():
         h5.attrs["ia_feedback_gain"] = float(IA_FEEDBACK_GAIN)
         h5.attrs["cut_feedback_gain"] = float(CUT_FEEDBACK_GAIN)
         h5.attrs["stdp_lambda"] = float(LAMBDA)
+        h5.attrs["freeze_bs_rg"] = bool(getattr(args, "freeze_bs_rg", False))   # MOD_FREEZE_BS
+        h5.attrs["stdp_ia_rg"] = bool(getattr(args, "stdp_ia_rg", False))       # MOD_IA_RG_STDP
         h5.attrs["local_threads"] = int(args.threads)
         h5.attrs["mpi_processes"] = int(nproc)
         h5.attrs["save_weights_mode"] = str(args.save_weights)
@@ -1758,7 +1816,7 @@ def main():
                 g.create_dataset(key, data=np.asarray(arr, dtype=np.float32), compression="gzip")
 
             gw = g.create_group("weights")
-            for key in ["cut->rge", "bs->rge", "bs->rgf"]:
+            for key in plastic_keys:
                 gw.create_dataset(f"{key}_mean", data=np.asarray(wstats[side][key][0], dtype=np.float32),
                                   compression="gzip")
                 gw.create_dataset(f"{key}_std", data=np.asarray(wstats[side][key][1], dtype=np.float32),
@@ -1767,7 +1825,7 @@ def main():
             # Optional: full weight vectors (shape: [T_samples, N_connections])
             if len(wfull_times) > 0:
                 gfw = g.create_group("full_weights")
-                for key in ["cut->rge", "bs->rge", "bs->rgf"]:
+                for key in plastic_keys:
                     src, tgt = conns_endpoints[side].get(key, (np.array([], dtype=np.int64), np.array([], dtype=np.int64)))
                     gk = gfw.create_group(key.replace("->", "_to_"))
                     gk.create_dataset("source", data=src, compression="gzip")
