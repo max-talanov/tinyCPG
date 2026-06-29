@@ -254,10 +254,16 @@ WMAX = 120.0
 WMAX_BS = 30.0
 
 # MOD_IA_RG_STDP: plastic homonymous Ia->RG projections (--stdp-ia-rg). The muscle
-# proprioceptive afferents become a learning drive to the rhythm generators. Given the
-# full WMAX headroom (like CUT) so the sensory loop can grow strong enough to carry the
-# rhythm once BS is frozen weak (--freeze-bs-rg).
-WMAX_IA = 120.0
+# proprioceptive afferents become a learning drive to the rhythm generators once BS is
+# frozen weak (--freeze-bs-rg).
+# WMAX_IA TUNING (debug-small, 25 s, frozen BS): the homonymous Ia->RG loop is in-phase
+# positive feedback, so a *low* cap is essential — a light phased boost reinforces each
+# burst without filling the inter-burst trough, but a high cap saturates into quasi-tonic
+# co-excitation of BOTH half-centres and destroys counter-phase. WMAX_IA sweep on
+# corr(Force-E,Force-F): 10->-0.98, 20->-0.71, 30->-0.50, 60->-0.26, 120->+0.12.
+# WMAX_IA=10 BEATS the BS-plastic control (-0.98 vs -0.96) AND fixes the weak flexor
+# (Force-F peak 11->17). Override with --wmax-ia.
+WMAX_IA = 10.0
 P_IA2RG_STDP = 0.5  # density of the new Ia->RG plastic projection (matches CUT/BS P_IN_STDP)
 
 # MOD_COACT: static CUT → RGE pathway — immediate cutaneous drive present from t=0,
@@ -439,6 +445,12 @@ def main():
                     help="MOD_IA_RG_STDP: add plastic homonymous Ia->RG projections "
                          "(Ia-E->RG-E, Ia-F->RG-F) so the muscle proprioceptive afferents "
                          "become a learning input to the rhythm generators (Wmax=WMAX_IA).")
+    ap.add_argument("--wmax-ia", type=float, default=WMAX_IA,
+                    help="MOD_IA_RG_STDP: weight cap for the plastic Ia->RG projection. "
+                         "Lower values limit symmetric over-excitation of both half-centres "
+                         "(preserves counter-phase); higher lets the sensory loop carry more drive.")
+    ap.add_argument("--p-ia2rg", type=float, default=P_IA2RG_STDP,
+                    help="MOD_IA_RG_STDP: connection probability of the Ia->RG projection.")
     ap.add_argument("--stdp-winit-dist", type=str, default="lognormal",
                     choices=["const", "normal", "lognormal", "lognormal_cv"],
                     help="Initial weight distribution for STDP synapses. const=all weights=W0_IN; normal/lognormal draw per-connection weights.")
@@ -871,7 +883,7 @@ def main():
         args.stdp_winit_mean,
         args.stdp_winit_std,
         args.stdp_winit_min,
-        min(float(args.stdp_winit_max), float(WMAX_IA)),
+        min(float(args.stdp_winit_max), float(getattr(args, "wmax_ia", WMAX_IA))),
     )
 
     # Robust rank/proc detection:
@@ -1096,8 +1108,8 @@ def main():
         copy(f"stdp_bs_rge_{side}", stdp_bs_defaults, make_weight_recorder_safe())   # MOD_COACT: capped Wmax
         copy(f"stdp_bs_rgf_{side}", stdp_bs_defaults, make_weight_recorder_safe())   # MOD_COACT: capped Wmax
         if getattr(args, "stdp_ia_rg", False):
-            # MOD_IA_RG_STDP: plastic homonymous Ia->RG models (full WMAX_IA headroom)
-            stdp_ia_defaults = {**stdp_defaults, "Wmax": WMAX_IA}
+            # MOD_IA_RG_STDP: plastic homonymous Ia->RG models (Wmax from --wmax-ia)
+            stdp_ia_defaults = {**stdp_defaults, "Wmax": float(getattr(args, "wmax_ia", WMAX_IA))}
             copy(f"stdp_ia_rge_{side}", stdp_ia_defaults, make_weight_recorder_safe())
             copy(f"stdp_ia_rgf_{side}", stdp_ia_defaults, make_weight_recorder_safe())
 
@@ -1173,9 +1185,10 @@ def main():
         # force) potentiates onto RG-E, Ia-F onto RG-F — the muscle afferents become a
         # learning drive to the rhythm generators (replacing the now-frozen BS plasticity).
         if getattr(args, "stdp_ia_rg", False):
-            nest.Connect(L["ia_in_e"], L["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_IA2RG_STDP},
+            _p_ia2rg = float(getattr(args, "p_ia2rg", P_IA2RG_STDP))
+            nest.Connect(L["ia_in_e"], L["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": _p_ia2rg},
                          syn_spec={"synapse_model": f"stdp_ia_rge_{side}", "weight": W_INIT_IA, "delay": delay["ia_path"]})
-            nest.Connect(L["ia_in_f"], L["rg_f"], conn_spec={"rule": "pairwise_bernoulli", "p": P_IA2RG_STDP},
+            nest.Connect(L["ia_in_f"], L["rg_f"], conn_spec={"rule": "pairwise_bernoulli", "p": _p_ia2rg},
                          syn_spec={"synapse_model": f"stdp_ia_rgf_{side}", "weight": W_INIT_IA, "delay": delay["ia_path"]})
 
         # MOD_PACED_GAIT: external sequential Ia-E groups → InE → inhibits RGF during stance.
@@ -1775,6 +1788,8 @@ def main():
         h5.attrs["stdp_lambda"] = float(LAMBDA)
         h5.attrs["freeze_bs_rg"] = bool(getattr(args, "freeze_bs_rg", False))   # MOD_FREEZE_BS
         h5.attrs["stdp_ia_rg"] = bool(getattr(args, "stdp_ia_rg", False))       # MOD_IA_RG_STDP
+        h5.attrs["wmax_ia"] = float(getattr(args, "wmax_ia", WMAX_IA))
+        h5.attrs["p_ia2rg"] = float(getattr(args, "p_ia2rg", P_IA2RG_STDP))
         h5.attrs["local_threads"] = int(args.threads)
         h5.attrs["mpi_processes"] = int(nproc)
         h5.attrs["save_weights_mode"] = str(args.save_weights)
