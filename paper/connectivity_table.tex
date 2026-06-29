@@ -1,0 +1,48 @@
+\begin{table}[t]
+  \centering
+  \small
+  \caption{Connectivity specification: per-connection synaptic weight and
+  conduction delay for every projection, obtained by querying NEST after
+  network construction (\texttt{--dump-connectivity}; production $N$). Weights
+  of static projections are delta-valued at their design weight; the three
+  plastic projections (\textsuperscript{p}) are reported at their lognormal
+  initialisation ($\mu,\mathrm{CV}$ sweep set; learned values converge to the
+  $\approx 63$\,pA load set-point, Sec.~\ref{sec:methods:stdp}). Delays follow
+  the rat \texttt{length\_velocity} preset with $0.2$\,ms Gaussian jitter
+  (s.d.\ across connections). $n$ = connection count for leg L.}
+  \label{tab:delays}
+  \begin{tabular}{l r r r}
+    \toprule
+    Projection & $n$ & Weight (pA) & Delay (ms) \\
+    \midrule
+    \multicolumn{4}{l}{\textit{Descending / cutaneous (plastic)}} \\
+    \quad CUT$\to$RG-E & 8554 & $7.9\pm5.2$\textsuperscript{p} & $2.00\pm0.21$ \\
+    \quad BS$\to$RG-E & 5025 & $3.5\pm2.1$\textsuperscript{p} & $3.00\pm0.21$ \\
+    \quad BS$\to$RG-F & 4957 & $3.5\pm2.1$\textsuperscript{p} & $3.00\pm0.21$ \\
+    \addlinespace[2pt]
+    \multicolumn{4}{l}{\textit{Rhythm-generator reciprocal core}} \\
+    \quad RG-E$\to$InE & 774 & $+12$ & $1.80\pm0.21$ \\
+    \quad RG-F$\to$InF & 1547 & $+18$ & $1.80\pm0.21$ \\
+    \quad InE$\to$RG-F & 741 & $-8$ & $1.79\pm0.22$ \\
+    \quad InF$\to$RG-E & 1461 & $-48$ & $1.81\pm0.20$ \\
+    \addlinespace[2pt]
+    \multicolumn{4}{l}{\textit{Motor pools}} \\
+    \quad RG-E$\to$M-E & 5012 & $+30$ & $2.00\pm0.21$ \\
+    \quad RG-F$\to$M-F & 5025 & $+30$ & $2.01\pm0.21$ \\
+    \quad M-E$\to$M-F & 2502 & $-22$ & $1.80\pm0.21$ \\
+    \quad M-F$\to$M-E & 2469 & $-22$ & $1.80\pm0.21$ \\
+    \quad M-E$\to$mus-E & 7977 & $+1$ & $2.00\pm0.21$ \\
+    \addlinespace[2pt]
+    \multicolumn{4}{l}{\textit{Sensory feedback}} \\
+    \quad Ia-E$\to$InE & 1252 & $+6$ & $2.00\pm0.21$ \\
+    \quad Ia-F$\to$InF & 1245 & $+6$ & $2.00\pm0.21$ \\
+    \quad IaInt-E$\to$M-F & 1997 & $-10$ & $2.00\pm0.21$ \\
+    \quad flexAff$\to$RG-F & 2532 & $+6$ & $2.01\pm0.20$ \\
+    \addlinespace[2pt]
+    \multicolumn{4}{l}{\textit{Commissural (interlimb)}} \\
+    \quad commiss.\ E (L$\to$R) & 999 & $-8$ & $2.21\pm0.21$ \\
+    \quad commiss.\ F (L$\to$R) & 2187 & $-20$ & $2.20\pm0.21$ \\
+    \addlinespace[2pt]
+    \bottomrule
+  \end{tabular}
+\end{table}

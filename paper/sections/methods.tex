@@ -80,6 +80,38 @@ Each motor neuron projects to $N_{\text{mus}}=100$ muscle-parrot relays
 ($W=-22$\,pA, $P=0.25$) enforces antagonist suppression at the motor
 level~\cite{mccreaRybak2008}.
 
+\paragraph{Connectivity specification.}
+The full per-connection weight and delay distributions of all
+projections were verified by querying NEST directly after network
+construction (\texttt{-{}-dump-connectivity}). Static projections are
+delta-distributed at their design weights---in particular the
+asymmetric reciprocal inhibition (InF$\to$RG-E $=-48$\,pA,
+InE$\to$RG-F $=-8$\,pA) reproduces the Zhang~6:1 ratio exactly---while
+the three plastic projections carry lognormal weight distributions at
+initialisation. Conduction delays follow the rat
+\texttt{length\_velocity} preset (brainstem pathways $\approx 3.0$\,ms,
+reciprocal and motor pathways $\approx 1.8$\,ms, commissural
+$\approx 2.2$\,ms) with $0.2$\,ms across-connection jitter.
+Table~\ref{tab:delays} lists all projections;
+Figure~\ref{fig:connectivity} shows the weight and delay distributions.
+
+\input{connectivity_table}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.95\linewidth]{fig_connectivity.png}
+  \caption{Distribution of synaptic weights and conduction delays along
+  every projection. \textbf{(a)} Weight histograms for the three plastic
+  projections at lognormal initialisation. \textbf{(b)} Mean synaptic
+  weight per projection (green excitatory, red inhibitory); the
+  asymmetric reciprocal inhibition InF$\to$RG-E $=-48$\,pA versus
+  InE$\to$RG-F $=-8$\,pA reproduces the Zhang~6:1 ratio. \textbf{(c)}
+  Conduction~+~synaptic delay per projection (mean $\pm$ across-connection
+  s.d.), following the rat \texttt{length\_velocity} preset with
+  $0.2$\,ms jitter.}
+  \label{fig:connectivity}
+\end{figure}
+
 \subsection{Brainstem drive}\label{sec:methods:bs}
 \todo{2 short paragraphs.}
 Reticulospinal input is modelled as a tonic Poisson process at
@@ -343,5 +375,6 @@ initialisation sweep rather than by stochastic repetition.
 
 % --- Parameter tables go in supplementary ---
 \todo{In Supplementary: paste \texttt{paper/params.tex} as
-Supplementary Table~S1; add the delay-model preset table as
-Table~S2; add the 10-point $(\mu,\text{CV})$ sweep as Table~S3.}
+Supplementary Table~S1; add the 10-point $(\mu,\text{CV})$ sweep as
+Table~S2. (Per-projection weight/delay specification is now
+Table~\ref{tab:delays} in the main text.)}
