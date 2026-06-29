@@ -38,7 +38,8 @@ sbatch run.sh
 | `cpg_2legs_fast.py` | The model. Neurons, connections, sim loop, HDF5 export. |
 | `cpg_plot_from_hdf5.py` | Reads HDF5, makes per-leg PNGs. |
 | `run.sh` | MN5 SLURM array script (N=100, 10-point μ:CV sweep). |
-| `run_speed_stdp.sh` | Phase A: 3 speeds × 3 λ {1e-5,1e-4,1e-3}, 120 s. |
+| `run_speed_stdp.sh` | Phase A: 3 speeds × 3 λ {1e-5,1e-4,1e-3}, 120 s. (descending/BS-plastic arm) |
+| `run_sensory_stdp.sh` | Sensory-learning arm: same 3×3 matrix but `--freeze-bs-rg --stdp-ia-rg --wmax-ia 10`. Pair with `run_speed_stdp.sh` for descending-vs-sensory contrast. |
 | `run_ablation_graded.sh` | Phase B: 3 Ia gains × 3 λ, 120 s. |
 | `run_frozen.sh` | Frozen-weight control: STDP off, air stepping, (mean,CV) sweep. |
 | `debug.sh` | Local single-config run with `--debug-small`. |
@@ -78,6 +79,12 @@ reinforces each burst without filling the inter-burst trough; raising WMAX_IA sa
 it into tonic co-excitation that destroys counter-phase (monotonic in the sweep). This is
 the bio-plausibility win the debug goal was after: self-sustained counter-phase on weak
 tonic BS + closed-loop proprioception.
+
+**Confirmed at production scale** (full N, BS=60 Hz, paced, 15 s): corr(RGE,RGF) **−0.965**,
+corr(F-E,F-F) **−0.983**, Force-E/F peaks **16.7/16.7** (fully balanced), troughs ~1.0–1.1,
+CUT→RGE→62.4, Ia→RG self-stabilises at **~4.5 pA** (same as debug — robust, sub-cap).
+Cleaner than debug-small. Production sweep: `run_sensory_stdp.sh` (sensory-learning arm,
+mirrors `run_speed_stdp.sh` for a descending-vs-sensory paired contrast).
 
 ## Architecture
 
