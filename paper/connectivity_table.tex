@@ -3,13 +3,14 @@
   \footnotesize
   \caption{Distribution of synaptic weights and conduction delays along every
   projection, grouped by the functional blocks of the architecture
-  (Fig.~\ref{fig:schematic}). Weights of static projections are delta-valued
-  at their design weight; plastic projections (\textsuperscript{p}) show the
-  converged distribution (mean$\pm$s.d.\ across connections; CUT$\to$RG-E and
-  Ia$\to$RG learned to their load set-points, BS$\to$RG frozen at weak init in the
-  sensory arm). Delays follow the rat \texttt{length\_velocity} preset with
-  $0.2$\,ms jitter. $n$ = connection count, leg L. Muscle$\to$Ia spindle feedback
-  is rate-coded transduction, not a synapse (no entry).}
+  (Fig.~\ref{fig:schematic}). Static projections are delta-valued at their design
+  weight (s.d.\ $=0$); plastic projections (\textsuperscript{p}) show the converged
+  distribution (CUT$\to$RG-E and Ia$\to$RG at their learned load set-points; BS$\to$RG
+  frozen at weak init in the sensory arm). The cutaneous input to RG-E has two
+  parallel pathways --- a plastic STDP pathway and a fixed co-activation pathway
+  ($14$\,pA) --- listed separately. Delays follow the rat \texttt{length\_velocity}
+  preset with $0.2$\,ms jitter. $n$ = connection count, leg L. Muscle$\to$Ia spindle
+  feedback is rate-coded transduction, not a synapse (no entry).}
   \label{tab:delays}
   \begin{tabular}{l r r r}
     \toprule
@@ -18,7 +19,8 @@
     \multicolumn{4}{l}{\textit{Descending / supraspinal drive}}\\
     \quad BS$\to$RG-E & 5025 & $+3.5\pm2.1$\textsuperscript{p} & $3.00\pm0.21$ \\
     \quad BS$\to$RG-F & 4957 & $+3.5\pm2.1$\textsuperscript{p} & $3.00\pm0.21$ \\
-    \quad CUT$\to$RG-E & 8554 & $+63.2\pm3.1$\textsuperscript{p} & $2.00\pm0.21$ \\
+    \quad CUT$\to$RG-E (plastic) & 5003 & $+63.2\pm3.1$\textsuperscript{p} & $2.00\pm0.21$ \\
+    \quad CUT$\to$RG-E (static) & 3551 & $+14$ & $2.00\pm0.21$ \\
     \quad CUT$\to$InE & 1501 & $+6$ & $2.00\pm0.21$ \\
     \quad base$\to$RG-E & 996 & $+1$ & $2.99\pm0.21$ \\
     \quad base$\to$RG-F & 1025 & $+1$ & $3.00\pm0.21$ \\
@@ -30,7 +32,7 @@
     \quad flexAff$\to$InF & 1279 & $+6$ & $2.00\pm0.21$ \\
     \addlinespace[2pt]
     \multicolumn{4}{l}{\textit{Rhythm-generator reciprocal core}}\\
-    \quad RG-E$\to$InE & 744 & $+12$ & $1.80\pm0.20$ \\
+    \quad RG-E$\to$InE & 744 & $+12$ & $1.80\pm0.21$ \\
     \quad RG-F$\to$InF & 1518 & $+18$ & $1.81\pm0.21$ \\
     \quad InE$\to$RG-F & 710 & $-8$ & $1.80\pm0.20$ \\
     \quad InF$\to$RG-E & 1514 & $-48$ & $1.80\pm0.21$ \\
@@ -38,9 +40,9 @@
     \multicolumn{4}{l}{\textit{Ia proprioceptive interneuron pathway}}\\
     \quad Ia-E$\to$IaInt-E & 1941 & $+6$ & $1.99\pm0.20$ \\
     \quad Ia-F$\to$IaInt-F & 1974 & $+6$ & $2.00\pm0.21$ \\
-    \quad IaInt-E$\to$M-F & 1997 & $-10$ & $2.00\pm0.21$ \\
+    \quad IaInt-E$\to$M-F & 1997 & $-10$ & $1.99\pm0.21$ \\
     \quad IaInt-F$\to$M-E & 2022 & $-10$ & $2.00\pm0.21$ \\
-    \quad Ia-E$\to$InE & 1252 & $+6$ & $2.00\pm0.21$ \\
+    \quad Ia-E$\to$InE & 1252 & $+6$ & $1.99\pm0.21$ \\
     \quad Ia-F$\to$InF & 1245 & $+6$ & $2.00\pm0.21$ \\
     \addlinespace[2pt]
     \multicolumn{4}{l}{\textit{Motor output}}\\

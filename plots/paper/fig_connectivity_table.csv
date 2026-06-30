@@ -2,7 +2,8 @@ projection,n_connections,weight_mean_pA,weight_std_pA,delay_mean_ms,delay_std_ms
 BS->RG-E,5025,3.501,2.070,3.001,0.209
 BS->RG-F,4957,3.475,2.051,3.001,0.207
 CUT->InE,1501,6.000,0.000,2.002,0.207
-CUT->RG-E,8554,7.862,5.233,1.997,0.208
+CUT->RG-E (plastic),5003,3.506,1.051,1.998,0.209
+CUT->RG-E (static coact),3551,14.000,0.000,1.995,0.207
 Ia-E->IaInt-E,1941,6.000,0.000,1.990,0.200
 Ia-E->InE,1252,6.000,0.000,1.995,0.211
 Ia-E->RG-E,5011,3.491,1.060,2.002,0.204

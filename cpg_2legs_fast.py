@@ -1270,12 +1270,17 @@ def main():
     # ---- optional: dump per-connection weight & delay distributions, then exit ----
     if str(getattr(args, "dump_connectivity", "")).strip():
         L = leg["L"]
-        # (name, source population, target population) for every named projection.
+        # (name, source population, target population [, synapse_model]) for every
+        # named projection. The optional 4th element disambiguates parallel pathways
+        # that share a (source, target) pair (CUT->RG-E has BOTH a plastic STDP
+        # pathway and a static co-activation pathway).
+        side0 = LEGS[0]
         projset = [
             # --- descending / supraspinal drive ---
             ("BS->RG-E",   L["bs_in_e"],  L["rg_e"]),
             ("BS->RG-F",   L["bs_in_f"],  L["rg_f"]),
-            ("CUT->RG-E",  L["cut_in"],   L["rg_e"]),
+            ("CUT->RG-E (plastic)", L["cut_in"], L["rg_e"], f"stdp_cut_rge_{side0}"),
+            ("CUT->RG-E (static coact)", L["cut_in"], L["rg_e"], "static_synapse"),
             ("CUT->InE",   L["cut_in"],   L["in_e"]),
             ("base->RG-E", L["base_in"],  L["rg_e"]),
             ("base->RG-F", L["base_in"],  L["rg_f"]),
@@ -1313,9 +1318,14 @@ def main():
                 hc.attrs["species"] = str(getattr(args, "species", "rat"))
                 hc.attrs["delay_model"] = str(getattr(args, "delay_model", "fixed"))
                 hc.attrs["delay_jitter_ms"] = float(getattr(args, "delay_jitter_ms", 0.0))
-                for name, src, tgt in projset:
+                for entry in projset:
+                    name, src, tgt = entry[0], entry[1], entry[2]
+                    syn_model = entry[3] if len(entry) > 3 else None
                     try:
-                        conns = nest.GetConnections(source=src, target=tgt)
+                        if syn_model is not None:
+                            conns = nest.GetConnections(source=src, target=tgt, synapse_model=syn_model)
+                        else:
+                            conns = nest.GetConnections(source=src, target=tgt)
                         if conns is None or len(conns) == 0:
                             continue
                         w = np.asarray(nest.GetStatus(conns, "weight"), dtype=np.float32)
