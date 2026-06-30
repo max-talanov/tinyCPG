@@ -498,9 +498,126 @@ substitutes for the lost loading-dependent afferent drive, exactly the
 function the cutaneous pacing serves here.
 
 % =============================================================
+\subsection{Sensory-sited plasticity: relocating the learning to the proprioceptive loop}\label{sec:results:sensory}
+
+\paragraph{Freezing the descending plasticity, adding a plastic Ia$\to$RG loop.}
+In all experiments so far the plasticity lived in the \emph{descending}
+projections (cutaneous CUT$\to$RG-E and brainstem BS$\to$RG). We now ask
+whether the learning must be sited there, or whether it can instead be
+carried by the \emph{sensory} loop. We froze both BS$\to$RG projections
+as static synapses at their weak lognormal initialisation (removing all
+descending brainstem plasticity) and added a plastic homonymous
+proprioceptive projection --- Ia-E$\to$RG-E and Ia-F$\to$RG-F --- so that
+the muscle afferents become the learning input to the rhythm generators.
+Because this loop is in-phase positive feedback, its weight cap is
+critical: a low cap ($w_{\max}=10$\,pA) lets a light \emph{phased} boost
+reinforce each burst without filling the inter-burst trough, whereas a
+high cap saturates into tonic co-excitation of both half-centres that
+abolishes counter-phase (corr$(F_E,F_F)$ falls monotonically from
+$-0.98$ at $w_{\max}=10$ to $+0.12$ at $w_{\max}=120$). The plastic
+Ia$\to$RG weight self-stabilises at only $\approx4.5$\,pA --- well below
+the cap --- a genuine low-gain equilibrium rather than a clamp.
+
+\paragraph{At normal loading, relocation is cost-free.}
+Across the full speed range the sensory-learning model matches the
+descending control on counter-phase (last 20\,s, $\lambda=10^{-3}$):
+corr$(F_E,F_F) = -0.99,\,-0.98,\,-0.95$ for the sensory arm at
+$6/13.5/21$\,cm/s versus $-0.95,\,-0.92,\,-0.94$ for the descending arm,
+with identical force amplitudes ($16$--$17$\,a.u., balanced E/F) and the
+same load set-point on the still-plastic CUT$\to$RG-E weight
+($\approx63$\,pA). The descending arm's brainstem contribution is small
+to begin with (BS$\to$RG converges to only $\approx15$\,pA against its
+$30$\,pA cap, the bulk of the drive being cutaneous); the sensory arm
+replaces that small plastic descending term with an even lighter
+$\approx4.5$\,pA \emph{phased proprioceptive} term and loses nothing.
+The learning trajectory is likewise preserved: CUT$\to$RG-E climbs to the
+same attractor and the slow $\lambda=10^{-5}$ transient is still rising
+at 120\,s, exactly as in the descending arm
+(Fig.~\ref{fig:sensory}a).
+
+\paragraph{Under unloading, sensory plasticity is partially self-rescuing.}
+The decisive difference appears under limb unloading, where we now have a
+\emph{three-way} contrast at the medium-walk anchor: the epidural-stim
+arm (cutaneous drive intact), the natural arm (cutaneous drive gated by
+loading), and the new sensory-learning arm (Table~\ref{tab:sensory},
+$\lambda=10^{-3}$). At full weight-bearing all three are clean. Under
+\emph{toe} stepping ($G=0.5$) the sensory arm preserves the rhythm
+(corr $-0.99$) where the natural arm has already degraded ($-0.70$): the
+plastic Ia$\to$RG loop reinforces the pattern from the proprioception
+that is still present. Under \emph{air} stepping ($G=0.1$) the sensory
+arm degrades to $-0.54$ --- better than the natural arm ($-0.36$) but
+well short of the stim arm ($-0.98$). This is the central limit of
+sensory-sited learning: under total unloading the Ia feedback is the very
+input the pathway learns from, so it cannot bootstrap a pattern from
+proprioception it no longer receives. Epidural-stim drive, being
+exogenous to the sensory loss, is unaffected.
+
+\paragraph{Mechanism and rehabilitation reading.}
+The three arms separate at the extensor (Fig.~\ref{fig:sensory}c). With
+the stim drive intact the extensor half-centre rate is held or rises with
+unloading (RG-E mean $470\to503\to533$\,Hz); in the natural arm it
+collapses ($470\to286\to132$\,Hz) as the flexor takes over
+($195\to228\to272$\,Hz); the sensory arm tracks between them but keeps
+the E/F \emph{force} balanced down to toe stepping, and recovers extensor
+force at air stepping only for fast learning ($\lambda=10^{-3}$: peak
+$F_E=16.8$ vs $\lambda=10^{-5}$: $11.5$\,a.u.). Read against
+SCI-rehabilitation physiology, the three arms reproduce a graded
+hierarchy: load-independent epidural stimulation restores stepping across
+the full unloading range~\cite{courtine2009,harkema2011}; proprioceptive
+reinforcement improves weight-supported (toe) stepping but cannot
+substitute for load feedback during suspension~\cite{edgerton2008,rossignol2006};
+and passive descending drive without either loses the pattern as load is
+withdrawn. The model thus makes a sharp statement: \emph{where the
+plasticity is sited determines which rehabilitation regime it survives}
+--- sensory-sited learning is self-rescuing under partial loading but
+hostage to its own gated input under total unloading.
+
+\begin{table}[h]
+  \centering
+  \caption{Three-way loading contrast: counter-phase corr$(F_E, F_F)$
+    versus loading at $\lambda=10^{-3}$ (last 20\,s, leg L, 520\,ms
+    commanded period). Stim = cutaneous drive intact; natural = cutaneous
+    and Ia gated by loading; sensory = frozen BS$\to$RG with plastic
+    Ia$\to$RG (Ia is itself the gated learning drive).}
+  \label{tab:sensory}
+  \small
+  \begin{tabular}{lrrr}
+    \toprule
+    Loading & Stim & Sensory & Natural \\
+    \midrule
+    baseline ($G=1.0$) & $-0.92$ & $\mathbf{-0.98}$ & $-0.92$ \\
+    toe step ($G=0.5$) & $-0.94$ & $\mathbf{-0.99}$ & $-0.70$ \\
+    air step ($G=0.1$) & $\mathbf{-0.98}$ & $-0.54$ & $-0.36$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.95\linewidth]{fig_descending_vs_sensory.png}
+  \caption{\textbf{Sensory-sited plasticity --- relocating the learning
+    from the descending to the proprioceptive loop.} Frozen BS$\to$RG +
+    plastic homonymous Ia$\to$RG ($w_{\max}=10$\,pA); production $N$,
+    120\,s, last 20\,s, $\lambda=10^{-3}$.
+    \textbf{(a)} counter-phase corr$(F_E,F_F)$ versus speed: the sensory
+    arm (green) matches the descending control (blue) across the locomotor
+    range --- relocation is cost-free at normal loading.
+    \textbf{(b)} counter-phase versus loading for the three arms: the
+    sensory arm rescues toe stepping where the natural arm collapses, and
+    partially holds air stepping, but cannot match the load-independent
+    stim arm.
+    \textbf{(c)} extensor RG-E mean rate versus loading --- the mechanism:
+    stim holds the extensor, natural collapses it, sensory lies between.
+    \textbf{(d)} force-peak balance versus loading: the sensory arm keeps
+    $F_E$ and $F_F$ balanced under unloading, where the natural arm loses
+    extensor force.}
+  \label{fig:sensory}
+\end{figure}
+
+% =============================================================
 \subsection{Summary of results}\label{sec:results:summary}
 
-Six findings emerge across the experiments.
+Eight findings emerge across the experiments.
 (1) STDP self-organises the descending and cutaneous weights to the
 same attractor across four orders of magnitude of initialisation
 (\autoref{sec:results:stdp}).
@@ -528,3 +645,15 @@ the latter depends on learning-induced weight structure, indicating
 that STDP organises descending weight \emph{structure} rather than
 merely a distribution (\autoref{sec:results:ablation},
 Fig.~\ref{fig:frozen}).
+(7) The plasticity can be relocated from the descending pathway to the
+proprioceptive loop --- freezing BS$\to$RG and adding a light
+($\approx4.5$\,pA) plastic Ia$\to$RG projection --- with no loss of
+counter-phase at normal loading across the entire speed range
+(\autoref{sec:results:sensory}, Fig.~\ref{fig:sensory}).
+(8) Under unloading the three learning loci form a hierarchy: the
+sensory-sited model self-rescues toe stepping (corr $-0.99$ vs natural
+$-0.70$) but degrades under air stepping (corr $-0.54$) because its Ia
+learning drive is itself gated away, whereas the load-independent
+epidural-stim drive remains robust ($-0.98$) --- so where the plasticity
+is sited determines which rehabilitation regime it survives
+(\autoref{sec:results:sensory}, Table~\ref{tab:sensory}).
