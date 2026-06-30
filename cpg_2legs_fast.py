@@ -1272,26 +1272,39 @@ def main():
         L = leg["L"]
         # (name, source population, target population) for every named projection.
         projset = [
-            ("CUT->RG-E",  L["cut_in"],   L["rg_e"]),
+            # --- descending / supraspinal drive ---
             ("BS->RG-E",   L["bs_in_e"],  L["rg_e"]),
             ("BS->RG-F",   L["bs_in_f"],  L["rg_f"]),
+            ("CUT->RG-E",  L["cut_in"],   L["rg_e"]),
+            ("CUT->InE",   L["cut_in"],   L["in_e"]),
+            ("base->RG-E", L["base_in"],  L["rg_e"]),
+            ("base->RG-F", L["base_in"],  L["rg_f"]),
+            # --- rhythm-generator reciprocal core ---
             ("RG-E->InE",  L["rg_e"],     L["in_e"]),
-            ("InE->RG-F",  L["in_e"],     L["rg_f"]),
             ("RG-F->InF",  L["rg_f"],     L["in_f"]),
+            ("InE->RG-F",  L["in_e"],     L["rg_f"]),
             ("InF->RG-E",  L["in_f"],     L["rg_e"]),
+            # --- motor output ---
             ("RG-E->M-E",  L["rg_e"],     L["m_e"]),
             ("RG-F->M-F",  L["rg_f"],     L["m_f"]),
             ("M-E->M-F",   L["m_e"],      L["m_f"]),
             ("M-F->M-E",   L["m_f"],      L["m_e"]),
             ("M-E->mus-E", L["m_e"],      L["mus_e"]),
+            ("M-F->mus-F", L["m_f"],      L["mus_f"]),
+            # --- Ia proprioceptive interneuron pathway ---
+            ("Ia-E->IaInt-E", L["ia_in_e"], L["ia_int_e"]),
+            ("Ia-F->IaInt-F", L["ia_in_f"], L["ia_int_f"]),
+            ("IaInt-E->M-F", L["ia_int_e"], L["m_f"]),
+            ("IaInt-F->M-E", L["ia_int_f"], L["m_e"]),
             ("Ia-E->InE",  L["ia_in_e"],  L["in_e"]),
             ("Ia-F->InF",  L["ia_in_f"],  L["in_f"]),
-            ("IaInt-E->M-F", L["ia_int_e"], L["m_f"]),
+            # --- commissural (interlimb; abstracts V0v/V0d/V2a/In1 classes) ---
             ("commiss F (L->R)", leg["L"]["rg_f"], leg["R"]["rg_f"]),
             ("commiss E (L->R)", leg["L"]["rg_e"], leg["R"]["rg_e"]),
         ]
         if L["ia_ext_pg_f"] is not None:
             projset.append(("flexAff->RG-F", L["ia_ext_pg_f"], L["rg_f"]))
+            projset.append(("flexAff->InF",  L["ia_ext_pg_f"], L["in_f"]))
         if getattr(args, "stdp_ia_rg", False):
             projset.append(("Ia-E->RG-E", L["ia_in_e"], L["rg_e"]))
             projset.append(("Ia-F->RG-F", L["ia_in_f"], L["rg_f"]))

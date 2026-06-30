@@ -1,47 +1,59 @@
 \begin{table}[t]
   \centering
-  \small
-  \caption{Connectivity specification: per-connection synaptic weight and
-  conduction delay for every projection, obtained by querying NEST after
-  network construction (\texttt{--dump-connectivity}; production $N$). Weights
-  of static projections are delta-valued at their design weight; the three
-  plastic projections (\textsuperscript{p}) are reported at their lognormal
-  initialisation ($\mu,\mathrm{CV}$ sweep set; learned values converge to the
-  $\approx 63$\,pA load set-point, Sec.~\ref{sec:methods:stdp}). Delays follow
-  the rat \texttt{length\_velocity} preset with $0.2$\,ms Gaussian jitter
-  (s.d.\ across connections). $n$ = connection count for leg L.}
+  \footnotesize
+  \caption{Distribution of synaptic weights and conduction delays along every
+  projection, grouped by the functional blocks of the architecture
+  (Fig.~\ref{fig:schematic}). Weights of static projections are delta-valued
+  at their design weight; plastic projections (\textsuperscript{p}) show the
+  converged distribution (mean$\pm$s.d.\ across connections; CUT$\to$RG-E and
+  Ia$\to$RG learned to their load set-points, BS$\to$RG frozen at weak init in the
+  sensory arm). Delays follow the rat \texttt{length\_velocity} preset with
+  $0.2$\,ms jitter. $n$ = connection count, leg L. Muscle$\to$Ia spindle feedback
+  is rate-coded transduction, not a synapse (no entry).}
   \label{tab:delays}
   \begin{tabular}{l r r r}
     \toprule
     Projection & $n$ & Weight (pA) & Delay (ms) \\
     \midrule
-    \multicolumn{4}{l}{\textit{Descending / cutaneous (plastic)}} \\
-    \quad CUT$\to$RG-E & 8554 & $7.9\pm5.2$\textsuperscript{p} & $2.00\pm0.21$ \\
-    \quad BS$\to$RG-E & 5025 & $3.5\pm2.1$\textsuperscript{p} & $3.00\pm0.21$ \\
-    \quad BS$\to$RG-F & 4957 & $3.5\pm2.1$\textsuperscript{p} & $3.00\pm0.21$ \\
+    \multicolumn{4}{l}{\textit{Descending / supraspinal drive}}\\
+    \quad BS$\to$RG-E & 5025 & $+3.5\pm2.1$\textsuperscript{p} & $3.00\pm0.21$ \\
+    \quad BS$\to$RG-F & 4957 & $+3.5\pm2.1$\textsuperscript{p} & $3.00\pm0.21$ \\
+    \quad CUT$\to$RG-E & 8554 & $+63.2\pm3.1$\textsuperscript{p} & $2.00\pm0.21$ \\
+    \quad CUT$\to$InE & 1501 & $+6$ & $2.00\pm0.21$ \\
+    \quad base$\to$RG-E & 996 & $+1$ & $2.99\pm0.21$ \\
+    \quad base$\to$RG-F & 1025 & $+1$ & $3.00\pm0.21$ \\
     \addlinespace[2pt]
-    \multicolumn{4}{l}{\textit{Rhythm-generator reciprocal core}} \\
-    \quad RG-E$\to$InE & 774 & $+12$ & $1.80\pm0.21$ \\
-    \quad RG-F$\to$InF & 1547 & $+18$ & $1.80\pm0.21$ \\
-    \quad InE$\to$RG-F & 741 & $-8$ & $1.79\pm0.22$ \\
-    \quad InF$\to$RG-E & 1461 & $-48$ & $1.81\pm0.20$ \\
+    \multicolumn{4}{l}{\textit{Sensory afferent $\to$ RG (plastic, sensory arm)}}\\
+    \quad Ia-E$\to$RG-E & 5011 & $+4.4\pm0.3$\textsuperscript{p} & $2.00\pm0.20$ \\
+    \quad Ia-F$\to$RG-F & 4942 & $+4.3\pm0.3$\textsuperscript{p} & $2.00\pm0.21$ \\
+    \quad flexAff$\to$RG-F & 2524 & $+6$ & $2.00\pm0.21$ \\
+    \quad flexAff$\to$InF & 1279 & $+6$ & $2.00\pm0.21$ \\
     \addlinespace[2pt]
-    \multicolumn{4}{l}{\textit{Motor pools}} \\
+    \multicolumn{4}{l}{\textit{Rhythm-generator reciprocal core}}\\
+    \quad RG-E$\to$InE & 744 & $+12$ & $1.80\pm0.20$ \\
+    \quad RG-F$\to$InF & 1518 & $+18$ & $1.81\pm0.21$ \\
+    \quad InE$\to$RG-F & 710 & $-8$ & $1.80\pm0.20$ \\
+    \quad InF$\to$RG-E & 1514 & $-48$ & $1.80\pm0.21$ \\
+    \addlinespace[2pt]
+    \multicolumn{4}{l}{\textit{Ia proprioceptive interneuron pathway}}\\
+    \quad Ia-E$\to$IaInt-E & 1941 & $+6$ & $1.99\pm0.20$ \\
+    \quad Ia-F$\to$IaInt-F & 1974 & $+6$ & $2.00\pm0.21$ \\
+    \quad IaInt-E$\to$M-F & 1997 & $-10$ & $2.00\pm0.21$ \\
+    \quad IaInt-F$\to$M-E & 2022 & $-10$ & $2.00\pm0.21$ \\
+    \quad Ia-E$\to$InE & 1252 & $+6$ & $2.00\pm0.21$ \\
+    \quad Ia-F$\to$InF & 1245 & $+6$ & $2.00\pm0.21$ \\
+    \addlinespace[2pt]
+    \multicolumn{4}{l}{\textit{Motor output}}\\
     \quad RG-E$\to$M-E & 5012 & $+30$ & $2.00\pm0.21$ \\
     \quad RG-F$\to$M-F & 5025 & $+30$ & $2.01\pm0.21$ \\
     \quad M-E$\to$M-F & 2502 & $-22$ & $1.80\pm0.21$ \\
     \quad M-F$\to$M-E & 2469 & $-22$ & $1.80\pm0.21$ \\
     \quad M-E$\to$mus-E & 7977 & $+1$ & $2.00\pm0.21$ \\
+    \quad M-F$\to$mus-F & 7964 & $+1$ & $2.00\pm0.21$ \\
     \addlinespace[2pt]
-    \multicolumn{4}{l}{\textit{Sensory feedback}} \\
-    \quad Ia-E$\to$InE & 1252 & $+6$ & $2.00\pm0.21$ \\
-    \quad Ia-F$\to$InF & 1245 & $+6$ & $2.00\pm0.21$ \\
-    \quad IaInt-E$\to$M-F & 1997 & $-10$ & $2.00\pm0.21$ \\
-    \quad flexAff$\to$RG-F & 2532 & $+6$ & $2.01\pm0.20$ \\
-    \addlinespace[2pt]
-    \multicolumn{4}{l}{\textit{Commissural (interlimb)}} \\
-    \quad commiss.\ E (L$\to$R) & 999 & $-8$ & $2.21\pm0.21$ \\
-    \quad commiss.\ F (L$\to$R) & 2187 & $-20$ & $2.20\pm0.21$ \\
+    \multicolumn{4}{l}{\textit{Commissural (interlimb; abstracts V0v/V0d/V2a/In1)}}\\
+    \quad commiss E (L$\to$R) & 1035 & $-8$ & $2.19\pm0.20$ \\
+    \quad commiss F (L$\to$R) & 2252 & $-20$ & $2.20\pm0.21$ \\
     \addlinespace[2pt]
     \bottomrule
   \end{tabular}

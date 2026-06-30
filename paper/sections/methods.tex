@@ -81,18 +81,28 @@ Each motor neuron projects to $N_{\text{mus}}=100$ muscle-parrot relays
 level~\cite{mccreaRybak2008}.
 
 \paragraph{Connectivity specification.}
-The full per-connection weight and delay distributions of all
-projections were verified by querying NEST directly after network
-construction (\texttt{-{}-dump-connectivity}). Static projections are
+The full per-connection weight and delay distributions of every
+projection were obtained by querying NEST directly after network
+construction (\texttt{-{}-dump-connectivity}). Table~\ref{tab:delays}
+lists all projections grouped by the functional blocks of the
+architecture (Fig.~\ref{fig:schematic}): descending/supraspinal drive,
+the sensory afferent$\to$RG projections, the rhythm-generator reciprocal
+core, the Ia proprioceptive interneuron pathway, motor output, and the
+commissural (interlimb) projections. Static projections are
 delta-distributed at their design weights---in particular the
 asymmetric reciprocal inhibition (InF$\to$RG-E $=-48$\,pA,
 InE$\to$RG-F $=-8$\,pA) reproduces the Zhang~6:1 ratio exactly---while
-the three plastic projections carry lognormal weight distributions at
-initialisation. Conduction delays follow the rat
+the plastic projections (CUT$\to$RG-E in both arms, BS$\to$RG in the
+descending arm, Ia$\to$RG in the sensory arm) carry lognormal weight
+distributions: the table reports their \emph{converged} mean$\pm$s.d.\
+(CUT$\to$RG-E and Ia$\to$RG at their learned load set-points, BS$\to$RG
+frozen at weak init in the sensory arm). Conduction delays follow the rat
 \texttt{length\_velocity} preset (brainstem pathways $\approx 3.0$\,ms,
 reciprocal and motor pathways $\approx 1.8$\,ms, commissural
-$\approx 2.2$\,ms) with $0.2$\,ms across-connection jitter.
-Table~\ref{tab:delays} lists all projections;
+$\approx 2.2$\,ms) with $0.2$\,ms across-connection jitter. The
+muscle$\to$Ia spindle/GTO feedback is implemented as a rate-coded
+transduction (force and length $\to$ Ia firing rate), not a synaptic
+projection, and so has no weight/delay entry.
 Figure~\ref{fig:connectivity} shows the weight and delay distributions.
 
 \input{connectivity_table}
@@ -101,14 +111,14 @@ Figure~\ref{fig:connectivity} shows the weight and delay distributions.
   \centering
   \includegraphics[width=0.95\linewidth]{fig_connectivity.png}
   \caption{Distribution of synaptic weights and conduction delays along
-  every projection. \textbf{(a)} Weight histograms for the three plastic
-  projections at lognormal initialisation. \textbf{(b)} Mean synaptic
-  weight per projection (green excitatory, red inhibitory); the
-  asymmetric reciprocal inhibition InF$\to$RG-E $=-48$\,pA versus
-  InE$\to$RG-F $=-8$\,pA reproduces the Zhang~6:1 ratio. \textbf{(c)}
-  Conduction~+~synaptic delay per projection (mean $\pm$ across-connection
-  s.d.), following the rat \texttt{length\_velocity} preset with
-  $0.2$\,ms jitter.}
+  every projection (sensory-arm configuration: frozen BS$\to$RG, plastic
+  Ia$\to$RG). \textbf{(a)} Weight histograms for the plastic projections
+  at initialisation (lognormal). \textbf{(b)} Mean synaptic weight per
+  projection (green excitatory, red inhibitory); the asymmetric reciprocal
+  inhibition InF$\to$RG-E $=-48$\,pA versus InE$\to$RG-F $=-8$\,pA
+  reproduces the Zhang~6:1 ratio. \textbf{(c)} Conduction~+~synaptic delay
+  per projection (mean $\pm$ across-connection s.d.), following the rat
+  \texttt{length\_velocity} preset with $0.2$\,ms jitter.}
   \label{fig:connectivity}
 \end{figure}
 
