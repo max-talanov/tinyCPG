@@ -7,19 +7,31 @@ a stub). Drawn directly from the projection list verified by
 --dump-connectivity, so it reflects what the code actually builds, not an
 idealised schematic.
 
-Colour key: blue = plastic excitatory; green = static excitatory;
-red = static inhibitory; grey dashed = rate-coded transduction (not a synapse).
+Colour key (bio-meaningful):
+  excitatory neurons      -> orange nodes
+  excitatory projections  -> light orange (static) / dark orange (STDP/plastic)
+  inhibitory neurons+proj -> light blue
+  muscles                 -> red
+  inputs/afferents        -> grey   (rate-coded transduction = grey dashed)
 """
 import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.patches import FancyArrowPatch, FancyBboxPatch, Circle
 
-EXC_P="#1f77b4"; EXC_S="#2e7d32"; INH="#c62828"; RATE="#9e9e9e"
+EXC_P="#C2570B"   # STDP / plastic excitatory projection (dark orange)
+EXC_S="#F2B66D"   # static excitatory projection (light orange)
+INH="#4FA8D8"     # inhibitory neuron + projection (light blue)
+RATE="#9e9e9e"    # rate-coded transduction / input grey
 
 def node(ax, xy, label, kind="rg", r=0.42):
     x,y=xy
-    fc={"rg":"#ffcc80","in":"#4fc3f7","m":"#ffb74d","mus":"#ef9a9a",
-        "drive":"#e0e0e0","aff":"#ce93d8","iaint":"#80cbc4"}[kind]
+    fc={"rg":"#F59331",     # excitatory neuron (orange)
+        "m":"#F59331",      # excitatory motoneuron (orange)
+        "in":"#9FD3EC",     # inhibitory interneuron (light blue)
+        "iaint":"#9FD3EC",  # Ia inhibitory interneuron (light blue)
+        "mus":"#D7263D",    # muscle (red)
+        "drive":"#BdBdBd",  # input / descending drive (grey)
+        "aff":"#BdBdBd"}[kind]  # afferent input (grey)
     if kind in ("mus","drive"):
         b=FancyBboxPatch((x-0.62,y-0.28),1.24,0.56,boxstyle="round,pad=0.02",
                          fc=fc,ec="#333",lw=1.2,zorder=3)
@@ -102,12 +114,17 @@ edge(ax,P["RGF"],(4.3,1.05),INH,rad=0.0,lw=1.2)
 
 # legend
 from matplotlib.lines import Line2D
-leg=[Line2D([0],[0],color=EXC_P,lw=2.5,label="plastic excitatory (STDP)"),
+from matplotlib.patches import Patch
+leg=[Patch(fc="#F59331",ec="#333",label="excitatory neuron"),
+     Patch(fc="#9FD3EC",ec="#333",label="inhibitory interneuron"),
+     Patch(fc="#D7263D",ec="#333",label="muscle"),
+     Patch(fc="#BdBdBd",ec="#333",label="input / afferent"),
+     Line2D([0],[0],color=EXC_P,lw=2.5,label="plastic excitatory (STDP)"),
      Line2D([0],[0],color=EXC_S,lw=2.5,label="static excitatory"),
-     Line2D([0],[0],color=INH,lw=2.5,label="static inhibitory"),
-     Line2D([0],[0],color=RATE,lw=2.5,ls="--",label="rate-coded transduction (no synapse)"),
+     Line2D([0],[0],color=INH,lw=2.5,label="inhibitory projection"),
+     Line2D([0],[0],color=RATE,lw=2.5,ls="--",label="rate-coded transduction"),
      Line2D([0],[0],color=EXC_S,lw=2.5,ls=":",label="external pacing afferent")]
-ax.legend(handles=leg,loc="upper center",ncol=5,fontsize=8.5,frameon=True,bbox_to_anchor=(0.5,1.04))
+ax.legend(handles=leg,loc="upper center",ncol=5,fontsize=8.2,frameon=True,bbox_to_anchor=(0.5,1.05))
 ax.set_title("tinyCPG — as-implemented architecture (one leg; contralateral is mirror)",
              fontsize=13,fontweight="bold",y=1.06)
 fig.savefig("plots/paper/fig_architecture_implemented.png",dpi=160,bbox_inches="tight")

@@ -451,6 +451,15 @@ def main():
                          "(preserves counter-phase); higher lets the sensory loop carry more drive.")
     ap.add_argument("--p-ia2rg", type=float, default=P_IA2RG_STDP,
                     help="MOD_IA_RG_STDP: connection probability of the Ia->RG projection.")
+    ap.add_argument("--static-weight-cv", type=float, default=0.0,
+                    help="BIO-PLAUSIBILITY: if >0, give every static-synapse weight per-connection "
+                         "lognormal heterogeneity with this coefficient of variation (mean and sign "
+                         "preserved). 0 = delta weights (legacy). Cortical/spinal weights are lognormal "
+                         "(Song 2005; Buzsaki & Mizuseki 2014); CV~0.5-1.0 is typical.")
+    ap.add_argument("--cut-static-w", type=float, default=None,
+                    help="BIO-PLAUSIBILITY: override W_CUT2RGE_STATIC (the fixed cutaneous co-activation "
+                         "pathway parallel to the plastic CUT->RG-E). Set 0 to DROP it entirely, leaving a "
+                         "single plastic cutaneous projection. Default keeps the 14 pA bootstrap pathway.")
     ap.add_argument("--stdp-winit-dist", type=str, default="lognormal",
                     choices=["const", "normal", "lognormal", "lognormal_cv"],
                     help="Initial weight distribution for STDP synapses. const=all weights=W0_IN; normal/lognormal draw per-connection weights.")
@@ -1123,8 +1132,11 @@ def main():
         # MOD_COACT: static CUT → RGE pathway — present from t=0 before STDP bootstraps.
         # CUT 100 Hz × W=14 × ~35 conns alone is subthreshold; combined with BS 60 Hz it
         # crosses threshold (bio-plausible co-activation gate for rat CPG).
-        nest.Connect(L["cut_in"], L["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_CUT2RGE_STATIC},
-                     syn_spec={"synapse_model": "static_synapse", "weight": W_CUT2RGE_STATIC, "delay": delay["cut_to_rg"]})
+        # --cut-static-w overrides the weight; 0 drops the pathway (single plastic CUT).
+        _cut_static_w = W_CUT2RGE_STATIC if getattr(args, "cut_static_w", None) is None else float(args.cut_static_w)
+        if _cut_static_w != 0.0:
+            nest.Connect(L["cut_in"], L["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_CUT2RGE_STATIC},
+                         syn_spec={"synapse_model": "static_synapse", "weight": _cut_static_w, "delay": delay["cut_to_rg"]})
 
         # MOD_FREEZE_BS: with --freeze-bs-rg these are static (no STDP), held at the weak
         # lognormal init so BS is a fixed tonic drive and the learning shifts to Ia->RG.
@@ -1266,6 +1278,27 @@ def main():
                      syn_spec={"synapse_model": "static_synapse", "weight": W_COMM_E_INH, "delay": delay["commissural"]})
         nest.Connect(RR["rg_e"], LL["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_COMM_E},
                      syn_spec={"synapse_model": "static_synapse", "weight": W_COMM_E_INH, "delay": delay["commissural"]})
+
+    # ---- BIO-PLAUSIBILITY: lognormal weight heterogeneity on static synapses ----
+    # Biological synaptic weights are heterogeneous (lognormal: Song 2005; Buzsaki &
+    # Mizuseki 2014), not delta-valued. With --static-weight-cv>0 we multiply every
+    # static-synapse weight by a per-connection lognormal factor (mean 1, given CV),
+    # preserving each projection's mean and sign. Applied before the dump and sim.
+    static_cv = float(getattr(args, "static_weight_cv", 0.0) or 0.0)
+    if static_cv > 0.0:
+        try:
+            sconns = nest.GetConnections(synapse_model="static_synapse")
+            if sconns is not None and len(sconns) > 0:
+                w = np.asarray(nest.GetStatus(sconns, "weight"), dtype=float)
+                sigma = float(np.sqrt(np.log(1.0 + static_cv * static_cv)))
+                mu = -0.5 * sigma * sigma  # so E[factor]=1
+                factor = np.random.default_rng(int(args.seed) + 777).lognormal(mu, sigma, size=w.size)
+                nest.SetStatus(sconns, [{"weight": float(wi * fi)} for wi, fi in zip(w, factor)])
+                if rank == 0:
+                    print(f"[BioPlaus] static-weight heterogeneity CV={static_cv} applied to {w.size} static synapses")
+        except Exception as e:
+            if rank == 0:
+                print(f"[BioPlaus] static heterogeneity skipped: {e}")
 
     # ---- optional: dump per-connection weight & delay distributions, then exit ----
     if str(getattr(args, "dump_connectivity", "")).strip():
@@ -1813,6 +1846,9 @@ def main():
         h5.attrs["stdp_ia_rg"] = bool(getattr(args, "stdp_ia_rg", False))       # MOD_IA_RG_STDP
         h5.attrs["wmax_ia"] = float(getattr(args, "wmax_ia", WMAX_IA))
         h5.attrs["p_ia2rg"] = float(getattr(args, "p_ia2rg", P_IA2RG_STDP))
+        h5.attrs["static_weight_cv"] = float(getattr(args, "static_weight_cv", 0.0) or 0.0)
+        h5.attrs["cut_static_w"] = (W_CUT2RGE_STATIC if getattr(args, "cut_static_w", None) is None
+                                    else float(args.cut_static_w))
         h5.attrs["local_threads"] = int(args.threads)
         h5.attrs["mpi_processes"] = int(nproc)
         h5.attrs["save_weights_mode"] = str(args.save_weights)
