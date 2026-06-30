@@ -72,7 +72,7 @@ for k,(lab,kind) in {
 # --- descending / supraspinal ---
 edge(ax,P["BS"],P["RGE"],EXC_S,label="BS→E (frozen)",lx=0.42)
 edge(ax,P["BS"],P["RGF"],EXC_S,rad=-0.25,label="BS→F (frozen)",lx=0.2)
-edge(ax,P["CUT"],P["RGE"],EXC_P,rad=0.12,label="plastic 63 / static 14",lx=0.55)
+edge(ax,P["CUT"],P["RGE"],EXC_P,rad=0.12,label="plastic →63",lx=0.55)
 edge(ax,P["CUT"],P["InE"],EXC_S,rad=-0.1,label="cut reflex",lx=0.7)
 edge(ax,P["base"],P["RGE"],EXC_S,rad=0.18,lw=1.0)
 edge(ax,P["base"],P["RGF"],EXC_S,rad=-0.18,lw=1.0,label="tonic bias",lx=0.3)

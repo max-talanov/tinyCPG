@@ -40,7 +40,12 @@ def main():
                              wm=float(g.attrs["w_mean"]), ws=float(g.attrs["w_std"]),
                              dm=float(g.attrs["d_mean"]), ds=float(g.attrs["d_std"])))
     rows.sort(key=lambda r: r["dm"])
-    plastic = [r for r in rows if r["ws"] > 0.05]   # distributed-weight (STDP) projections
+    # STDP/plastic projections identified by name (all projections now carry a weight
+    # distribution since static synapses get lognormal heterogeneity; panel (a) shows
+    # only the *learned* projections).
+    def _is_plastic(nm):
+        return ("plastic" in nm) or nm.startswith("BS->") or nm in ("Ia-E->RG-E", "Ia-F->RG-F")
+    plastic = [r for r in rows if _is_plastic(r["name"])]
 
     plt.rcParams.update({"font.size": 9, "axes.titlesize": 11, "axes.labelsize": 10})
     fig = plt.figure(figsize=(14, 11))
@@ -56,23 +61,22 @@ def main():
         if i == 0:
             ax.set_ylabel("count")
         ax.grid(alpha=0.2)
-    fig.text(0.5, 0.985, "(a) Plastic-projection weight distributions (initial lognormal)",
+    fig.text(0.5, 0.985, "(a) Plastic / learned-projection weight distributions (STDP + lognormal init)",
              ha="center", fontsize=11, weight="bold")
 
-    # (b) static weight per projection — signed bar
+    # (b) weight per projection — signed bar with the per-connection spread (s.d.)
     ax = fig.add_subplot(gs[1])
     sr = sorted(rows, key=lambda r: r["wm"])
-    names = [r["name"] for r in sr]; wm = [r["wm"] for r in sr]
+    names = [r["name"] for r in sr]; wm = [r["wm"] for r in sr]; ws = [r["ws"] for r in sr]
     colors = ["#cc3311" if w < 0 else "#228833" for w in wm]
     y = np.arange(len(sr))
-    ax.barh(y, wm, color=colors, alpha=0.85)
+    ax.barh(y, wm, xerr=ws, color=colors, alpha=0.85,
+            error_kw=dict(ecolor="#555", elinewidth=0.8, capsize=2))
     ax.set_yticks(y); ax.set_yticklabels(names, fontsize=8)
     ax.axvline(0, color="black", lw=0.6)
-    for i, r in enumerate(sr):
-        ax.text(wm[i] + (1.5 if wm[i] >= 0 else -1.5), i, f"{wm[i]:.0f}",
-                va="center", ha="left" if wm[i] >= 0 else "right", fontsize=7)
-    ax.set_xlabel("mean synaptic weight (pA)   —  green = excitatory, red = inhibitory")
-    ax.set_title("(b) Synaptic weight by projection (mean; the 6:1 F→E / E→F Zhang asymmetry is InF→RG-E −48 vs InE→RG-F −8)")
+    ax.set_xlabel("synaptic weight (pA): mean ± per-connection s.d.  —  green = excitatory, red = inhibitory")
+    ax.set_title("(b) Weight by projection — all projections heterogeneous (lognormal CV≈0.5); "
+                 "the 6:1 InF→RG-E (−48) vs InE→RG-F (−8) Zhang asymmetry preserved")
     ax.grid(alpha=0.2, axis="x")
 
     # (c) delay per projection (mean ± std), sorted by delay

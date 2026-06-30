@@ -25,12 +25,14 @@ This is a deliberate modelling choice, not an omission:
   (s.d. ≈ 0.2 ms) because conduction distance and synaptic latency genuinely
   vary, whereas the *strength* of a designed fixed projection does not.
 
-**If we wanted weight distributions on the static projections** it is a one-line
-change (replace the scalar weight with a random `Parameter`, as the plastic
-projections already use). We deliberately did not, to keep the fixed scaffold a
-clean control against which the *learned* structure is measured (cf. the
-frozen-weight control experiment, which shows the learned weight *structure* —
-not just its marginal distribution — carries the counter-phase quality).
+**RESOLVED (adopted).** Since biological weights *are* heterogeneous, the model
+now applies per-connection lognormal heterogeneity to every static synapse by
+default (`--static-weight-cv 0.5`, mean and sign preserved). So all projections
+now carry a weight distribution, not just a delay distribution. This was
+validated to slightly *improve* counter-phase (corr$(F_E,F_F)$ −0.978 → −0.989,
+debug-small sensory), so bio-plausibility and performance agree. The legacy
+delta behaviour remains available with `--static-weight-cv 0` (used by the
+frozen-weight control, which isolates *learned* weight structure).
 
 ## Q4 — What are the "extra" projections (CUT→InE, Ia→IaInt, base→RG, Ia→InE)?
 
@@ -58,9 +60,15 @@ The cutaneous input to RG-E is **two parallel pathways** sharing the same
 The original dump queried *all* cut→rge connections and so superimposed a clean
 lognormal (≈ 5000 plastic synapses) on a delta spike at 14 pA (≈ 3500 static
 synapses) → the bimodal histogram. **It was correct data with a conflated label.**
-The dump now splits them (`CUT→RG-E (plastic)` vs `CUT→RG-E (static coact)`); the
-plastic histogram is a clean lognormal and the static pathway is its own delta
-row. So: the plastic weights *are* lognormal, as expected.
+
+**RESOLVED (adopted).** The static co-activation pathway was a numerical bootstrap
+(ensure CUT+BS cross threshold at t=0 before STDP grows the plastic weight) — a
+modeling scaffold, not biology: a real cutaneous→RG input is a single projection.
+It is now **dropped by default** (`--cut-static-w 0`), leaving one plastic
+cutaneous→RG-E projection. Validated to work in both arms (CUT still learns to
+≈ 65 pA; counter-phase preserved/improved) — the paced gait and Ia loop supply
+the early drive the bootstrap used to provide. The plastic CUT histogram is the
+clean lognormal expected. (`--cut-static-w 14` restores the legacy pathway.)
 
 ## Q5 — Discrepancies: diagram vs implemented architecture
 

@@ -3,6 +3,14 @@
 What to upload to MN5, what to submit, and what to bring back for local plotting.
 Plotting is done **locally** (after `scp`-ing results back), not on MN5.
 
+> **NOTE — bio-plausibility defaults changed (post 2026-06-30).** The model now
+> defaults to lognormal static-weight heterogeneity (`--static-weight-cv 0.5`) and
+> a single plastic cutaneous projection (`--cut-static-w 0`, the static co-activation
+> pathway dropped). These improve counter-phase but change the canonical numbers, so
+> **all arms must be re-run** to regenerate a single-version result set. The run
+> scripts need no edits — they pick up the new defaults automatically; the HDF5
+> attrs `static_weight_cv` / `cut_static_w` record the configuration.
+
 ## 1. Files to upload
 
 The model is standalone (no local imports), so MN5 needs only the model + the

@@ -451,15 +451,16 @@ def main():
                          "(preserves counter-phase); higher lets the sensory loop carry more drive.")
     ap.add_argument("--p-ia2rg", type=float, default=P_IA2RG_STDP,
                     help="MOD_IA_RG_STDP: connection probability of the Ia->RG projection.")
-    ap.add_argument("--static-weight-cv", type=float, default=0.0,
-                    help="BIO-PLAUSIBILITY: if >0, give every static-synapse weight per-connection "
+    ap.add_argument("--static-weight-cv", type=float, default=0.5,
+                    help="BIO-PLAUSIBILITY (default 0.5): give every static-synapse weight per-connection "
                          "lognormal heterogeneity with this coefficient of variation (mean and sign "
                          "preserved). 0 = delta weights (legacy). Cortical/spinal weights are lognormal "
                          "(Song 2005; Buzsaki & Mizuseki 2014); CV~0.5-1.0 is typical.")
-    ap.add_argument("--cut-static-w", type=float, default=None,
-                    help="BIO-PLAUSIBILITY: override W_CUT2RGE_STATIC (the fixed cutaneous co-activation "
-                         "pathway parallel to the plastic CUT->RG-E). Set 0 to DROP it entirely, leaving a "
-                         "single plastic cutaneous projection. Default keeps the 14 pA bootstrap pathway.")
+    ap.add_argument("--cut-static-w", type=float, default=0.0,
+                    help="BIO-PLAUSIBILITY (default 0 = dropped): weight of the fixed cutaneous "
+                         "co-activation pathway parallel to the plastic CUT->RG-E. 0 leaves a single "
+                         "plastic cutaneous projection (bio-plausible). Set 14 to restore the legacy "
+                         "co-activation bootstrap pathway.")
     ap.add_argument("--stdp-winit-dist", type=str, default="lognormal",
                     choices=["const", "normal", "lognormal", "lognormal_cv"],
                     help="Initial weight distribution for STDP synapses. const=all weights=W0_IN; normal/lognormal draw per-connection weights.")
@@ -1132,8 +1133,8 @@ def main():
         # MOD_COACT: static CUT → RGE pathway — present from t=0 before STDP bootstraps.
         # CUT 100 Hz × W=14 × ~35 conns alone is subthreshold; combined with BS 60 Hz it
         # crosses threshold (bio-plausible co-activation gate for rat CPG).
-        # --cut-static-w overrides the weight; 0 drops the pathway (single plastic CUT).
-        _cut_static_w = W_CUT2RGE_STATIC if getattr(args, "cut_static_w", None) is None else float(args.cut_static_w)
+        # --cut-static-w sets the weight; default 0 drops the pathway (single plastic CUT).
+        _cut_static_w = float(getattr(args, "cut_static_w", 0.0))
         if _cut_static_w != 0.0:
             nest.Connect(L["cut_in"], L["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": P_CUT2RGE_STATIC},
                          syn_spec={"synapse_model": "static_synapse", "weight": _cut_static_w, "delay": delay["cut_to_rg"]})
@@ -1847,8 +1848,7 @@ def main():
         h5.attrs["wmax_ia"] = float(getattr(args, "wmax_ia", WMAX_IA))
         h5.attrs["p_ia2rg"] = float(getattr(args, "p_ia2rg", P_IA2RG_STDP))
         h5.attrs["static_weight_cv"] = float(getattr(args, "static_weight_cv", 0.0) or 0.0)
-        h5.attrs["cut_static_w"] = (W_CUT2RGE_STATIC if getattr(args, "cut_static_w", None) is None
-                                    else float(args.cut_static_w))
+        h5.attrs["cut_static_w"] = float(getattr(args, "cut_static_w", 0.0))
         h5.attrs["local_threads"] = int(args.threads)
         h5.attrs["mpi_processes"] = int(nproc)
         h5.attrs["save_weights_mode"] = str(args.save_weights)

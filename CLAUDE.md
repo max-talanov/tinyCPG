@@ -156,6 +156,8 @@ Cross-leg: L↔R commissural inhibition on RG-F (strong) and RG-E (weak).
 | `--stdp-ia-rg` | MOD_IA_RG_STDP: add plastic homonymous Ia→RG. Adds `ia->rge`/`ia->rgf` weight keys. Shifts learning from descending (BS) to sensory (Ia) pathway. Pair with `--freeze-bs-rg`. |
 | `--wmax-ia` | Weight cap for Ia→RG STDP (default 10). **Low cap is critical**: homonymous Ia→RG is in-phase positive feedback — light (≤10) reinforces bursts without filling troughs; high (≥60) saturates into tonic co-excitation that destroys counter-phase. |
 | `--p-ia2rg` | Connection probability of the Ia→RG projection (default 0.5). |
+| `--static-weight-cv` | **Bio-plausibility (default 0.5):** per-connection lognormal weight heterogeneity on all static synapses (mean/sign preserved). Biological weights are lognormal (Song 2005; Buzsáki & Mizuseki 2014). `0` = legacy delta weights (used by the frozen-weight control). |
+| `--cut-static-w` | **Bio-plausibility (default 0 = dropped):** weight of the fixed CUT→RG-E co-activation pathway. Default leaves a single plastic cutaneous projection; set `14` to restore the legacy bootstrap. |
 
 ## Bio-plausibility constraints (rat)
 

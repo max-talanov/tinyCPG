@@ -89,14 +89,18 @@ architecture (Fig.~\ref{fig:schematic}): descending/supraspinal drive,
 the sensory afferent$\to$RG projections, the rhythm-generator reciprocal
 core, the Ia proprioceptive interneuron pathway, motor output, and the
 commissural (interlimb) projections. Static projections are
-delta-distributed at their design weights---in particular the
-asymmetric reciprocal inhibition (InF$\to$RG-E $=-48$\,pA,
-InE$\to$RG-F $=-8$\,pA) reproduces the Zhang~6:1 ratio exactly---while
-the plastic projections (CUT$\to$RG-E in both arms, BS$\to$RG in the
-descending arm, Ia$\to$RG in the sensory arm) carry lognormal weight
-distributions: the table reports their \emph{converged} mean$\pm$s.d.\
-(CUT$\to$RG-E and Ia$\to$RG at their learned load set-points, BS$\to$RG
-frozen at weak init in the sensory arm). Conduction delays follow the rat
+heterogeneous: their per-connection weights are drawn from a lognormal
+distribution about the design value (coefficient of variation $0.5$, mean
+and sign preserved), since biological synaptic weights are lognormally
+distributed rather than uniform~\cite{song2005,buzsaki2014}. The mean
+preserves the designed balance---in particular the asymmetric reciprocal
+inhibition (InF$\to$RG-E $=-48$\,pA, InE$\to$RG-F $=-8$\,pA) reproduces the
+Zhang~6:1 ratio exactly. The plastic projections (CUT$\to$RG-E in both
+arms, BS$\to$RG in the descending arm, Ia$\to$RG in the sensory arm) carry
+lognormal weight distributions from STDP: the table reports their
+\emph{converged} mean$\pm$s.d.\ (CUT$\to$RG-E and Ia$\to$RG at their
+learned load set-points, BS$\to$RG frozen at weak init in the sensory
+arm). The cutaneous input to RG-E is a single plastic projection. Conduction delays follow the rat
 \texttt{length\_velocity} preset (brainstem pathways $\approx 3.0$\,ms,
 reciprocal and motor pathways $\approx 1.8$\,ms, commissural
 $\approx 2.2$\,ms) with $0.2$\,ms across-connection jitter. The
@@ -112,13 +116,15 @@ Figure~\ref{fig:connectivity} shows the weight and delay distributions.
   \includegraphics[width=0.95\linewidth]{fig_connectivity.png}
   \caption{Distribution of synaptic weights and conduction delays along
   every projection (sensory-arm configuration: frozen BS$\to$RG, plastic
-  Ia$\to$RG). \textbf{(a)} Weight histograms for the plastic projections
-  at initialisation (lognormal). \textbf{(b)} Mean synaptic weight per
-  projection (green excitatory, red inhibitory); the asymmetric reciprocal
-  inhibition InF$\to$RG-E $=-48$\,pA versus InE$\to$RG-F $=-8$\,pA
-  reproduces the Zhang~6:1 ratio. \textbf{(c)} Conduction~+~synaptic delay
-  per projection (mean $\pm$ across-connection s.d.), following the rat
-  \texttt{length\_velocity} preset with $0.2$\,ms jitter.}
+  Ia$\to$RG). \textbf{(a)} Weight histograms for the plastic / learned
+  projections (STDP + lognormal init). \textbf{(b)} Synaptic weight per
+  projection (mean $\pm$ per-connection s.d.; green excitatory, red
+  inhibitory) --- all projections are heterogeneous (lognormal, CV$\approx
+  0.5$), with the asymmetric reciprocal inhibition InF$\to$RG-E $=-48$\,pA
+  versus InE$\to$RG-F $=-8$\,pA preserving the Zhang~6:1 ratio in the mean.
+  \textbf{(c)} Conduction~+~synaptic delay per projection (mean $\pm$
+  across-connection s.d.), following the rat \texttt{length\_velocity}
+  preset with $0.2$\,ms jitter.}
   \label{fig:connectivity}
 \end{figure}
 
