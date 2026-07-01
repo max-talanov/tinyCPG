@@ -103,12 +103,14 @@ decades below the bio-plausible cortical
 value~\cite{biPoo1998,morrison2007}
 ($\lambda \in \{1{\times}10^{-5},\,1{\times}10^{-4},\,1{\times}10^{-3}\}$).
 The measured cycle period tracks the commanded period within $\le 1$\,ms
-in 7 of 9 cells, and the E$\leftrightarrow$F counter-phase is strong
-throughout ($|\mathrm{corr}| \ge 0.74$). The counter-phase strength,
-however, depends \emph{non-monotonically} on $\lambda$: it is strongest
-at the slowest rate ($\lambda=10^{-5}$, corr down to $-0.99$), dips at
-$\lambda=10^{-4}$, and recovers at the baseline rate
-($\lambda=10^{-3}$)
+in 7 of 9 cells (the two exceptions are both the slowest learning rate,
+$\lambda=10^{-5}$, which has not converged within 120\,s), and the
+E$\leftrightarrow$F counter-phase is strong throughout
+($|\mathrm{corr}| \ge 0.81$). The counter-phase strength depends
+\emph{non-monotonically} on $\lambda$: at slow and medium walk it is
+strongest at the slowest rate ($\lambda=10^{-5}$, corr down to $-0.99$)
+and dips at $\lambda=10^{-4}$, whereas at the fast gait the baseline
+rate ($\lambda=10^{-3}$) is strongest ($-0.95$)
 (Fig.~\ref{fig:speed_stdp}, Table~\ref{tab:speed_stdp_metrics}).
 
 \begin{table}[h]
@@ -123,14 +125,14 @@ $\lambda=10^{-4}$, and recovers at the baseline rate
     Speed & $\lambda$ & Cmd.\ (ms) & Measured (ms) & Peak $F_E$ & corr$(F_E, F_F)$ & Spec.\ conc. \\
     \midrule
     6.0\ cm/s  & $1{\times}10^{-5}$ & 1200 & $1200.0 \pm 0$   & 17.46 & $\mathbf{-0.99}$ & 0.86 \\
-    6.0\ cm/s  & $1{\times}10^{-4}$ & 1200 & $1200.0 \pm 0$   & 17.46 & $-0.85$ & 0.86 \\
-    6.0\ cm/s  & $1{\times}10^{-3}$ & 1200 & $1200.0 \pm 0$   & 17.46 & $-0.90$ & 0.86 \\
-    13.5\ cm/s & $1{\times}10^{-5}$ &  520 & $519.6  \pm 0$   & 16.73 & $\mathbf{-0.99}$ & 0.89 \\
-    13.5\ cm/s & $1{\times}10^{-4}$ &  520 & $519.6  \pm 0$   & 16.76 & $-0.78$ & 0.89 \\
-    13.5\ cm/s & $1{\times}10^{-3}$ &  520 & $519.6  \pm 0$   & 16.73 & $-0.81$ & 0.89 \\
-    21.0\ cm/s & $1{\times}10^{-5}$ &  350 & $350.4 \pm 0$    & 15.54 & $-0.84$ & 0.95 \\
-    21.0\ cm/s & $1{\times}10^{-4}$ &  350 & $350.4 \pm 11.1$ & 15.51 & $-0.74$ & 0.92 \\
-    21.0\ cm/s & $1{\times}10^{-3}$ &  350 & $350.4 \pm 11.1$ & 15.53 & $-0.82$ & 0.93 \\
+    6.0\ cm/s  & $1{\times}10^{-4}$ & 1200 & $1200.0 \pm 0$   & 17.46 & $-0.82$ & 0.86 \\
+    6.0\ cm/s  & $1{\times}10^{-3}$ & 1200 & $1200.0 \pm 0$   & 17.46 & $-0.97$ & 0.87 \\
+    13.5\ cm/s & $1{\times}10^{-5}$ &  520 & $519.6  \pm 45.0$ & 16.62 & $\mathbf{-0.93}$ & 0.87 \\
+    13.5\ cm/s & $1{\times}10^{-4}$ &  520 & $519.6  \pm 0$   & 16.72 & $-0.81$ & 0.89 \\
+    13.5\ cm/s & $1{\times}10^{-3}$ &  520 & $519.6  \pm 0$   & 16.72 & $-0.88$ & 0.89 \\
+    21.0\ cm/s & $1{\times}10^{-5}$ &  350 & $321.2 \pm 69.5$ & 12.69 & $-0.82$ & 0.85 \\
+    21.0\ cm/s & $1{\times}10^{-4}$ &  350 & $350.4 \pm 0$    & 15.46 & $-0.88$ & 0.94 \\
+    21.0\ cm/s & $1{\times}10^{-3}$ &  350 & $350.4 \pm 0$    & 15.49 & $\mathbf{-0.95}$ & 0.94 \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -158,7 +160,7 @@ $\lambda=10^{-4}$, and recovers at the baseline rate
     ($\lambda=10^{-3}$, red) plateaus within $\sim$7\,s, the
     intermediate rate ($10^{-4}$, green) within $\sim$75\,s, and the
     slow rate ($10^{-5}$, blue) climbs steadily \emph{without}
-    plateauing in 120\,s --- it reaches only $\sim$40\% of the
+    plateauing in 120\,s --- it reaches only $\sim$17\% of the
     converged weight. (f) Spectral concentration --- fraction of total
     PSD power within $\pm 10\%$ of the fundamental cycle frequency.}
   \label{fig:speed_stdp}
@@ -180,14 +182,16 @@ shortens from 1200 to 350\,ms --- a $\approx 11\%$ compression.
 \paragraph{Interpretation: a non-monotonic, two-regime dependence on
 $\lambda$.}
 The counter-phase correlation (Fig.~\ref{fig:speed_stdp}, tile c)
-depends non-monotonically on the learning rate: it is strongest at the
-slowest rate ($\lambda=10^{-5}$: $-0.99$ at slow and medium walk),
-weakest at the intermediate rate ($\lambda=10^{-4}$), and recovers at
-the baseline rate ($\lambda=10^{-3}$). The weight trajectories
+depends non-monotonically on the learning rate: at slow and medium walk
+it is strongest at the slowest rate ($\lambda=10^{-5}$: $-0.99$ at slow
+walk, $-0.93$ at medium walk), weakest at the intermediate rate
+($\lambda=10^{-4}$), and recovers at the baseline rate
+($\lambda=10^{-3}$); at the fast gait this inverts and the baseline
+rate is strongest ($-0.95$). The weight trajectories
 (Row 5, panels d/e) explain why. At $\lambda=10^{-5}$ the descending
 CUT$\to$RG-E and BS$\to$RG-E weights are still climbing at the end of
-the run (medium-walk CUT$\to$RG-E reaches only $24$\,pA, versus $63$\,pA
-when fully converged): the plastic descending pathway is \emph{weak},
+the run (medium-walk CUT$\to$RG-E reaches only $\sim 11$\,pA, versus
+$63$\,pA when fully converged): the plastic descending pathway is \emph{weak},
 so the rhythm is dominated by the externally paced drive and the
 reciprocal-inhibition core, which together impose a near-perfect
 anti-phase. As $\lambda$ increases and the descending weights reach
@@ -197,7 +201,7 @@ track the gait less cleanly, producing the counter-phase dip. The
 baseline rate recovers a broader, more heterogeneous weight
 distribution (quantified in Phase~B,
 \autoref{sec:results:ablation}) and with it a clean rhythm. In all
-nine cells the counter-phase remains strong ($|\mathrm{corr}|\ge0.74$),
+nine cells the counter-phase remains strong ($|\mathrm{corr}|\ge0.81$),
 so the gait is robust across the learning-rate range; the
 non-monotonicity concerns the \emph{degree} of counter-phase, not its
 presence.
@@ -218,8 +222,8 @@ flexor counterpart (\autoref{sec:methods:stdp}). At the medium walk the
 converged extensor drive (CUT$+$BS$\to$RG-E $\approx 78$\,pA) dwarfs the
 flexor drive (BS$\to$RG-F $\approx 16$\,pA). Strong learning therefore
 adds a large, extensor-weighted descending current that perturbs the
-balanced paced rhythm, slightly reducing counter-phase from $-0.99$
-(weak drive) to $-0.80$ (full drive). The same asymmetry leaves the
+balanced paced rhythm, slightly reducing counter-phase (medium walk:
+from $-0.93$ at the slowest rate to $-0.88$ at full drive). The same asymmetry leaves the
 flexor half-centre, which is intrinsically generated and never receives
 a comparable learned drive, visibly more variable than the extensor
 across all conditions. We interpret STDP here as self-organising the
@@ -248,7 +252,7 @@ Our three speed conditions cover the canonical rat treadmill locomotor
 range used in the spinal cord injury literature: 6\,cm/s (slow
 exploration; Lavrov 2008~\cite{lavrov2008}), 13.5\,cm/s (medium walk;
 Courtine 2009~\cite{courtine2009}), and 21\,cm/s (fast walk / slow trot
-transition). Counter-phase correlation remains strong ($\le -0.74$)
+transition). Counter-phase correlation remains strong ($\le -0.81$)
 across the full range, indicating that paced sensory drive supports the
 rat locomotor speed range without retuning of the central architecture.
 
@@ -273,15 +277,15 @@ amplitude in both versions.
 
 \paragraph{Anchor result: the paced cutaneous drive preserves stepping.}
 The two versions are indistinguishable at full weight-bearing
-(baseline: corr $-0.81$ in both) but diverge sharply as the limb is
+(baseline: corr $-0.90$ in both) but diverge sharply as the limb is
 unloaded (Fig.~\ref{fig:epidural}, at the baseline learning rate
 $\lambda=10^{-3}$). Under the natural model the counter-phase
-\emph{collapses} --- from $-0.81$ (baseline) through $-0.46$ (toe) to
-$-0.08$ (air stepping) --- with the cycle period becoming highly
-irregular (s.d.\ $168$\,ms at air stepping), the extensor riding
-tonically high and the flexor ceasing to alternate. Under the
+\emph{degrades markedly} --- from $-0.90$ (baseline) through $-0.77$ (toe) to
+$-0.52$ (air stepping) --- with the cycle period becoming highly
+irregular (s.d.\ $130$\,ms at air stepping), the extensor riding
+tonically high and the flexor alternating erratically. Under the
 epidural-stim-assisted model the same unloading leaves the rhythm intact
-(air stepping: corr $-0.92$, period s.d.\ $0$\,ms). The paced cutaneous
+(air stepping: corr $-0.98$, period s.d.\ $0$\,ms). The paced cutaneous
 drive --- the stimulation analogue --- is therefore what preserves
 stepping once limb-contact feedback is lost, directly reproducing the
 central finding of the Courtine/Lavrov SCI-rehabilitation program:
@@ -297,34 +301,36 @@ that cannot otherwise step~\cite{lavrov2008,courtine2009,harkema2011}.
     drive intact, blue) and the natural model (cutaneous drive gated by
     loading, red).
     \textbf{(a)} counter-phase corr$(F_E,F_F)$ versus loading: identical
-    at baseline, the natural model collapses toward zero with unloading
+    at baseline, the natural model degrades sharply with unloading
     while the stim-assisted model stays strong.
     \textbf{(b)} cycle-period s.d.\ versus loading.
     \textbf{(c)} air-stepping force trace, stim-assisted --- clean E/F
-    alternation (corr $-0.92$).
-    \textbf{(d)} air-stepping force trace, natural --- collapsed
-    alternation, tonic extensor (corr $-0.08$).}
+    alternation (corr $-0.98$).
+    \textbf{(d)} air-stepping force trace, natural --- degraded
+    alternation, tonic extensor (corr $-0.52$).}
   \label{fig:epidural}
 \end{figure}
 
-\paragraph{Robustness within the stim-assisted condition.}
-We now characterise the epidural-stim-assisted condition (cutaneous
-drive intact) in detail, crossing the three loading levels with the
-three STDP rates of Phase A
+\paragraph{The natural arm across learning rates.}
+We now characterise the \emph{natural} (unassisted) arm --- in which
+both the cutaneous and the Ia feedback are gated by loading --- across
+the full loading $\times$ learning-rate matrix
 ($\lambda \in \{1{\times}10^{-5},\,1{\times}10^{-4},\,1{\times}10^{-3}\}$),
 at the medium-walk anchor (520\,ms cycle period, 120\,s simulations).
-Two findings emerge (Fig.~\ref{fig:ablgrad},
-Table~\ref{tab:ablgrad_metrics}):
-(i) at the slow learning rate ($\lambda=10^{-5}$) the gait is
-\emph{uniformly clean} across all three loading conditions
-($519.6\pm0$\,ms, corr $-0.93$ to $-0.99$), \emph{including} air
-stepping;
-(ii) the gait degrades only at the intermediate rate
-($\lambda=10^{-4}$), where reduced Ia gain introduces cycle-period
-jitter (air stepping: $480.6 \pm 98.6$\,ms, corr $-0.73$), and then
-partially recovers at the baseline rate ($\lambda=10^{-3}$). The
-counter-phase under air stepping is thus non-monotonic in $\lambda$,
-strong at both the slow and baseline rates and weakest in between.
+One relationship organises the matrix (Fig.~\ref{fig:ablgrad},
+Table~\ref{tab:ablgrad_metrics}): at full weight-bearing the rhythm
+alternates strongly at every learning rate (corr $-0.85$ to $-0.95$),
+but as the limb is unloaded the counter-phase degrades, and it degrades
+\emph{least where the learned descending drive is most developed}. Under
+air stepping the counter-phase strengthens monotonically with $\lambda$
+--- from $-0.29$ at the slow rate (converged CUT$\to$RG-E only $4$\,pA)
+through $-0.22$ at the intermediate rate to $-0.52$ at the baseline rate
+(CUT$\to$RG-E $60$\,pA) --- and the same ordering holds under toe
+stepping ($-0.42 \to -0.65 \to -0.77$). Because in the natural arm the
+cutaneous drive is \emph{itself} gated by loading, even the
+fully-learned baseline rate cannot hold a clean rhythm under air stepping
+($-0.52$); restoring that requires the ungated cutaneous drive of the
+epidural-stim arm (Fig.~\ref{fig:epidural}, $-0.98$).
 
 \begin{table}[h]
   \centering
@@ -338,15 +344,15 @@ strong at both the slow and baseline rates and weakest in between.
     \toprule
     Condition & $\lambda$ & Cycle (ms) & $\pm$ s.d.\ (ms) & Peak $F_E$ & corr$(F_E, F_F)$ \\
     \midrule
-    baseline ($G=1.0$)   & $1{\times}10^{-5}$ & 519.6 &   0.0 & 16.73 & $\mathbf{-0.99}$ \\
-    baseline             & $1{\times}10^{-4}$ & 519.6 &   0.0 & 16.76 & $-0.78$ \\
-    baseline             & $1{\times}10^{-3}$ & 519.6 &   0.0 & 16.73 & $-0.81$ \\
-    toe step ($G=0.5$)   & $1{\times}10^{-5}$ & 519.6 &   0.0 & 16.79 & $\mathbf{-0.98}$ \\
-    toe step             & $1{\times}10^{-4}$ & 505.9 &  61.3 & 17.01 & $-0.72$ \\
-    toe step             & $1{\times}10^{-3}$ & 493.0 &  83.6 & 16.73 & $-0.85$ \\
-    air step ($G=0.1$)   & $1{\times}10^{-5}$ & 519.6 &   0.0 & 16.89 & $\mathbf{-0.93}$ \\
-    air step             & $1{\times}10^{-4}$ & 480.6 &  98.6 & 16.89 & $-0.73$ \\
-    air step             & $1{\times}10^{-3}$ & 519.6 &   0.0 & 16.73 & $-0.92$ \\
+    baseline ($G=1.0$)   & $1{\times}10^{-5}$ & 519.6 &  49.3 & 16.68 & $\mathbf{-0.95}$ \\
+    baseline             & $1{\times}10^{-4}$ & 519.6 &   0.0 & 16.72 & $-0.85$ \\
+    baseline             & $1{\times}10^{-3}$ & 519.6 &   0.0 & 16.72 & $-0.90$ \\
+    toe step ($G=0.5$)   & $1{\times}10^{-5}$ & 493.0 &  90.2 & 13.23 & $-0.42$ \\
+    toe step             & $1{\times}10^{-4}$ & 519.6 &   0.0 & 16.72 & $-0.65$ \\
+    toe step             & $1{\times}10^{-3}$ & 519.6 &   0.0 & 16.73 & $\mathbf{-0.77}$ \\
+    air step ($G=0.1$)   & $1{\times}10^{-5}$ & 230.3 &  97.2 & 10.03 & $-0.29$ \\
+    air step             & $1{\times}10^{-4}$ & 438.9 & 124.4 & 15.60 & $-0.22$ \\
+    air step             & $1{\times}10^{-3}$ & 436.9 & 130.5 & 16.96 & $\mathbf{-0.52}$ \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -362,67 +368,54 @@ strong at both the slow and baseline rates and weakest in between.
     (slow / intermediate / baseline).
     \textbf{Rows 1--3 (panels B1--B9):} Force-E (blue) and Force-F
     (orange) leg L, \emph{first} 20\,s of each 120\,s simulation. The
-    air-stepping row (B7--B9) is cleanest at the slow rate (B7) and
-    the baseline rate (B9), and most irregular at the intermediate
-    rate (B8).
+    air-stepping row (B7--B9) is cleanest at the baseline rate (B9) and
+    degrades toward the slow rate (B7) as the learned descending drive
+    weakens.
     \textbf{Row 4:} Quantitative summary heat-tiles across the
     $3\times 3$ matrix: (a) measured cycle period (ms);
     (b) peak Force-E (a.u.);
     (c) E$\leftrightarrow$F counter-phase Pearson correlation
-    (non-monotonic in $\lambda$).
-    \textbf{Row 5 (the two regimes):} STDP weight trajectories at air
+    --- strengthening with $\lambda$ under unloading.
+    \textbf{Row 5:} STDP weight trajectories at air
     stepping. (d, e) mean CUT$\to$RG-E and BS$\to$RG-E weight vs time,
     three $\lambda$ overlaid --- at the slow rate ($\lambda=10^{-5}$,
-    blue) the weights are only half-developed at $t=120$\,s (CUT$\to$RG-E
-    $\approx 29$\,pA vs $\approx 63$\,pA when converged), whereas the
-    intermediate and baseline rates reach full strength. (f) CUT$\to$RG-E
-    mean $\pm$ across-connection std: the baseline rate ($\lambda=10^{-3}$,
-    red) holds a markedly broader weight distribution than the tight
-    intermediate rate ($\lambda=10^{-4}$, green) --- a candidate
-    distributional correlate of the clean baseline case, shown by the
-    frozen-weight control (Fig.~\ref{fig:frozen}) to be necessary but
-    not sufficient.}
+    blue) the gated cutaneous drive learns to only CUT$\to$RG-E
+    $\approx 4$\,pA at $t=120$\,s (vs $\approx 60$\,pA at the baseline
+    rate), leaving the rhythm without a descending drive to fall back on
+    once the afferents are withdrawn. (f) CUT$\to$RG-E mean $\pm$
+    across-connection std for the three rates.}
   \label{fig:ablgrad}
 \end{figure}
 
-\paragraph{Interpretation: sensory loss is harmful only at the
-intermediate learning rate.}
-Reducing Ia gain degrades the rhythm only at the intermediate learning
-rate ($\lambda=10^{-4}$), where the cycle s.d.\ grows from $0$
-(baseline) to $61.3$\,ms (toe stepping) to $98.6$\,ms (air stepping) and
-the counter-phase correlation weakens to $\approx -0.72$. At the slow
-rate ($\lambda=10^{-5}$) the same Ia attenuation is essentially benign:
-all three loading conditions keep a rock-steady period ($519.6\pm0$\,ms)
-and strong counter-phase ($-0.93$ to $-0.99$). Where degradation does
-occur, peak force is preserved ($\approx 16.7$--$17.0$\,a.u.), so it is
-a \emph{timing} effect, not amplitude. The selective vulnerability at
-intermediate $\lambda$ --- and the robustness flanking it --- is the
-central observation of Phase~B.
+\paragraph{Interpretation: the learned descending drive compensates for
+lost feedback.}
+The matrix tells a single, coherent story that unifies Phase~B with the
+epidural contrast above. As the limb unloads, the two afferent channels
+that would otherwise sustain the rhythm --- cutaneous and Ia --- are both
+attenuated; what remains to hold the gait is the STDP-learned descending
+drive. The more that drive has developed (the higher the learning rate),
+the better the rhythm survives unloading, so under air stepping the
+counter-phase strengthens monotonically with $\lambda$
+(Table~\ref{tab:ablgrad_metrics}). At full weight-bearing the learned
+drive is not needed --- the intact afferents carry the rhythm and all
+three rates alternate strongly --- and under progressive unloading the
+learning rate becomes the decisive variable: the fully-converged baseline
+rate ($\lambda=10^{-3}$, CUT$\to$RG-E $\approx 60$\,pA) is the most
+robust, while the barely-developed slow rate ($\lambda=10^{-5}$,
+$\approx 4$\,pA) is the most fragile --- its peak force collapsing to
+$\approx 10$\,a.u.\ and its period losing lock ($230\pm97$\,ms). Where
+the rhythm does hold, peak force is preserved, so the degradation is
+primarily a \emph{timing} effect. The ceiling on this compensation is
+intrinsic to the natural arm: because its cutaneous drive is gated too,
+learning can only \emph{partially} substitute for lost feedback --- which
+is precisely the gap the exogenous epidural-stim drive fills.
 
-\paragraph{A weight-distribution hypothesis for the two flanking
-regimes.}
-The weight trajectories (Fig.~\ref{fig:ablgrad}, Row 5) suggest two
-candidate explanations for the robustness that flanks the intermediate
-dip. At the slow rate ($\lambda=10^{-5}$) the descending pathway is
-barely developed: by $t=120$\,s the mean CUT$\to$RG-E weight has
-reached only $\approx 29$\,pA and BS$\to$RG-E only $\approx 7.5$\,pA,
-less than half their converged values (panels d, e). With such weak
-plastic drive the rhythm is carried almost entirely by the externally
-paced stimulation and the reciprocal-inhibition core, which together
-impose a near-perfect anti-phase ($-0.93$) --- a \emph{weakness}
-mechanism. At the baseline rate ($\lambda=10^{-3}$) the weights are
-instead fully developed but \emph{broadly distributed} (across-connection
-std of CUT$\to$RG-E $3.7$\,pA, versus only $1.3$\,pA at the intermediate
-rate; panel f), suggesting a second, \emph{heterogeneity} mechanism in
-which a wider spread of descending weights desensitises the rhythm
-generator to the noisy attenuated Ia. The intermediate rate
-($\lambda=10^{-4}$) has weights that are fully developed (mean
-$63.7$\,pA) yet tightly distributed (std $1.3$\,pA), and is the worst
-case ($-0.73$). These observations motivate a direct control: if the
-\emph{marginal} weight distribution (its mean and spread) is what
-carries the counter-phase quality, then imposing that distribution by
-hand and freezing it --- with no learning --- should reproduce the
-effect.
+\paragraph{Does the weight \emph{distribution} suffice?}
+A residual question concerns the clean rhythm at full weight-bearing:
+is it carried merely by the \emph{marginal} statistics of the converged
+weights (their mean and spread), or by finer learning-induced structure?
+The following frozen-weight control isolates that question by imposing a
+prescribed weight distribution with no learning at all.
 
 \paragraph{Frozen-weight control: the marginal distribution is
 insufficient.}
@@ -521,8 +514,8 @@ the cap --- a genuine low-gain equilibrium rather than a clamp.
 \paragraph{At normal loading, relocation is cost-free.}
 Across the full speed range the sensory-learning model matches the
 descending control on counter-phase (last 20\,s, $\lambda=10^{-3}$):
-corr$(F_E,F_F) = -0.99,\,-0.98,\,-0.95$ for the sensory arm at
-$6/13.5/21$\,cm/s versus $-0.95,\,-0.92,\,-0.94$ for the descending arm,
+corr$(F_E,F_F) = -0.99,\,-0.98,\,-0.96$ for the sensory arm at
+$6/13.5/21$\,cm/s versus $-0.97,\,-0.88,\,-0.95$ for the descending arm,
 with identical force amplitudes ($16$--$17$\,a.u., balanced E/F) and the
 same load set-point on the still-plastic CUT$\to$RG-E weight
 ($\approx63$\,pA). The descending arm's brainstem contribution is small
@@ -542,25 +535,28 @@ arm (cutaneous drive intact), the natural arm (cutaneous drive gated by
 loading), and the new sensory-learning arm (Table~\ref{tab:sensory},
 $\lambda=10^{-3}$). At full weight-bearing all three are clean. Under
 \emph{toe} stepping ($G=0.5$) the sensory arm preserves the rhythm
-(corr $-0.99$) where the natural arm has already degraded ($-0.70$): the
+(corr $-0.99$) where the natural arm has already degraded ($-0.77$): the
 plastic Ia$\to$RG loop reinforces the pattern from the proprioception
-that is still present. Under \emph{air} stepping ($G=0.1$) the sensory
-arm degrades to $-0.54$ --- better than the natural arm ($-0.36$) but
-well short of the stim arm ($-0.98$). This is the central limit of
-sensory-sited learning: under total unloading the Ia feedback is the very
-input the pathway learns from, so it cannot bootstrap a pattern from
-proprioception it no longer receives. Epidural-stim drive, being
-exogenous to the sensory loss, is unaffected.
+that is still present. Under \emph{air} stepping ($G=0.1$), however, the
+sensory arm degrades to $-0.51$ --- essentially tied with the natural
+arm ($-0.52$) and well short of the stim arm ($-0.98$). This is the
+central limit of sensory-sited learning: under total unloading the Ia
+feedback is the very input the pathway learns from, so it cannot
+bootstrap a pattern from proprioception it no longer receives, and its
+advantage over the unassisted natural arm vanishes. Epidural-stim drive,
+being exogenous to the sensory loss, is unaffected. The sensory arm's
+gain is therefore specific to \emph{partial} unloading (toe stepping),
+where residual proprioception still carries a learnable pattern.
 
 \paragraph{Mechanism and rehabilitation reading.}
 The three arms separate at the extensor (Fig.~\ref{fig:sensory}c). With
 the stim drive intact the extensor half-centre rate is held or rises with
-unloading (RG-E mean $470\to503\to533$\,Hz); in the natural arm it
-collapses ($470\to286\to132$\,Hz) as the flexor takes over
-($195\to228\to272$\,Hz); the sensory arm tracks between them but keeps
+unloading (RG-E mean $418\to458\to487$\,Hz); in the natural arm it
+collapses ($419\to267\to128$\,Hz) as the flexor takes over
+($197\to222\to257$\,Hz); the sensory arm tracks between them but keeps
 the E/F \emph{force} balanced down to toe stepping, and recovers extensor
 force at air stepping only for fast learning ($\lambda=10^{-3}$: peak
-$F_E=16.8$ vs $\lambda=10^{-5}$: $11.5$\,a.u.). Read against
+$F_E=16.7$ vs $\lambda=10^{-5}$: $8.1$\,a.u.). Read against
 SCI-rehabilitation physiology, the three arms reproduce a graded
 hierarchy: load-independent epidural stimulation restores stepping across
 the full unloading range~\cite{courtine2009,harkema2011}; proprioceptive
@@ -585,9 +581,9 @@ hostage to its own gated input under total unloading.
     \toprule
     Loading & Stim & Sensory & Natural \\
     \midrule
-    baseline ($G=1.0$) & $-0.92$ & $\mathbf{-0.98}$ & $-0.92$ \\
-    toe step ($G=0.5$) & $-0.94$ & $\mathbf{-0.99}$ & $-0.70$ \\
-    air step ($G=0.1$) & $\mathbf{-0.98}$ & $-0.54$ & $-0.36$ \\
+    baseline ($G=1.0$) & $-0.90$ & $\mathbf{-0.98}$ & $-0.90$ \\
+    toe step ($G=0.5$) & $-0.98$ & $\mathbf{-0.99}$ & $-0.77$ \\
+    air step ($G=0.1$) & $\mathbf{-0.98}$ & $-0.51$ & $-0.52$ \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -625,19 +621,23 @@ same attractor across four orders of magnitude of initialisation
 drift in amplitude or period (\autoref{sec:results:stability}).
 (3) The gait tracks the commanded step period across the rat locomotor
 range (6--21\,cm/s) with sub-millisecond error; counter-phase remains
-strong throughout but depends non-monotonically on the STDP rate,
-being cleanest when the descending plastic weights are weak (slow
-$\lambda$) (\autoref{sec:results:speed}).
+strong throughout ($|\mathrm{corr}|\ge0.81$) but depends
+non-monotonically on the STDP rate --- cleanest at the slow rate for
+slow and medium walk, and at the baseline rate for the fast gait
+(\autoref{sec:results:speed}).
 (4) A paired loading experiment dissociates the two afferent channels:
 when the paced cutaneous drive is gated by loading (the natural,
-unassisted case) the rhythm collapses under air stepping
-(corr $-0.08$), whereas holding that drive intact (the epidural-stim
-analogue) preserves it (corr $-0.92$) --- a direct model of the
+unassisted case) the rhythm degrades markedly under air stepping
+(corr $-0.52$), whereas holding that drive intact (the epidural-stim
+analogue) preserves it (corr $-0.98$) --- a direct model of the
 Courtine/Lavrov epidural-stimulation rescue
 (\autoref{sec:results:ablation}, Fig.~\ref{fig:epidural}).
-(5) Within the stim-assisted condition, the rhythm is robust to severe
-Ia attenuation at both slow and baseline learning rates and degrades
-only at an intermediate rate (\autoref{sec:results:ablation}).
+(5) In the natural (unassisted) arm, unloading degrades the rhythm, and
+it does so \emph{least} where the learned descending drive is most
+developed: under air stepping the counter-phase strengthens monotonically
+with the STDP rate ($-0.29$ at the slow rate, CUT$\to$RG-E $\approx4$\,pA,
+to $-0.52$ at the baseline rate, $\approx60$\,pA), so learning partially
+compensates for lost feedback (\autoref{sec:results:ablation}).
 (6) A frozen-weight control shows that imposing the converged
 \emph{marginal} weight distribution by hand reproduces the
 weak-weight regime but \emph{not} the clean baseline-rate rhythm:
@@ -651,9 +651,10 @@ proprioceptive loop --- freezing BS$\to$RG and adding a light
 counter-phase at normal loading across the entire speed range
 (\autoref{sec:results:sensory}, Fig.~\ref{fig:sensory}).
 (8) Under unloading the three learning loci form a hierarchy: the
-sensory-sited model self-rescues toe stepping (corr $-0.99$ vs natural
-$-0.70$) but degrades under air stepping (corr $-0.54$) because its Ia
-learning drive is itself gated away, whereas the load-independent
-epidural-stim drive remains robust ($-0.98$) --- so where the plasticity
-is sited determines which rehabilitation regime it survives
+sensory-sited model self-rescues \emph{toe} stepping (corr $-0.99$ vs
+natural $-0.77$) but under \emph{air} stepping degrades to $-0.51$ ---
+tied with the natural arm ($-0.52$) --- because its Ia learning drive is
+itself gated away, whereas the load-independent epidural-stim drive
+remains robust ($-0.98$) --- so where the plasticity is sited determines
+which rehabilitation regime it survives
 (\autoref{sec:results:sensory}, Table~\ref{tab:sensory}).
