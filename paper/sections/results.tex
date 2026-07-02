@@ -417,60 +417,46 @@ weights (their mean and spread), or by finer learning-induced structure?
 The following frozen-weight control isolates that question by imposing a
 prescribed weight distribution with no learning at all.
 
-\paragraph{Frozen-weight control: the marginal distribution is
-insufficient.}
-We re-simulated air stepping with STDP switched off
+\paragraph{Frozen-weight control: does the imposed distribution suffice?}
+To isolate whether the clean full-loading rhythm is carried by the
+\emph{marginal} weight distribution or by finer learning-induced
+structure, we re-simulated \emph{baseline} loading with STDP switched off
 (\verb|--stdp-lambda 0|) and the CUT$\to$RG-E weights drawn from a
 prescribed lognormal of fixed mean and coefficient of variation (CV),
-with BS$\to$RG-E scaled to the observed $0.25\times$ ratio
-(Fig.~\ref{fig:frozen}). Two controlled sweeps isolated the candidate
-mechanisms. The \emph{weakness} mechanism is confirmed: at fixed tight
-spread (CV$=0.02$), weak imposed weights give a clean, jitter-free
-rhythm (mean $15$\,pA: corr $-0.95$; mean $25$\,pA: $-0.90$; both with
-zero period s.d.), and the rhythm degrades as the imposed mean rises
-into the intermediate range (mean $35$--$55$\,pA: corr $-0.56$ to
-$-0.65$, period s.d.\ $83$--$143$\,ms). The \emph{heterogeneity}
-mechanism, however, is \emph{not} reproduced: at fixed full mean
-($63$\,pA), broadening the imposed CV from $0.02$ to $0.10$ leaves the
-counter-phase essentially flat ($-0.80$ to $-0.89$) and, if anything,
-\emph{adds} period jitter rather than removing it. Decisively, the
-frozen full-and-broad configuration (mean $63$\,pA, CV $0.06$) yields
-corr $-0.80$, well short of the clean plastic baseline-rate result at
-the same marginal statistics ($-0.92$). Imposing the converged marginal
-distribution by hand therefore does not recover the clean rhythm: the
-counter-phase quality at the baseline learning rate depends on
-\emph{learning-induced structure} in the descending weights --- their
-specific assignment across connections, and correlations the STDP
-process builds between weight and target --- that a random draw of
-matched mean and variance does not capture. In short, STDP organises
-weight \emph{structure}, not merely a weight \emph{distribution}; the
-weakness regime is a genuine distributional effect, but the
-baseline-rate robustness is a signature of self-organisation that
-survives only with plasticity engaged.
+BS$\to$RG-E scaled to the observed $0.25\times$ ratio, all other synapses
+at the bio-plausible defaults (Fig.~\ref{fig:frozen}). Two controlled
+sweeps isolate the candidate mechanisms: a \emph{mean} sweep at fixed
+tight spread (the weakness axis --- does a weak imposed drive give a
+clean rhythm and an intermediate one degrade it?) and a \emph{CV} sweep
+at fixed full mean (the heterogeneity axis --- does broadening the
+imposed distribution toward the converged spread, $\mathrm{CV}\approx
+0.05$, recover the clean rhythm?). The plastic reference to reproduce is
+the natural arm at baseline loading, corr $-0.90$ ($\lambda=10^{-3}$)
+with converged CUT$\to$RG-E mean $\approx63$\,pA.
+\todo{Fill the quantitative result from the baseline frozen re-run
+(\texttt{run\_frozen.sh}, $\mathrm{IA\_GAIN}=1.0$, bio-plausible
+defaults) and its interpretation --- whether imposing the converged
+CUT$\to$RG-E marginal by hand reproduces the clean plastic baseline
+rhythm or falls short of it, i.e.\ whether STDP organises weight
+\emph{structure} beyond the marginal \emph{distribution}.}
 
 \begin{figure}[t]
   \centering
   \includegraphics[width=0.95\linewidth]{fig8_frozen_control.png}
-  \caption{\textbf{Frozen-weight control --- the imposed marginal
-    distribution does not reproduce the plastic two-regime result.}
+  \caption{\textbf{Frozen-weight control --- does the imposed marginal
+    distribution reproduce the clean plastic baseline rhythm?}
     STDP is switched off and the CUT$\to$RG-E weights are drawn from a
-    prescribed lognormal (BS$\to$RG-E at $0.25\times$ the mean); air
-    stepping, 520\,ms paced, 30\,s.
+    prescribed lognormal (BS$\to$RG-E at $0.25\times$ the mean); baseline
+    loading, 520\,ms paced, 30\,s, bio-plausible static defaults.
     \textbf{(a)} corr$(F_E,F_F)$ versus imposed mean weight at fixed
-    tight spread (CV$=0.02$): the \emph{weakness} mechanism is
-    confirmed --- weak weights give clean counter-phase, intermediate
-    weights degrade it.
-    \textbf{(b)} corr versus imposed CV at fixed full mean
-    ($63$\,pA): broadening the distribution does \emph{not} clean the
-    rhythm, refuting the heterogeneity mechanism as a marginal-
-    distribution effect.
+    tight spread (CV$=0.02$) --- the \emph{weakness} axis.
+    \textbf{(b)} corr versus imposed CV at fixed full mean ($63$\,pA)
+    --- the \emph{heterogeneity} axis.
     \textbf{(c, d)} corresponding cycle-period jitter.
     \textbf{(e--g)} representative force traces (weak / full+tight /
-    full+broad). Compared with the plastic baseline-rate result
-    ($-0.92$ at the same marginal statistics), the frozen full+broad
-    case reaches only $-0.80$, indicating the clean plastic rhythm
-    relies on learning-induced weight structure absent from a matched
-    random draw.}
+    full+broad).%
+    \todo{Refresh panels and caption conclusion from the baseline frozen
+    re-run.}}
   \label{fig:frozen}
 \end{figure}
 
@@ -640,13 +626,12 @@ developed: under air stepping the counter-phase strengthens monotonically
 with the STDP rate ($-0.29$ at the slow rate, CUT$\to$RG-E $\approx4$\,pA,
 to $-0.52$ at the baseline rate, $\approx60$\,pA), so learning partially
 compensates for lost feedback (\autoref{sec:results:ablation}).
-(6) A frozen-weight control shows that imposing the converged
-\emph{marginal} weight distribution by hand reproduces the
-weak-weight regime but \emph{not} the clean baseline-rate rhythm:
-the latter depends on learning-induced weight structure, indicating
-that STDP organises descending weight \emph{structure} rather than
-merely a distribution (\autoref{sec:results:ablation},
-Fig.~\ref{fig:frozen}).
+(6) A frozen-weight control (STDP off, CUT$\to$RG-E drawn from a
+prescribed lognormal at baseline loading) tests whether the clean
+full-loading rhythm is carried by the converged weights' \emph{marginal}
+distribution or by finer learning-induced structure
+(\autoref{sec:results:ablation}, Fig.~\ref{fig:frozen}).%
+\todo{State the outcome once the baseline frozen re-run is in.}
 (7) The plasticity can be relocated from the descending pathway to the
 proprioceptive loop --- freezing BS$\to$RG and adding a light
 ($\approx4.5$\,pA) plastic Ia$\to$RG projection --- with no loss of

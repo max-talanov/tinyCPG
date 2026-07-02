@@ -5,8 +5,8 @@ Paper Figure — frozen-weight control: does the descending-weight
 distribution (mean + spread), held fixed with plasticity OFF, reproduce
 the two-regime counter-phase result of Phase B?
 
-Reads cpg_frozen_m<MEAN>_cv<CV3>_air_*.h5 files (STDP frozen, air
-stepping, 520 ms paced) and dissects the two hypothesised mechanisms:
+Reads cpg_frozen_m<MEAN>_cv<CV3>_baseline_*.h5 files (STDP frozen, baseline
+loading, 520 ms paced) and dissects the two hypothesised mechanisms:
 
   MEAN sweep (weakness; CV fixed 0.02):  corr & period-jitter vs mean
   CV   sweep (heterogeneity; mean = 63): corr & period-jitter vs CV
@@ -60,7 +60,7 @@ def _safe_corr(a, b):
 
 
 def _load(path: str) -> Dict:
-    m = re.search(r"cpg_frozen_m(\d+)_cv(\d+)_air", os.path.basename(path))
+    m = re.search(r"cpg_frozen_m(\d+)_cv(\d+)_baseline", os.path.basename(path))
     mean = float(m.group(1)) if m else np.nan
     cv = float(m.group(2)) / 1000.0 if m else np.nan
     with h5py.File(path, "r") as h:
@@ -99,7 +99,7 @@ def main():
     os.makedirs(args.outdir, exist_ok=True)
     out_path = args.out or os.path.join(args.outdir, "fig8_frozen_control.png")
 
-    files = sorted(glob.glob(os.path.join(args.indir, "cpg_frozen_m*_cv*_air_*.h5")))
+    files = sorted(glob.glob(os.path.join(args.indir, "cpg_frozen_m*_cv*_baseline_*.h5")))
     if not files:
         raise SystemExit(f"No cpg_frozen_*.h5 files in {args.indir}")
     runs = [_load(f) for f in files]
@@ -179,7 +179,7 @@ def main():
     fig.suptitle(
         "Frozen-weight control — does the imposed CUT→RG-E distribution "
         "reproduce the two-regime counter-phase?\n"
-        "(STDP off, air stepping G$_{Ia}$=0.1, 520 ms paced, 30 s)",
+        "(STDP off, baseline loading G$_{Ia}$=1.0, 520 ms paced, 30 s)",
         fontsize=12, y=0.99)
     fig.savefig(out_path, dpi=180, bbox_inches="tight")
     plt.close(fig)

@@ -32,6 +32,7 @@ rsync -av \
   run_ablation_stim.sh \
   run_ablation_graded.sh \
   run_ablation_sensory.sh \
+  run_frozen.sh \
   <user>@mn5:/path/to/tinyCPG/
 ```
 
@@ -67,6 +68,15 @@ sbatch run_ablation_stim.sh      # -> results/cpg_ablstim_<gain>_<lam>_*.h5
 sbatch run_ablation_graded.sh    # -> results/cpg_ablgrad_<gain>_<lam>_*.h5
 ```
 
+**Frozen-weight control (§3.6) — re-run required at BASELINE loading.**
+`run_frozen.sh` now runs at full weight-bearing (`IA_GAIN=1.0`) and inherits
+the bio-plausible defaults; it tests whether imposing the converged
+CUT$\to$RG-E marginal distribution by hand reproduces the clean baseline
+rhythm (corr $-0.90$). The old air-stepping frozen data is superseded.
+```bash
+sbatch run_frozen.sh             # -> results/cpg_frozen_m<M>_cv<CV3>_baseline_*.h5
+```
+
 Check progress: `squeue -u <user>`. Each array job writes its tasks into
 `results/`. Logs: `Nest_*_<jobid>_<task>.slurmout/.slurmerr`.
 
@@ -90,6 +100,15 @@ scp shows up as a few MB and breaks the plotters).
 Point `--indir` at the dated results folder. Sensory arm uses the new modes:
 ```bash
 INDIR=results/$(date +%F)
+
+# Paper figures with committed generators (all recompute metrics from the HDF5s)
+python3 cpg_anchor_figure.py          --indir $INDIR --out plots/paper/fig2_main.png
+python3 cpg_speed_stdp_figure.py      --indir $INDIR --outdir plots/paper          # fig5 + CSV
+python3 cpg_ablation_graded_figure.py --indir $INDIR --outdir plots/paper          # fig6 + CSV
+python3 cpg_epidural_contrast.py --stim-dir $INDIR --natural-dir $INDIR --lambda-tag lam1em3 \
+        --out plots/paper/fig9_epidural_contrast.png                                # fig9 + CSV
+python3 cpg_descending_vs_sensory.py  --indir $INDIR --out plots/paper/fig_descending_vs_sensory.png
+python3 cpg_frozen_figure.py          --indir $INDIR --outdir plots/paper           # fig8 (needs cpg_frozen_*_baseline_*)
 
 # STDP weight matrices (sensory tracks CUT + Ia->RG; descending tracks CUT + BS->RG)
 python3 cpg_stdp_matrix.py --mode speed    --indir $INDIR --out plots/paper/fig_stdp_descending.png

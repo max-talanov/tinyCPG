@@ -10,16 +10,17 @@
 #SBATCH --partition=acc
 #
 # Frozen-weight control — does the descending-weight DISTRIBUTION (mean +
-# spread), held fixed with plasticity OFF, reproduce the two-regime
-# counter-phase result of Phase B?  All runs at air stepping
-# (Ia gain = 0.1), STDP frozen (--stdp-lambda 0), 30 s, 520 ms paced.
+# spread), held fixed with plasticity OFF, reproduce the clean plastic
+# rhythm at FULL WEIGHT-BEARING?  All runs at baseline loading
+# (Ia gain = 1.0), STDP frozen (--stdp-lambda 0), 30 s, 520 ms paced.
+# Inherits the bio-plausible defaults (static-weight-cv 0.5, cut-static-w 0).
 #
-# The plastic Phase B run showed (air stepping, converged):
-#   λ=1e-5: CUT->RGE mean 29 pA, std 1.6  (weak, half-developed) → corr -0.93
-#   λ=1e-4: CUT->RGE mean 64 pA, std 1.3  (full, tight)          → corr -0.73
-#   λ=1e-3: CUT->RGE mean 63 pA, std 3.7  (full, broad)          → corr -0.92
-# Hypothesis: TWO mechanisms protect the rhythm — low mean (weakness) and
-# high spread (heterogeneity) — and the degraded case is full-mean + tight.
+# Reference: the plastic natural arm at baseline loading (2026-07-01) reaches
+# corr(F_E,F_F) -0.90 (lambda 1e-3) / -0.95 (lambda 1e-5), with the converged
+# CUT->RGE marginal distribution at mean ~63 pA, std ~3 pA (CV ~0.05).
+# Question: does imposing THAT marginal distribution by hand, frozen, recover
+# the clean baseline rhythm, or does the plastic rhythm depend on finer
+# learning-induced weight structure a matched random draw does not capture?
 #
 # We freeze a lognormal CUT->RGE distribution of prescribed (mean, CV) and
 # scale BS->RGE to 0.25× the CUT mean (the observed ratio). Two sweeps:
@@ -34,7 +35,7 @@
 #     (idx 5 above, mean=63 CV=0.02, is the tight anchor for this sweep)
 #     prediction: low CV → degraded, high CV → clean
 #
-# Output: results/cpg_frozen_m<MEAN>_cv<CV3>_air_seed12345.h5
+# Output: results/cpg_frozen_m<MEAN>_cv<CV3>_baseline_seed12345.h5
 
 export LANG=${LANG:-C.UTF-8}
 export LC_ALL=${LC_ALL:-C.UTF-8}
@@ -47,7 +48,7 @@ OUTDIR="results/"
 BASE_SEED=12345
 SIM_MS=30000             # frozen weights — no convergence transient needed
 PERIOD=520               # medium walk anchor (matches Phase B)
-IA_GAIN=0.1              # air stepping (the degraded condition under test)
+IA_GAIN=1.0              # baseline / full weight-bearing (the clean rhythm to reproduce)
 BS_MEAN_MUL=0.25         # BS->RGE mean = 0.25 × CUT->RGE mean (observed ratio)
 
 T=${SLURM_ARRAY_TASK_ID:-0}
@@ -67,7 +68,7 @@ esac
 
 # CV3 = CV × 1000, zero-padded to 3 digits (0.02 → 020) for the filename
 CV3=$(printf "%03d" "$(echo "$CV * 1000 / 1" | bc)")
-TAG="frozen_m${MEAN}_cv${CV3}_air"
+TAG="frozen_m${MEAN}_cv${CV3}_baseline"
 OUT="${OUTDIR}cpg_${TAG}_seed${BASE_SEED}.h5"
 echo "[Frozen] task=$T mean=$MEAN CV=$CV BSmean=$(echo "$MEAN*$BS_MEAN_MUL"|bc) -> $OUT"
 
