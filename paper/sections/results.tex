@@ -37,8 +37,9 @@ on the last 20\,s window:}
   \centering
   \includegraphics[width=0.95\linewidth]{fig2_main.png}
   \caption{\textbf{Self-organisation and long-term stability of paced
-    locomotion} ($\mu{=}3.5$, $\mathrm{CV}{=}0.30$, $T{=}120\,$s,
-    $N{=}6$ sweep points shown).
+    locomotion} (representative production run: descending arm, medium
+    walk, $\mu{=}3.5$, $\mathrm{CV}{=}0.30$, $\lambda{=}10^{-3}$,
+    $T{=}120\,$s).
     \textbf{Top-left:} Force-E (blue) and Force-F (orange) leg L,
     last 5\,s zoom --- clean counter-phase alternation.
     \textbf{Top-right:} Underlying RG-E/F population rates --- same
@@ -48,9 +49,9 @@ on the last 20\,s window:}
     \textbf{Centre-right:} Force leg R full 120\,s ---
     180\,$^{\circ}$ phase offset, no synchrony drift.
     \textbf{Bottom row:} STDP weight trajectories for the three plastic
-    projections (CUT$\to$RG-E, BS$\to$RG-E, BS$\to$RG-F), with the six
-    sweep initialisations all converging to the same plateau by
-    $t \approx 5{-}10\,$s.}
+    projections, converging to plateau by $t \approx 5{-}10\,$s
+    (CUT$\to$RG-E $\to 63$\,pA; BS$\to$RG-E $\to 15$\,pA; BS$\to$RG-F
+    $\to 16$\,pA).}
   \label{fig:main}
 \end{figure}
 
@@ -65,12 +66,11 @@ self-organisation claim of the paper.}
 \subsection{Long-term stability of counter-phase locomotion}\label{sec:results:stability}
 
 \paragraph{Anchor result.}
-Over \SI{120}{\second} (120 gait cycles) at the production
-configuration ($\mu=3.5$, $\mathrm{CV}=0.30$, BS\,$=60\,$Hz, N$=$200 per
-half-centre), Force-E peaks at \SI{17.4}{\au}, Force-F at
-\SI{17.4}{\au}, with a Force-E$\leftrightarrow$Force-F Pearson
-correlation of $-0.91$ on the last 20\,s window. Cycle period jitter
-is $<\SI{1}{\milli\second}$.
+Over \SI{120}{\second} at the production configuration ($\mu=3.5$,
+$\mathrm{CV}=0.30$, BS\,$=60\,$Hz, N$=$200 per half-centre; medium walk,
+520\,ms), Force-E peaks at \SI{16.7}{\au}, Force-F at \SI{16.9}{\au},
+with a Force-E$\leftrightarrow$Force-F Pearson correlation of $-0.88$ on
+the last 20\,s window. Cycle period jitter is $<\SI{1}{\milli\second}$.
 
 \paragraph{Quantitative summary.}
 \todo{Add a one-paragraph narrative around the following:
@@ -553,7 +553,8 @@ The three arms separate at the extensor (Fig.~\ref{fig:sensory}c). With
 the stim drive intact the extensor half-centre rate is held or rises with
 unloading (RG-E mean $418\to458\to487$\,Hz); in the natural arm it
 collapses ($419\to267\to128$\,Hz) as the flexor takes over
-($197\to222\to257$\,Hz); the sensory arm tracks between them but keeps
+($197\to222\to257$\,Hz); the sensory arm's extensor rate falls with the
+natural collapse ($419\to261\to78$\,Hz) yet it keeps
 the E/F \emph{force} balanced down to toe stepping, and recovers extensor
 force at air stepping only for fast learning ($\lambda=10^{-3}$: peak
 $F_E=16.7$ vs $\lambda=10^{-5}$: $8.1$\,a.u.). Read against
@@ -603,7 +604,8 @@ hostage to its own gated input under total unloading.
     partially holds air stepping, but cannot match the load-independent
     stim arm.
     \textbf{(c)} extensor RG-E mean rate versus loading --- the mechanism:
-    stim holds the extensor, natural collapses it, sensory lies between.
+    stim holds the extensor while both the natural and sensory arms let it
+    collapse under unloading.
     \textbf{(d)} force-peak balance versus loading: the sensory arm keeps
     $F_E$ and $F_F$ balanced under unloading, where the natural arm loses
     extensor force.}
