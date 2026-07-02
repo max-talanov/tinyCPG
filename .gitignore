@@ -205,3 +205,8 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# tinyCPG figures — the single tracked/published set lives in paper/figures/.
+# plots/paper/ is scratch output from the figure scripts; do not commit it.
+plots/paper/**/*.png
+plots/paper/**/*.csv
