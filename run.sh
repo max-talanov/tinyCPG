@@ -55,8 +55,9 @@ srun --cpu-bind=cores --distribution=block:block \
     --bs-noise-std-hz 0.25 \
     --enforce-tonic-bs \
     --paced-gait \
-    --step-period-ms 1000 \
+    --step-period-ms 520 \
     --stance-fraction 0.5 \
     --n-ia-groups 3 \
     --ia-ext-hz 60 80 100 \
+    --ia-ext-f-hz 80 \
     --long-run

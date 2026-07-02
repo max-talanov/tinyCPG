@@ -79,6 +79,36 @@ the self-organisation claim of the paper: a spinal locomotor pattern and
 the descending weights that support it emerge from STDP acting on the
 sensory-entrained rhythm, with no hand-tuning of the synaptic strengths.
 
+\paragraph{Force develops as the weights converge.}
+The consequence for motor output is direct
+(Fig.~\ref{fig:force_stages}). Sampling the extensor/flexor force in three
+windows of the run --- early ($t\approx4$--9\,s), mid ($40$--45\,s) and
+late ($115$--120\,s) --- shows the counter-phase waveform sharpen as the
+plastic weight grows: early bursts are ragged with phase slips and
+amplitude jitter (CUT$\to$RG-E $\approx7$\,pA), whereas the late window is
+a clean, regular antiphase (CUT$\to$RG-E $\approx64$\,pA). The same
+progression holds across all five learning modes, including the two in
+which the plasticity is sited in the proprioceptive loop (the Ia$\to$RG
+weight self-stabilises at its low $\approx4$--5\,pA set-point while the
+cutaneous drive develops). For this figure the learning rate is
+$\lambda=10^{-4}$, chosen so that convergence spans the full run and the
+three stages are visibly distinct (at $\lambda=10^{-3}$ convergence is
+complete within $\approx8$\,s).
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.98\linewidth]{fig_force_stages.png}
+  \caption{\textbf{Force profiles at three stages of STDP learning, all
+    five modes.} Rows: descending, sensory, epidural-stim, natural, and
+    sensory-ablation arms; columns: beginning / middle / end of the
+    120\,s run (leg L, $\lambda=10^{-4}$, $\mu=3.5$, CV$=0.30$). Solid =
+    Force-E, dashed = Force-F. Each panel is annotated with the driving
+    plastic weight (CUT$\to$RG-E, or Ia$+$CUT for the sensory arms) and
+    the in-window corr$(F_E,F_F)$. The waveform sharpens from ragged early
+    bursts to clean counter-phase as the weight converges.}
+  \label{fig:force_stages}
+\end{figure}
+
 % =============================================================
 \subsection{Long-term stability of counter-phase locomotion}\label{sec:results:stability}
 
@@ -135,8 +165,8 @@ rate ($\lambda=10^{-3}$) is strongest ($-0.95$)
 \begin{table}[h]
   \centering
   \caption{Phase A --- speed $\times$ STDP metrics (last 20\,s of each
-    120\,s run, leg L). \emph{Auto-generated from}
-    \texttt{plots/paper/fig5\_speed\_stdp\_metrics.csv}.}
+    120\,s run, leg L). \emph{Computed from the canonical 2026-07-01
+    bio-plausible set} (\texttt{cpg\_speed\_stdp\_*}).}
   \label{tab:speed_stdp_metrics}
   \small
   \begin{tabular}{lrrrrrr}
@@ -276,6 +306,80 @@ across the full range, indicating that paced sensory drive supports the
 rat locomotor speed range without retuning of the central architecture.
 
 % =============================================================
+\subsection{Network-level activity: every population alternates in counter-phase across all modes}\label{sec:results:network}
+
+\paragraph{Full-circuit population rates.}
+Behind the muscle-force output, the counter-phase organisation is
+expressed at every level of the circuit. Figs.~\ref{fig:net_speed}--%
+\ref{fig:net_ablsens} show the population firing rates of all sixteen
+recorded groups --- both legs' RG-F/RG-E rhythm generators, InF/InE
+reciprocal-inhibition interneurons, IaInt-F/IaInt-E proprioceptive
+interneurons, and M-F/M-E motor pools --- over the last few cycles of
+each 120\,s run. Three features are consistent across all five learning
+modes and all conditions: (i) within each leg, every flexor-side
+population fires in strict antiphase to its extensor-side counterpart;
+(ii) the two legs hold a $180^{\circ}$ offset (right-leg panels, tinted,
+are half a cycle out of phase with the left); and (iii) the reciprocal
+InF/InE and IaInt interneurons carry the same clean alternation as the
+rhythm generators, confirming that the inhibitory core --- not just the
+motor read-out --- is phase-locked. The descending (Fig.~\ref{fig:net_speed})
+and sensory-sited (Fig.~\ref{fig:net_sensory}) arms are essentially
+indistinguishable at the population level across the speed range, and the
+loading arms (Figs.~\ref{fig:net_ablstim}--\ref{fig:net_ablsens}) show the
+same organisation at baseline loading; where it degrades under unloading
+is quantified in \autoref{sec:results:ablation} and
+\autoref{sec:results:sensory}.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.98\linewidth]{fig_network_speed.png}
+  \caption{\textbf{Descending arm --- full-circuit population activity
+    across walking speed.} Rows: both legs' RG-F/RG-E, InF/InE,
+    IaInt-F/IaInt-E, M-F/M-E (spikes$\cdot$neuron$^{-1}\cdot$s$^{-1}$).
+    Columns: slow / medium / fast walk. Last 5 cycles;
+    $\lambda=10^{-3}$, $\mu=3.5$, CV$=0.30$. Right-leg panels tinted.}
+  \label{fig:net_speed}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.98\linewidth]{fig_network_sensory.png}
+  \caption{\textbf{Sensory arm (plastic Ia$\to$RG, frozen BS) ---
+    full-circuit population activity across walking speed.} Same layout as
+    Fig.~\ref{fig:net_speed}; indistinguishable from the descending arm at
+    the population level.}
+  \label{fig:net_sensory}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.98\linewidth]{fig_network_ablstim.png}
+  \caption{\textbf{Epidural-stim arm --- population activity across
+    loading} (baseline / toe / air stepping). Cutaneous drive held intact;
+    the counter-phase organisation is preserved as loading is removed.}
+  \label{fig:net_ablstim}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.98\linewidth]{fig_network_natural.png}
+  \caption{\textbf{Natural (unassisted) arm --- population activity across
+    loading.} Cutaneous and Ia drive gated together by loading; the rhythm
+    degrades as the limb is unloaded (air column).}
+  \label{fig:net_natural}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.98\linewidth]{fig_network_ablsens.png}
+  \caption{\textbf{Sensory-ablation arm --- population activity across
+    loading.} Plastic Ia$\to$RG with loading-gated Ia; self-rescues toe
+    stepping but degrades under air stepping as the Ia learning drive is
+    gated away.}
+  \label{fig:net_ablsens}
+\end{figure}
+
+% =============================================================
 \subsection{Graded sensory ablation: epidural stimulation rescues stepping under unloading}\label{sec:results:ablation}
 
 \paragraph{Two loading models.}
@@ -355,8 +459,8 @@ epidural-stim arm (Fig.~\ref{fig:epidural}, $-0.98$).
   \centering
   \caption{Phase B --- graded Ia ablation $\times$ STDP metrics
     (last 20\,s of each 120\,s run, leg L, 520\,ms commanded period).
-    \emph{Auto-generated from}
-    \texttt{plots/paper/fig6\_ablation\_graded\_metrics.csv}.}
+    \emph{Computed from the canonical 2026-07-01 bio-plausible set}
+    (\texttt{cpg\_ablgrad\_*}).}
   \label{tab:ablgrad_metrics}
   \small
   \begin{tabular}{lrrrrr}

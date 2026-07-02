@@ -22,7 +22,7 @@ available at \href{https://github.com/max-talanov/tinyCPG}{github.com/max-talano
   \centering
   \includegraphics[width=0.95\linewidth]{fig1_schematic.png}
   \caption{\textbf{Architecture of the two-leg spinal CPG.}
-    \todo{Insert the existing schematic.} Each leg contains a flexor (F)
+    Each leg contains a flexor (F)
     and extensor (E) rhythm-generator half-centre coupled by asymmetric
     reciprocal inhibition via InE and InF interneurons (Zhang 2022 6:1
     ratio). Sensory afferents (Ia, cutaneous) feed into the
@@ -31,6 +31,24 @@ available at \href{https://github.com/max-talanov/tinyCPG}{github.com/max-talano
     L\,$\leftrightarrow$\,R commissural inhibition (V0-like) is mediated by
     flexor- and extensor-targeted projections.}
   \label{fig:schematic}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.95\linewidth]{fig_architecture_implemented.png}
+  \caption{\textbf{As-implemented architecture (one leg; contralateral is
+    the mirror image).} Drawn directly from the verified projection list
+    (\autoref{tab:delays}), colour-coded by function: orange = excitatory
+    neurons, light/dark orange = static/plastic excitatory projections,
+    light blue = inhibitory neurons and projections, red = muscle,
+    grey = inputs/afferents (rate-coded muscle$\to$Ia transduction dashed).
+    This is the functional instantiation of the schematic in
+    Fig.~\ref{fig:schematic}: the descending drive (BS, CUT), the
+    reciprocal-inhibition core with the 6:1 InF$\to$RG-E / InE$\to$RG-F
+    asymmetry, the Ia proprioceptive interneuron pathway and closed loop,
+    the plastic Ia$\to$RG projection (sensory arm), and the motor output
+    to the muscle proxies.}
+  \label{fig:architecture}
 \end{figure}
 
 \subsection{Single-neuron model}\label{sec:methods:neuron}
