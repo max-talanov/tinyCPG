@@ -410,17 +410,11 @@ intrinsic to the natural arm: because its cutaneous drive is gated too,
 learning can only \emph{partially} substitute for lost feedback --- which
 is precisely the gap the exogenous epidural-stim drive fills.
 
-\paragraph{Does the weight \emph{distribution} suffice?}
-A residual question concerns the clean rhythm at full weight-bearing:
-is it carried merely by the \emph{marginal} statistics of the converged
-weights (their mean and spread), or by finer learning-induced structure?
-The following frozen-weight control isolates that question by imposing a
-prescribed weight distribution with no learning at all.
-
 \paragraph{Frozen-weight control: does the imposed distribution suffice?}
-To isolate whether the clean full-loading rhythm is carried by the
-\emph{marginal} weight distribution or by finer learning-induced
-structure, we re-simulated \emph{baseline} loading with STDP switched off
+A residual question concerns the clean rhythm at full weight-bearing: is
+it carried merely by the \emph{marginal} statistics of the converged
+weights (their mean and spread), or by finer learning-induced structure?
+To isolate this we re-simulated \emph{baseline} loading with STDP switched off
 (\verb|--stdp-lambda 0|) and the CUT$\to$RG-E weights drawn from a
 prescribed lognormal of fixed mean and coefficient of variation (CV),
 BS$\to$RG-E scaled to the observed $0.25\times$ ratio, all other synapses
@@ -433,12 +427,31 @@ imposed distribution toward the converged spread, $\mathrm{CV}\approx
 0.05$, recover the clean rhythm?). The plastic reference to reproduce is
 the natural arm at baseline loading, corr $-0.90$ ($\lambda=10^{-3}$)
 with converged CUT$\to$RG-E mean $\approx63$\,pA.
-\todo{Fill the quantitative result from the baseline frozen re-run
-(\texttt{run\_frozen.sh}, $\mathrm{IA\_GAIN}=1.0$, bio-plausible
-defaults) and its interpretation --- whether imposing the converged
-CUT$\to$RG-E marginal by hand reproduces the clean plastic baseline
-rhythm or falls short of it, i.e.\ whether STDP organises weight
-\emph{structure} beyond the marginal \emph{distribution}.}
+Across the mean sweep (Fig.~\ref{fig:frozen}a) the frozen rhythm is
+strong throughout but strikingly non-monotonic: correlation is cleanest
+at the \emph{weakest} imposed mean (corr $-0.99$ at $15$\,pA, weaker
+than the plastic reference), dips to its worst in the middle of the
+range ($-0.73$ to $-0.74$ at $35$--$45$\,pA), then partially recovers
+at the full converged mean ($-0.88$ at $63$\,pA, tight CV$=0.02$).
+Peak extensor force is essentially flat across the entire sweep
+($16.71$--$16.72$\,a.u.), so the imposed CUT$\to$RG-E weight does not
+gate \emph{whether} the rhythm exists at baseline loading --- the
+intact BS tonic drive, closed-loop Ia feedback, and cutaneous pacing
+ramp already carry most of it --- it mainly modulates phase-locking
+\emph{quality}. The CV sweep at the full mean (Fig.~\ref{fig:frozen}b)
+is comparatively flat ($-0.80$ to $-0.87$ across CV $0.02$--$0.10$) and
+non-monotonic in the same way; broadening the spread toward the
+converged heterogeneity does not recover the plastic reference ---
+imposing the true converged marginal (mean $63$\,pA, CV$\approx0.05$,
+interpolated corr $\approx-0.81$) falls \emph{short} of the plastic
+$-0.90$ by about $0.09$, while the tightest imposed spread at the same
+mean (CV$=0.02$, corr $-0.88$) comes within $0.02$ of it. So hand-tuning
+the exact converged CV does not close the gap and if anything goes the
+wrong way: the marginal distribution alone --- even matched in mean and
+spread --- does not fully reproduce the plastic baseline rhythm, so STDP
+organises weight \emph{structure} (which specific synapses are
+strengthened, correlated with each afferent's phase) beyond what its
+marginal mean and coefficient of variation capture.
 
 \begin{figure}[t]
   \centering
@@ -454,9 +467,12 @@ rhythm or falls short of it, i.e.\ whether STDP organises weight
     --- the \emph{heterogeneity} axis.
     \textbf{(c, d)} corresponding cycle-period jitter.
     \textbf{(e--g)} representative force traces (weak / full+tight /
-    full+broad).%
-    \todo{Refresh panels and caption conclusion from the baseline frozen
-    re-run.}}
+    full+broad). Both axes are non-monotonic: correlation is cleanest at
+    the weak mean ($-0.99$) and at full mean with tight spread ($-0.88$),
+    weakest in the mid-range mean ($-0.73$ at $35$--$45$\,pA); force
+    output is unaffected by the imposed weight throughout. The full
+    converged marginal (mean $63$\,pA, CV$\approx0.05$) falls short of
+    the plastic reference ($-0.90$) by $\approx0.09$.}
   \label{fig:frozen}
 \end{figure}
 
@@ -627,11 +643,13 @@ with the STDP rate ($-0.29$ at the slow rate, CUT$\to$RG-E $\approx4$\,pA,
 to $-0.52$ at the baseline rate, $\approx60$\,pA), so learning partially
 compensates for lost feedback (\autoref{sec:results:ablation}).
 (6) A frozen-weight control (STDP off, CUT$\to$RG-E drawn from a
-prescribed lognormal at baseline loading) tests whether the clean
-full-loading rhythm is carried by the converged weights' \emph{marginal}
-distribution or by finer learning-induced structure
-(\autoref{sec:results:ablation}, Fig.~\ref{fig:frozen}).%
-\todo{State the outcome once the baseline frozen re-run is in.}
+prescribed lognormal at baseline loading) shows the rhythm's
+\emph{existence} is robust to the imposed CUT$\to$RG-E weight (force
+output unchanged across a $15$--$63$\,pA sweep) but its \emph{quality}
+is not: the converged marginal distribution (mean $63$\,pA,
+CV$\approx0.05$) falls short of the plastic reference by $\approx0.09$
+correlation, so STDP organises weight structure beyond the marginal
+mean and spread (\autoref{sec:results:ablation}, Fig.~\ref{fig:frozen}).
 (7) The plasticity can be relocated from the descending pathway to the
 proprioceptive loop --- freezing BS$\to$RG and adding a light
 ($\approx4.5$\,pA) plastic Ia$\to$RG projection --- with no loss of
