@@ -23,7 +23,7 @@ EXC_S="#F2B66D"   # static excitatory projection (light orange)
 INH="#4FA8D8"     # inhibitory neuron + projection (light blue)
 RATE="#9e9e9e"    # rate-coded transduction / input grey
 
-def node(ax, xy, label, kind="rg", r=0.42):
+def node(ax, xy, label, kind="rg", r=0.48):
     x,y=xy
     fc={"rg":"#F59331",     # excitatory neuron (orange)
         "m":"#F59331",      # excitatory motoneuron (orange)
@@ -38,7 +38,7 @@ def node(ax, xy, label, kind="rg", r=0.42):
         ax.add_patch(b)
     else:
         ax.add_patch(Circle((x,y),r,fc=fc,ec="#333",lw=1.2,zorder=3))
-    ax.text(x,y,label,ha="center",va="center",fontsize=8.5,fontweight="bold",zorder=4)
+    ax.text(x,y,label,ha="center",va="center",fontsize=10.5,fontweight="bold",zorder=4)
 
 def edge(ax, a, b, color, style="-", rad=0.0, lw=1.6, label=None, lx=0.5):
     ar=FancyArrowPatch(a,b,connectionstyle=f"arc3,rad={rad}",arrowstyle="-|>",
@@ -47,7 +47,7 @@ def edge(ax, a, b, color, style="-", rad=0.0, lw=1.6, label=None, lx=0.5):
     ax.add_patch(ar)
     if label:
         mx=a[0]+(b[0]-a[0])*lx+rad*1.2; my=a[1]+(b[1]-a[1])*lx+0.18
-        ax.text(mx,my,label,fontsize=6.6,color=color,ha="center",style="italic",zorder=5)
+        ax.text(mx,my,label,fontsize=8.4,color=color,ha="center",style="italic",zorder=5)
 
 fig,ax=plt.subplots(figsize=(15,8.6))
 ax.set_xlim(0,15.5); ax.set_ylim(0,10); ax.axis("off")
@@ -108,7 +108,7 @@ edge(ax,P["IaE"],P["RGE"],EXC_P,rad=0.45,lw=2.0,label="plastic Ia→RG (sensory)
 edge(ax,P["IaF"],P["RGF"],EXC_P,rad=-0.45,lw=2.0)
 # commissural stub
 ax.annotate("commissural\nRG-E↔RG-E (−8)\nRG-F↔RG-F (−20)\n→ contralateral leg",
-            (4.3,0.5),fontsize=7.5,color=INH,ha="center",
+            (4.3,0.5),fontsize=9,color=INH,ha="center",
             bbox=dict(boxstyle="round",fc="#fff3f3",ec=INH,lw=1))
 edge(ax,P["RGF"],(4.3,1.05),INH,rad=0.0,lw=1.2)
 
@@ -124,8 +124,6 @@ leg=[Patch(fc="#F59331",ec="#333",label="excitatory neuron"),
      Line2D([0],[0],color=INH,lw=2.5,label="inhibitory projection"),
      Line2D([0],[0],color=RATE,lw=2.5,ls="--",label="rate-coded transduction"),
      Line2D([0],[0],color=EXC_S,lw=2.5,ls=":",label="external pacing afferent")]
-ax.legend(handles=leg,loc="upper center",ncol=5,fontsize=8.2,frameon=True,bbox_to_anchor=(0.5,1.05))
-ax.set_title("tinyCPG — as-implemented architecture (one leg; contralateral is mirror)",
-             fontsize=13,fontweight="bold",y=1.06)
+ax.legend(handles=leg,loc="upper center",ncol=5,fontsize=10,frameon=True,bbox_to_anchor=(0.5,1.05))
 fig.savefig("plots/paper/fig_architecture_implemented.png",dpi=160,bbox_inches="tight")
 print("saved plots/paper/fig_architecture_implemented.png")
