@@ -26,7 +26,7 @@ the identical attractor.
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=0.95\linewidth]{fig_init_convergence.png}
+  \includegraphics[width=0.8\textwidth]{fig_init_convergence.png}
   \caption{\textbf{Initialisation-robustness of STDP self-organisation}
     (descending arm, medium walk, $\lambda=10^{-3}$, bio-plausible
     defaults). \textbf{(a)} Mean CUT$\to$RG-E weight trajectory for each
@@ -62,7 +62,7 @@ weights also yield an identical motor output.
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=0.95\linewidth]{fig2_main.png}
+  \includegraphics[width=0.8\textwidth]{fig2_main.png}
   \caption{\textbf{Self-organisation and long-term stability of paced
     locomotion} (representative production run: descending arm, medium
     walk, $\mu{=}3.5$, $\mathrm{CV}{=}0.30$, $\lambda{=}10^{-3}$,
@@ -95,6 +95,33 @@ the self-organisation claim of the paper: a spinal locomotor pattern and
 the descending weights that support it emerge from STDP acting on the
 sensory-entrained rhythm, with no hand-tuning of the synaptic strengths.
 
+\paragraph{The same self-organisation occurs in every mode.}
+The convergence is not specific to the descending arm. Across all five
+learning modes the plastic CUT$\to$RG-E projection follows the same
+learning profile and reaches the same $\approx63\,$pA plateau
+(Fig.~\ref{fig:weight_profiles}); the learning rate sets only the
+time-to-plateau ($\approx7\,$s / $\approx75\,$s / not-within-120\,s at
+$\lambda=10^{-3}$/$10^{-4}$/$10^{-5}$). In the two sensory-sited modes the
+additional plastic Ia$\to$RG-E projection does \emph{not} run away: it
+self-stabilises at a low $\approx4$--$5\,$pA set-point across all learning
+rates (dashed, Fig.~\ref{fig:weight_profiles}), which is exactly the
+regime that reinforces each burst without filling the inter-burst trough
+(\autoref{sec:results:sensory}).
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.8\textwidth]{fig_weight_profiles.png}
+  \caption{\textbf{STDP weight profiles across all five learning modes.}
+    One panel per mode; solid = plastic CUT$\to$RG-E weight (left axis,
+    present in every mode), dashed = plastic Ia$\to$RG-E (right axis,
+    sensory arms only). Colour = STDP learning rate $\lambda$. Medium walk
+    (520\,ms), baseline loading, $\mu=3.5$, CV$=0.30$, bio-plausible
+    defaults. CUT$\to$RG-E converges to $\approx63\,$pA in every mode
+    (rate sets only the time-to-plateau); the sensory-arm Ia$\to$RG-E
+    self-stabilises at a low $\approx4$--$5\,$pA set-point.}
+  \label{fig:weight_profiles}
+\end{figure}
+
 \paragraph{Force develops as the weights converge.}
 The consequence for motor output is direct
 (Fig.~\ref{fig:force_stages}). Sampling the extensor/flexor force in three
@@ -113,7 +140,7 @@ complete within $\approx8$\,s).
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=0.98\linewidth]{fig_force_stages.png}
+  \includegraphics[width=0.8\textwidth]{fig_force_stages.png}
   \caption{\textbf{Force profiles at three stages of STDP learning, all
     five modes.} Rows: descending, sensory, epidural-stim, natural, and
     sensory-ablation arms; columns: beginning / middle / end of the
@@ -131,17 +158,17 @@ complete within $\approx8$\,s).
 \paragraph{Anchor result.}
 Over \SI{120}{\second} at the production configuration ($\mu=3.5$,
 $\mathrm{CV}=0.30$, BS\,$=60\,$Hz, N$=$200 per half-centre; medium walk,
-520\,ms), Force-E peaks at \SI{16.7}{\au}, Force-F at \SI{16.9}{\au},
+520\,ms), Force-E peaks at 16.7\,a.u., Force-F at 16.9\,a.u.,
 with a Force-E$\leftrightarrow$Force-F Pearson correlation of $-0.88$ on
 the last 20\,s window. Cycle period jitter is $<\SI{1}{\milli\second}$.
 
 \paragraph{Quantitative summary.}
 Over the last 20\,s (38 cycles at the 520\,ms medium walk, leg L):
-Force-E peaks at \SI{16.72}{\au} and Force-F at \SI{16.94}{\au} --- a
+Force-E peaks at 16.72\,a.u. and Force-F at 16.94\,a.u. --- a
 balanced half-centre output --- with an E$\leftrightarrow$F Pearson
 correlation of $-0.88$ (RG-E$\leftrightarrow$RG-F rate correlation
 $-0.96$). The rhythm shows \emph{no drift}: the 95th-percentile Force-E
-peak is identical at 20--40\,s and 100--120\,s (\SI{16.72}{\au} in both
+peak is identical at 20--40\,s and 100--120\,s (16.72\,a.u. in both
 windows), and the left and right legs hold a $180^{\circ}$ antiphase
 throughout (measured L$\to$R lag $260\,\mathrm{ms}=180^{\circ}$ of the
 520\,ms cycle). Cycle-period jitter is below the sampling resolution.
@@ -204,7 +231,7 @@ rate ($\lambda=10^{-3}$) is strongest ($-0.95$)
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=0.95\linewidth]{fig5_speed_stdp.png}
+  \includegraphics[width=0.8\textwidth]{fig5_speed_stdp.png}
   \caption{\textbf{Phase A --- speed $\times$ STDP learning-rate matrix.}
     Rows = walking speed (slow / medium / fast walk;
     Courtine/Lavrov rat treadmill range~\cite{lavrov2008,courtine2009}).
@@ -348,7 +375,7 @@ is quantified in \autoref{sec:results:ablation} and
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=0.98\linewidth]{fig_network_speed.png}
+  \includegraphics[width=0.8\textwidth]{fig_network_speed.png}
   \caption{\textbf{Descending arm --- full-circuit population activity
     across walking speed.} Rows: both legs' RG-F/RG-E, InF/InE,
     IaInt-F/IaInt-E, M-F/M-E (spikes$\cdot$neuron$^{-1}\cdot$s$^{-1}$).
@@ -359,7 +386,7 @@ is quantified in \autoref{sec:results:ablation} and
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=0.98\linewidth]{fig_network_sensory.png}
+  \includegraphics[width=0.8\textwidth]{fig_network_sensory.png}
   \caption{\textbf{Sensory arm (plastic Ia$\to$RG, frozen BS) ---
     full-circuit population activity across walking speed.} Same layout as
     Fig.~\ref{fig:net_speed}; indistinguishable from the descending arm at
@@ -369,7 +396,7 @@ is quantified in \autoref{sec:results:ablation} and
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=0.98\linewidth]{fig_network_ablstim.png}
+  \includegraphics[width=0.8\textwidth]{fig_network_ablstim.png}
   \caption{\textbf{Epidural-stim arm --- population activity across
     loading} (baseline / toe / air stepping). Cutaneous drive held intact;
     the counter-phase organisation is preserved as loading is removed.}
@@ -378,7 +405,7 @@ is quantified in \autoref{sec:results:ablation} and
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=0.98\linewidth]{fig_network_natural.png}
+  \includegraphics[width=0.8\textwidth]{fig_network_natural.png}
   \caption{\textbf{Natural (unassisted) arm --- population activity across
     loading.} Cutaneous and Ia drive gated together by loading; the rhythm
     degrades as the limb is unloaded (air column).}
@@ -387,7 +414,7 @@ is quantified in \autoref{sec:results:ablation} and
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=0.98\linewidth]{fig_network_ablsens.png}
+  \includegraphics[width=0.8\textwidth]{fig_network_ablsens.png}
   \caption{\textbf{Sensory-ablation arm --- population activity across
     loading.} Plastic Ia$\to$RG with loading-gated Ia; self-rescues toe
     stepping but degrades under air stepping as the Ia learning drive is
@@ -433,7 +460,7 @@ that cannot otherwise step~\cite{lavrov2008,courtine2009,harkema2011}.
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=0.92\linewidth]{fig9_epidural_contrast.png}
+  \includegraphics[width=0.8\textwidth]{fig9_epidural_contrast.png}
   \caption{\textbf{Epidural-stimulation rescue --- the paced cutaneous
     drive preserves stepping under unloading.} Air-stepping contrast at
     $\lambda=10^{-3}$ between the epidural-stim-assisted model (cutaneous
@@ -498,7 +525,7 @@ epidural-stim arm (Fig.~\ref{fig:epidural}, $-0.98$).
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=0.97\linewidth]{fig6_ablation_graded.png}
+  \includegraphics[width=0.8\textwidth]{fig6_ablation_graded.png}
   \caption{\textbf{Phase B --- graded sensory ablation $\times$ STDP
     learning-rate matrix (Courtine/Lavrov SCI rehab paradigm).}
     Rows = Ia feedback gain (baseline / toe stepping / air stepping).
@@ -594,7 +621,7 @@ marginal mean and coefficient of variation capture.
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=0.95\linewidth]{fig8_frozen_control.png}
+  \includegraphics[width=0.8\textwidth]{fig8_frozen_control.png}
   \caption{\textbf{Frozen-weight control --- does the imposed marginal
     distribution reproduce the clean plastic baseline rhythm?}
     STDP is switched off and the CUT$\to$RG-E weights are drawn from a
@@ -732,7 +759,7 @@ hostage to its own gated input under total unloading.
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=0.95\linewidth]{fig_descending_vs_sensory.png}
+  \includegraphics[width=0.8\textwidth]{fig_descending_vs_sensory.png}
   \caption{\textbf{Sensory-sited plasticity --- relocating the learning
     from the descending to the proprioceptive loop.} Frozen BS$\to$RG +
     plastic homonymous Ia$\to$RG ($w_{\max}=10$\,pA); production $N$,
