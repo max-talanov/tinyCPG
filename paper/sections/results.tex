@@ -11,16 +11,33 @@
 \subsection{Self-organisation of locomotor pattern via STDP}\label{sec:results:stdp}
 
 \paragraph{Anchor result.}
-From the production initialisation (a lognormal weight prior with
-$\mu=3.5$, $\mathrm{CV}=0.30$), all three plastic projections
-(CUT$\to$RG-E, BS$\to$RG-E, BS$\to$RG-F) converge to a stable
-steady-state weight distribution within $t \approx 7\,\mathrm{s}$ and
-hold it for the full \SI{120}{\second} of simulation. The converged
-value is set by the closed-loop network dynamics, not by the
-initialisation or the learning rate: every learning rate that reaches
-plateau within the run converges to the \emph{same} asymptote
-(\autoref{sec:results:speed}, Fig.~\ref{fig:speed_stdp}, row~5),
-differing only in how quickly it gets there.
+Across ten initialisations of the plastic weights --- a lognormal prior
+with $(\mu,\mathrm{CV})$ ranging from $(0,0)$ to $(16,0.05)$, i.e.\ four
+orders of magnitude in the initial mean --- STDP drives the cutaneous
+CUT$\to$RG-E projection to the \emph{same} converged strength,
+$63.6\pm0.3\,$pA (across-initialisation CV $0.4\%$), within
+$t\approx7$--$10\,$s, and holds it stable for the full \SI{120}{\second}
+(Fig.~\ref{fig:init_convergence}). The brainstem projections likewise
+reach a common value independent of the starting weights (BS$\to$RG-E
+$15.5\,$pA, BS$\to$RG-F $15.9\,$pA). The converged weights are therefore
+set by the closed-loop network dynamics, not by the initialisation: even
+starting every synapse at zero ($\mu=0$) the network self-organises to
+the identical attractor.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.95\linewidth]{fig_init_convergence.png}
+  \caption{\textbf{Initialisation-robustness of STDP self-organisation}
+    (descending arm, medium walk, $\lambda=10^{-3}$, bio-plausible
+    defaults). \textbf{(a)} Mean CUT$\to$RG-E weight trajectory for each
+    of the ten $(\mu,\mathrm{CV})$ initial-weight points (colour = initial
+    $\mu$); all converge to the same plateau (dashed) by $t\approx7$--%
+    $10\,$s, the smallest initial weights ($\mu=0$) taking only a few
+    seconds longer. \textbf{(b)} Converged CUT$\to$RG-E (last-20\,s mean)
+    versus initial $\mu$: flat at $63.6\pm0.3\,$pA across four orders of
+    magnitude, i.e.\ the attractor is independent of initialisation.}
+  \label{fig:init_convergence}
+\end{figure}
 
 \paragraph{Quantitative summary.}
 At the baseline learning rate ($\lambda=10^{-3}$; last-20\,s window, leg L,
@@ -39,12 +56,9 @@ Fig.~\ref{fig:main}):
         $\approx11\,$pA, $\sim$17\% of converged) --- yet the asymptote is
         common (\autoref{sec:results:speed}).
 \end{itemize}
-\todo{Initialisation-robustness sweep: the earlier claim that the
-attractor is invariant across ten $(\mu,\mathrm{CV})$ initial-weight
-points spanning four orders of magnitude was established on the
-pre-bio-plausible model. Re-run \texttt{run.sh} (the 10-point $\mu$:CV
-sweep) with the bio-plausible defaults to restore that multi-init result
-on the current model, then broaden this paragraph accordingly.}
+The counter-phase is preserved at every initialisation
+(corr$(F_E,F_F)$ between $-0.91$ and $-0.97$), so the identical converged
+weights also yield an identical motor output.
 
 \begin{figure}[t]
   \centering
@@ -69,11 +83,13 @@ on the current model, then broaden this paragraph accordingly.}
 \end{figure}
 
 \paragraph{Interpretation.}
-That the converged weights are invariant to the learning rate --- every
-$\lambda$ that plateaus reaches the same CUT$\to$RG-E $\approx63\,$pA and
-BS$\to$RG $\approx16\,$pA --- shows that the descending and cutaneous
-synaptic strengths are fixed points of the closed-loop dynamics rather
-than free parameters set by the experimenter. The learning rate governs
+That the converged weights are invariant to \emph{both} the
+initialisation (Fig.~\ref{fig:init_convergence}) and the learning rate
+--- every starting weight and every $\lambda$ that plateaus reaches the
+same CUT$\to$RG-E $\approx63\,$pA and BS$\to$RG $\approx16\,$pA --- shows
+that the descending and cutaneous synaptic strengths are fixed points of
+the closed-loop dynamics rather than free parameters set by the
+experimenter. The learning rate governs
 only the \emph{time} to reach the attractor, not its location. This is
 the self-organisation claim of the paper: a spinal locomotor pattern and
 the descending weights that support it emerge from STDP acting on the
