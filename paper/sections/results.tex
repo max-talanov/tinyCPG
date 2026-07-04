@@ -40,87 +40,58 @@ the identical attractor.
 \end{figure}
 
 \paragraph{Quantitative summary.}
-At the baseline learning rate ($\lambda=10^{-3}$; last-20\,s window, leg L,
-Fig.~\ref{fig:main}):
+The canonical model sites its plasticity in the sensory loop (frozen
+BS$\to$RG; plastic CUT$\to$RG-E, Ia-E$\to$RG-E, Ia-F$\to$RG-F). At the
+baseline learning rate ($\lambda=10^{-3}$; last-20\,s window,
+Fig.~\ref{fig:stdp_matrix}):
 \begin{itemize}
-  \item Mean CUT$\to$RG-E weight: $62.9\,\mathrm{pA}$ --- the single large
-        plastic projection; a fast plateau (already $\approx52\,$pA at
-        $t=5\,$s, flat by $\approx7\,$s).
-  \item Mean BS$\to$RG-E weight: $15.5\,\mathrm{pA}$; BS$\to$RG-F
-        $15.8\,\mathrm{pA}$ --- both well below the BS-specific cap
-        ($W_{\max}=30\,\mathrm{pA}$) that keeps the tonic brainstem drive
-        subthreshold on its own.
-  \item Time-to-plateau scales with the learning rate: $\approx7\,$s at
-        $\lambda=10^{-3}$, $\approx75\,$s at $10^{-4}$, and not within
-        \SI{120}{\second} at $10^{-5}$ (CUT$\to$RG-E reaches only
-        $\approx11\,$pA, $\sim$17\% of converged) --- yet the asymptote is
-        common (\autoref{sec:results:speed}).
+  \item CUT$\to$RG-E converges to $\approx63\,$pA --- the single large
+        plastic input --- with a fast plateau ($\approx52\,$pA at $t=5\,$s,
+        flat by $\approx7\,$s).
+  \item The two proprioceptive projections self-stabilise at a low
+        set-point: Ia-E$\to$RG-E and Ia-F$\to$RG-F at $\approx4$--$5\,$pA,
+        well below their $10\,$pA cap. This low Ia set-point is exactly the
+        regime that reinforces each burst without filling the inter-burst
+        trough (\autoref{sec:results:sensory}).
+  \item Time-to-plateau scales with the learning rate ($\approx7\,$s /
+        $\approx75\,$s / not-within-\SI{120}{\second} at
+        $\lambda=10^{-3}$/$10^{-4}$/$10^{-5}$), yet the asymptote is common.
 \end{itemize}
-The counter-phase is preserved at every initialisation
-(corr$(F_E,F_F)$ between $-0.91$ and $-0.97$), so the identical converged
-weights also yield an identical motor output.
+All three projections behave identically in the left and right legs and
+across the five locomotion modes (Fig.~\ref{fig:stdp_matrix}); only under
+air stepping does the loading-gated afferent drive visibly slow
+CUT$\to$RG-E learning.
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=0.8\textwidth]{fig2_main.png}
-  \caption{\textbf{Self-organisation and long-term stability of paced
-    locomotion} (representative production run: descending arm, medium
-    walk, $\mu{=}3.5$, $\mathrm{CV}{=}0.30$, $\lambda{=}10^{-3}$,
-    $T{=}120\,$s).
-    \textbf{Top-left:} Force-E (blue) and Force-F (orange) leg L,
-    last 5\,s zoom --- clean counter-phase alternation.
-    \textbf{Top-right:} Underlying RG-E/F population rates --- same
-    window.
-    \textbf{Centre-left:} Force leg L full 120\,s --- no drift in cycle
-    amplitude or period.
-    \textbf{Centre-right:} Force leg R full 120\,s ---
-    180\,$^{\circ}$ phase offset, no synchrony drift.
-    \textbf{Bottom row:} STDP weight trajectories for the three plastic
-    projections, converging to plateau by $t \approx 5{-}10\,$s
-    (CUT$\to$RG-E $\to 63$\,pA; BS$\to$RG-E $\to 15$\,pA; BS$\to$RG-F
-    $\to 16$\,pA).}
-  \label{fig:main}
+  \includegraphics[width=0.8\textwidth]{fig_stdp_weight_matrix.png}
+  \caption{\textbf{STDP weight trajectories of the three plastic
+    projections across the five locomotion modes} (canonical sensory
+    model: frozen BS$\to$RG; plastic CUT$\to$RG-E, Ia-E$\to$RG-E,
+    Ia-F$\to$RG-F). Rows: the three projections, left leg (white) then
+    right leg (tinted); columns: slow~/ medium\,$=$\,plantar\,$=$\,baseline
+    / fast walk and toe~/ air stepping. Each panel overlays the three
+    learning rates $\lambda$. CUT$\to$RG-E converges to $\approx63\,$pA in
+    every mode --- the rate sets only the time-to-plateau --- while the two
+    proprioceptive projections self-stabilise at a low $\approx4$--$5\,$pA
+    set-point. Left and right legs are symmetric; under air stepping the
+    loading-gated afferent drive slows CUT$\to$RG-E convergence.}
+  \label{fig:stdp_matrix}
 \end{figure}
 
 \paragraph{Interpretation.}
 That the converged weights are invariant to \emph{both} the
 initialisation (Fig.~\ref{fig:init_convergence}) and the learning rate
 --- every starting weight and every $\lambda$ that plateaus reaches the
-same CUT$\to$RG-E $\approx63\,$pA and BS$\to$RG $\approx16\,$pA --- shows
-that the descending and cutaneous synaptic strengths are fixed points of
-the closed-loop dynamics rather than free parameters set by the
-experimenter. The learning rate governs
-only the \emph{time} to reach the attractor, not its location. This is
-the self-organisation claim of the paper: a spinal locomotor pattern and
-the descending weights that support it emerge from STDP acting on the
-sensory-entrained rhythm, with no hand-tuning of the synaptic strengths.
-
-\paragraph{The same self-organisation occurs in every mode.}
-The convergence is not specific to the descending arm. Across all five
-learning modes the plastic CUT$\to$RG-E projection follows the same
-learning profile and reaches the same $\approx63\,$pA plateau
-(Fig.~\ref{fig:weight_profiles}); the learning rate sets only the
-time-to-plateau ($\approx7\,$s / $\approx75\,$s / not-within-120\,s at
-$\lambda=10^{-3}$/$10^{-4}$/$10^{-5}$). In the two sensory-sited modes the
-additional plastic Ia$\to$RG-E projection does \emph{not} run away: it
-self-stabilises at a low $\approx4$--$5\,$pA set-point across all learning
-rates (dashed, Fig.~\ref{fig:weight_profiles}), which is exactly the
-regime that reinforces each burst without filling the inter-burst trough
-(\autoref{sec:results:sensory}).
-
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=0.8\textwidth]{fig_weight_profiles.png}
-  \caption{\textbf{STDP weight profiles across all five learning modes.}
-    One panel per mode; solid = plastic CUT$\to$RG-E weight (left axis,
-    present in every mode), dashed = plastic Ia$\to$RG-E (right axis,
-    sensory arms only). Colour = STDP learning rate $\lambda$. Medium walk
-    (520\,ms), baseline loading, $\mu=3.5$, CV$=0.30$, bio-plausible
-    defaults. CUT$\to$RG-E converges to $\approx63\,$pA in every mode
-    (rate sets only the time-to-plateau); the sensory-arm Ia$\to$RG-E
-    self-stabilises at a low $\approx4$--$5\,$pA set-point.}
-  \label{fig:weight_profiles}
-\end{figure}
+same CUT$\to$RG-E $\approx63\,$pA and the same $\approx4$--$5\,$pA Ia
+set-point --- shows that the cutaneous and proprioceptive synaptic
+strengths are fixed points of the closed-loop dynamics rather than free
+parameters set by the experimenter. The learning rate governs only the
+\emph{time} to reach the attractor, not its location. This is the
+self-organisation claim of the paper: a spinal locomotor pattern and the
+synaptic weights that support it emerge from STDP acting on the
+sensory-entrained rhythm, with no hand-tuning, identically in both legs
+and across all five locomotion modes (Fig.~\ref{fig:stdp_matrix}).
 
 \paragraph{Force develops as the weights converge.}
 The consequence for motor output is direct
