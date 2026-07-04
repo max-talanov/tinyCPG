@@ -369,23 +369,10 @@ def main():
     ax_d.legend(loc="lower right", fontsize=7)
     ax_d.grid(alpha=0.2)
 
-    ax_e = fig.add_subplot(gs[4, 1])
-    for l in LAMBDA_ORDER:
-        d = data.get((anchor_speed, l))
-        if d is None or "bs->rge_mean" not in d["weights"]:
-            continue
-        w = d["weights"]["bs->rge_mean"]
-        tt = d["t"][: w.size]
-        ax_e.plot(tt / 1000.0, w, color=lam_color[l], linewidth=1.2,
-                  label=LAMBDA_LABEL[l].split("\n")[0])
-    ax_e.axhline(30.0, linestyle="--", color="grey", alpha=0.6,
-                 label="W_max (BS) = 30 pA")
-    ax_e.set_xlabel("time (s)"); ax_e.set_ylabel("mean weight (pA)")
-    ax_e.set_title("(e) BS→RG-E weight trajectory\n(medium walk; saturates at W_max)")
-    ax_e.legend(loc="lower right", fontsize=7)
-    ax_e.grid(alpha=0.2)
+    # (BS->RG-E panel removed: BS is frozen in the canonical sensory model, and the
+    #  full weight trajectories are shown per projection in the STDP weight-matrix figure.)
 
-    ax_f = fig.add_subplot(gs[4, 2])
+    ax_f = fig.add_subplot(gs[4, 1:])
     M = np.full((n_rows, n_cols), np.nan)
     for r, s in enumerate(SPEED_ORDER):
         for c, l in enumerate(LAMBDA_ORDER):
@@ -398,7 +385,7 @@ def main():
     ax_f.set_yticks(range(n_rows))
     ax_f.set_yticklabels([SPEED_LABEL[s].split("\n")[0] for s in SPEED_ORDER],
                          fontsize=8)
-    ax_f.set_title("(f) Spectral concentration in\n±10% band around f₀ (higher = sharper)")
+    ax_f.set_title("(e) Spectral concentration in ±10% band around f₀ (higher = sharper)")
     for r in range(n_rows):
         for c in range(n_cols):
             if np.isfinite(M[r, c]):
@@ -409,12 +396,6 @@ def main():
 
     win_desc = (f"first {win_ms/1000:.0f} s" if args.trace_window == "first"
                 else f"last {win_ms/1000:.0f} s")
-    fig.suptitle(
-        "Phase A — Speed × STDP learning-rate matrix\n"
-        f"Self-organisation across rat locomotor range and bio-plausible λ "
-        f"(force traces = {win_desc};  μ=3.5, CV=0.30, 120 s each)",
-        fontsize=12, y=0.997,
-    )
     fig.savefig(out_path, dpi=180, bbox_inches="tight")
     plt.close(fig)
     print(f"[speed_stdp] saved {out_path}")

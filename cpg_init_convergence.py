@@ -65,9 +65,6 @@ def main():
     axB.set_ylim(conv.mean() - 5, conv.mean() + 5)
     axB.set_xlim(mus.min() - 1, mus.max() + 1); axB.grid(alpha=0.2)
 
-    fig.suptitle("Initialisation-robustness of STDP self-organisation "
-                 "(descending arm, medium walk, λ=10⁻³, bio-plausible defaults)",
-                 fontsize=12, y=1.02)
     fig.tight_layout()
     fig.savefig(args.out, dpi=args.dpi, bbox_inches="tight")
     plt.close(fig)

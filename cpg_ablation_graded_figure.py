@@ -360,12 +360,6 @@ def main():
     win_desc = (f"first {win_ms/1000:.0f} s" if args.trace_window == "first"
                 else f"last {win_ms/1000:.0f} s")
     sim_s = max((d["sim_ms"] for d in data.values()), default=120000.0) / 1000.0
-    fig.suptitle(
-        "Phase B — Graded sensory ablation × STDP learning-rate matrix\n"
-        "Courtine/Lavrov SCI paradigm: baseline → toe stepping → air stepping"
-        f"  (force traces = {win_desc};  μ=3.5, CV=0.30, 520 ms period, {sim_s:.0f} s each)",
-        fontsize=12, y=0.997,
-    )
     fig.savefig(out_path, dpi=180, bbox_inches="tight")
     plt.close(fig)
     print(f"[ablgrad] saved {out_path}")

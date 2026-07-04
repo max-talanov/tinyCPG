@@ -135,11 +135,6 @@ def main():
 
     mode_desc = ("walking speed" if args.mode == "speed"
                  else f"graded ablation ({'stim' if 'stim' in args.ablation_prefix else 'natural'})")
-    fig.suptitle(
-        f"tinyCPG network activity — population rates (spikes·neuron⁻¹·s⁻¹) across {mode_desc}\n"
-        f"RG, reciprocal-inhibition (In) & Ia interneurons, motor pools; "
-        f"last {args.n_cycles} cycles; λ={lam.replace('lam1em','1·10⁻')}, μ=3.5, CV=0.30",
-        fontsize=11, y=0.998)
     fig.tight_layout(rect=(0.02, 0, 1, 0.975))
     fig.savefig(args.out, dpi=args.dpi, bbox_inches="tight")
     plt.close(fig)

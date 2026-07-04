@@ -158,10 +158,6 @@ def main():
         _trace(ax_d, fn, "(d) Air stepping — natural (CUT gated)")
 
     lam_pretty = lam.replace("lam1em", "λ = 1·10⁻")
-    fig.suptitle(
-        "Epidural-stimulation rescue — paced cutaneous drive preserves stepping under unloading\n"
-        f"(Phase B air-stepping contrast; {lam_pretty}; 520 ms; μ=3.5, CV=0.30)",
-        fontsize=12, y=0.99)
     fig.savefig(args.out, dpi=180, bbox_inches="tight")
     plt.close(fig)
     print(f"[epidural] saved {args.out}")

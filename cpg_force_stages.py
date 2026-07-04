@@ -94,11 +94,6 @@ def main():
                 ax.set_xlabel("time in window (s)")
     axes[0][0].legend(loc="upper right", fontsize=6, ncol=2, framealpha=0.9)
     lamtxt = args.lambda_tag.replace("lam1em", "1·10⁻")
-    fig.suptitle(f"tinyCPG — force profiles across three stages of STDP learning "
-                 f"(leg L, λ={lamtxt}, μ=3.5, CV=0.30)\n"
-                 "rate chosen so convergence spans the 120 s run; counter-phase sharpens "
-                 "as the plastic weight grows (beginning → end)",
-                 fontsize=12, y=1.005)
     fig.tight_layout(rect=(0.04, 0, 1, 0.975))
     fig.savefig(args.out, dpi=args.dpi, bbox_inches="tight")
     plt.close(fig)

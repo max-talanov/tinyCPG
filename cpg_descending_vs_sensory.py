@@ -125,8 +125,6 @@ def main():
     ax[1, 1].legend(loc="lower left", fontsize=8)
     ax[1, 1].set_title("(d) Sensory arm keeps E/F force balanced")
 
-    fig.suptitle("Sensory-sited plasticity — relocating the learning from the descending to the "
-                 "proprioceptive loop  (λ=1·10⁻³, last 20 s, production N)", fontsize=12, y=0.995)
     fig.tight_layout(rect=[0, 0, 1, 0.97])
     os.makedirs(os.path.dirname(a.out) or ".", exist_ok=True)
     fig.savefig(a.out, dpi=170, bbox_inches="tight")

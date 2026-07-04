@@ -176,11 +176,6 @@ def main():
             ax.set_ylabel("Force E (solid) / F (dashed)")
             ax.legend(loc="upper right", ncol=2, fontsize=7)
 
-    fig.suptitle(
-        "Frozen-weight control — does the imposed CUT→RG-E distribution "
-        "reproduce the two-regime counter-phase?\n"
-        "(STDP off, baseline loading G$_{Ia}$=1.0, 520 ms paced, 30 s)",
-        fontsize=12, y=0.99)
     fig.savefig(out_path, dpi=180, bbox_inches="tight")
     plt.close(fig)
     print(f"[frozen] saved {out_path}")

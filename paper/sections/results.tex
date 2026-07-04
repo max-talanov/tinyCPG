@@ -1,7 +1,7 @@
 % Results — target 1500-2200 words for PLOS Comp Bio.
 %
 % Anchored on four figures:
-%   Fig 2 (fig2_main.png)             = main combined summary (120 s + STDP convergence)
+%   fig_stdp_weight_matrix.png        = STDP weights: both legs x 3 projections x 5 modes
 %   Fig 5 (fig5_speed_stdp.png)       = Phase A — speed × STDP learning rate matrix
 %   Fig 6 (fig6_ablation_graded.png)  = Phase B — graded sensory ablation × STDP matrix
 %
@@ -27,9 +27,11 @@ the identical attractor.
 \begin{figure}[t]
   \centering
   \includegraphics[width=0.8\textwidth]{fig_init_convergence.png}
-  \caption{\textbf{Initialisation-robustness of STDP self-organisation}
-    (descending arm, medium walk, $\lambda=10^{-3}$, bio-plausible
-    defaults). \textbf{(a)} Mean CUT$\to$RG-E weight trajectory for each
+  \caption{\textbf{Initialisation-robustness of STDP self-organisation.}
+    \emph{Main idea: the learned synaptic weight is a property of the
+    network dynamics, not a value we tune --- whatever the weights start
+    at, STDP drives them to the same place.} Medium walk, $\lambda=10^{-3}$,
+    bio-plausible defaults. \textbf{(a)} Mean CUT$\to$RG-E weight trajectory for each
     of the ten $(\mu,\mathrm{CV})$ initial-weight points (colour = initial
     $\mu$); all converge to the same plateau (dashed) by $t\approx7$--%
     $10\,$s, the smallest initial weights ($\mu=0$) taking only a few
@@ -218,14 +220,15 @@ rate ($\lambda=10^{-3}$) is strongest ($-0.95$)
     a.u.); (c) E$\leftrightarrow$F counter-phase Pearson correlation
     --- note the non-monotonic $\lambda$ dependence, strongest at the
     slowest rate.
-    \textbf{Row 5:} STDP weight trajectories at the medium-walk anchor.
-    (d, e) the two strongest plastic projections: the baseline rate
-    ($\lambda=10^{-3}$, red) plateaus within $\sim$7\,s, the
-    intermediate rate ($10^{-4}$, green) within $\sim$75\,s, and the
-    slow rate ($10^{-5}$, blue) climbs steadily \emph{without}
-    plateauing in 120\,s --- it reaches only $\sim$17\% of the
-    converged weight. (f) Spectral concentration --- fraction of total
-    PSD power within $\pm 10\%$ of the fundamental cycle frequency.}
+    \textbf{Row 5:} (d) CUT$\to$RG-E weight trajectory at the medium-walk
+    anchor: the baseline rate ($\lambda=10^{-3}$, red) plateaus within
+    $\sim$7\,s, the intermediate rate ($10^{-4}$, green) within
+    $\sim$75\,s, and the slow rate ($10^{-5}$, blue) climbs steadily
+    \emph{without} plateauing in 120\,s --- reaching only $\sim$17\% of the
+    converged weight. (The per-projection weight trajectories for all modes
+    are in Fig.~\ref{fig:stdp_matrix}.) (e) Spectral concentration ---
+    fraction of total PSD power within $\pm 10\%$ of the fundamental cycle
+    frequency.}
   \label{fig:speed_stdp}
 \end{figure}
 
@@ -251,10 +254,10 @@ walk, $-0.93$ at medium walk), weakest at the intermediate rate
 ($\lambda=10^{-4}$), and recovers at the baseline rate
 ($\lambda=10^{-3}$); at the fast gait this inverts and the baseline
 rate is strongest ($-0.95$). The weight trajectories
-(Row 5, panels d/e) explain why. At $\lambda=10^{-5}$ the descending
-CUT$\to$RG-E and BS$\to$RG-E weights are still climbing at the end of
-the run (medium-walk CUT$\to$RG-E reaches only $\sim 11$\,pA, versus
-$63$\,pA when fully converged): the plastic descending pathway is \emph{weak},
+(Row 5, panel d; Fig.~\ref{fig:stdp_matrix}) explain why. At
+$\lambda=10^{-5}$ the plastic CUT$\to$RG-E weight is still climbing at the
+end of the run (medium-walk CUT$\to$RG-E reaches only $\sim 11$\,pA, versus
+$63$\,pA when fully converged): the plastic cutaneous pathway is \emph{weak},
 so the rhythm is dominated by the externally paced drive and the
 reciprocal-inhibition core, which together impose a near-perfect
 anti-phase. As $\lambda$ increases and the descending weights reach
@@ -593,11 +596,16 @@ marginal mean and coefficient of variation capture.
 \begin{figure}[t]
   \centering
   \includegraphics[width=0.8\textwidth]{fig8_frozen_control.png}
-  \caption{\textbf{Frozen-weight control --- does the imposed marginal
-    distribution reproduce the clean plastic baseline rhythm?}
-    STDP is switched off and the CUT$\to$RG-E weights are drawn from a
-    prescribed lognormal (BS$\to$RG-E at $0.25\times$ the mean); baseline
-    loading, 520\,ms paced, 30\,s, bio-plausible static defaults.
+  \caption{\textbf{Frozen-weight control --- is learning necessary, or is
+    the converged weight \emph{distribution} enough?}
+    \emph{Main idea: we switch STDP off and hand-impose the CUT$\to$RG-E
+    weights from a prescribed distribution (fixed mean and spread), then ask
+    whether the rhythm is as clean as the learned one. If a hand-imposed
+    distribution sufficed, STDP would be organising nothing beyond the
+    marginal statistics; it falls short, so the learning organises finer
+    weight structure.}
+    STDP off; CUT$\to$RG-E drawn from a prescribed lognormal (BS$\to$RG-E at
+    $0.25\times$ the mean); baseline loading, 520\,ms paced, 30\,s.
     \textbf{(a)} corr$(F_E,F_F)$ versus imposed mean weight at fixed
     tight spread (CV$=0.02$) --- the \emph{weakness} axis.
     \textbf{(b)} corr versus imposed CV at fixed full mean ($63$\,pA)
@@ -732,9 +740,16 @@ hostage to its own gated input under total unloading.
   \centering
   \includegraphics[width=0.8\textwidth]{fig_descending_vs_sensory.png}
   \caption{\textbf{Sensory-sited plasticity --- relocating the learning
-    from the descending to the proprioceptive loop.} Frozen BS$\to$RG +
-    plastic homonymous Ia$\to$RG ($w_{\max}=10$\,pA); production $N$,
-    120\,s, last 20\,s, $\lambda=10^{-3}$.
+    from the descending to the proprioceptive loop.}
+    \emph{Main idea: does it matter \emph{where} the plasticity lives?
+    We move the learning from the brainstem (descending) pathway into the
+    muscle-afferent (Ia) loop and ask whether the gait still works and how
+    it holds up as the limb is unloaded. Answer: identical at normal
+    loading, and it self-rescues toe stepping --- but because the Ia drive
+    is itself gated by loading, it cannot rescue air stepping the way the
+    load-independent epidural-stim drive can.}
+    Frozen BS$\to$RG + plastic homonymous Ia$\to$RG ($w_{\max}=10$\,pA);
+    production $N$, 120\,s, last 20\,s, $\lambda=10^{-3}$.
     \textbf{(a)} counter-phase corr$(F_E,F_F)$ versus speed: the sensory
     arm (green) matches the descending control (blue) across the locomotor
     range --- relocation is cost-free at normal loading.
