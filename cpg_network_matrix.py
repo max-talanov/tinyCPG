@@ -80,7 +80,7 @@ def main():
                 ax.set_ylabel(rlabel, rotation=0, ha="right", va="center",
                               fontsize=11, labelpad=26)
             if r == 0:
-                ax.set_title(clabel, fontsize=13, fontweight="bold")
+                ax.set_title(f"({chr(97 + c)})  {clabel}", fontsize=13, fontweight="bold")
             if r == nr - 1:
                 ax.set_xlabel("time (ms, last cycles)", fontsize=11)
             ax.tick_params(labelsize=8)

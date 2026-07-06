@@ -89,6 +89,10 @@ def main():
                 ax.set_ylabel(f"{mlabel}\nForce (a.u.)", fontsize=11)
             if r == nr - 1:
                 ax.set_xlabel("time in window (s)", fontsize=12)
+    _L = [chr(97 + i) if i < 26 else chr(96 + i // 26) + chr(97 + i % 26) for i in range(nr * nc)]
+    for i, ax in enumerate(axes.flat):
+        ax.text(0.02, 0.95, f"({_L[i]})", transform=ax.transAxes, fontsize=11,
+                fontweight="bold", va="top", ha="left")
     axes[0][0].legend(loc="upper right", fontsize=9, ncol=2, framealpha=0.9)
     lamtxt = args.lambda_tag.replace("lam1em", "1·10⁻")
     fig.tight_layout(rect=(0.04, 0, 1, 0.975))

@@ -68,6 +68,12 @@ def main():
             axr.tick_params(axis="y", labelcolor="0.35")
             if r == nr - 1:
                 ax.set_xlabel("time (s)", fontsize=12)
+    # panel index letters (row-major)
+    _L = [chr(97 + i) if i < 26 else chr(96 + i // 26) + chr(97 + i % 26) for i in range(nr * nc)]
+    for i, ax in enumerate(axes.flat):
+        ax.text(0.03, 0.96, f"({_L[i]})", transform=ax.transAxes, fontsize=12,
+                fontweight="bold", va="top", ha="left")
+
     # single combined legend
     h1 = [plt.Line2D([0], [0], color=CUT[2], lw=2.0, label=CUT[1] + " (left axis)")]
     h2 = [plt.Line2D([0], [0], color=c, lw=1.6, ls="--", label=n + " (right axis)")

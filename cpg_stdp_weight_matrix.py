@@ -79,6 +79,10 @@ def main():
                 ax.set_ylabel(rlabel + "\nweight (pA)", fontsize=10)
             if r == nr - 1:
                 ax.set_xlabel("time (s)", fontsize=10)
+    _L = [chr(97 + i) if i < 26 else chr(96 + i // 26) + chr(97 + i % 26) for i in range(nr * nc)]
+    for i, ax in enumerate(axes.flat):
+        ax.text(0.03, 0.94, f"({_L[i]})", transform=ax.transAxes, fontsize=9,
+                fontweight="bold", va="top", ha="left")
     axes[0][nc - 1].legend(fontsize=9, loc="lower right", framealpha=0.92)
     fig.tight_layout()
     fig.savefig(args.out, dpi=args.dpi, bbox_inches="tight")
