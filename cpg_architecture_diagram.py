@@ -99,8 +99,8 @@ edge(ax, P["flexAff"], P["RGF"], ORANGE_L, style=":", rad=-0.1, label="swing aff
 # --- reciprocal core (Zhang 6:1) ---
 edge(ax, P["RGE"], P["InE"], ORANGE_L, lw=1.4)
 edge(ax, P["RGF"], P["InF"], ORANGE_L, lw=1.4)
-edge(ax, P["InE"], P["RGF"], BLUE, label="−8", lx=0.5)
-edge(ax, P["InF"], P["RGE"], BLUE, label="−48 (6:1)", lx=0.5)
+edge(ax, P["InE"], P["RGF"], BLUE, label="−8", lx=0.62, ly=0.28)
+edge(ax, P["InF"], P["RGE"], BLUE, label="−48 (6:1)", lx=0.32, ly=-0.42)
 # --- motor output ---
 edge(ax, P["RGE"], P["ME"], ORANGE_L, label="+30", lx=0.5)
 edge(ax, P["RGF"], P["MF"], ORANGE_L, label="+30", lx=0.5)
@@ -115,8 +115,8 @@ edge(ax, P["IaE"], P["IaIntE"], ORANGE_L, lw=1.4)
 edge(ax, P["IaIntE"], P["MF"], BLUE, lw=1.4, rad=0.15, label="Ia recip −10", lx=0.6, ly=-0.25)
 edge(ax, P["IaF"], P["IaIntF"], ORANGE_L, lw=1.4)
 edge(ax, P["IaIntF"], P["ME"], BLUE, lw=1.4, rad=0.15)
-edge(ax, P["IaE"], P["InF"], ORANGE_L, rad=0.25, lw=1.3, label="Ia→In loop", lx=0.35)
-edge(ax, P["IaE"], P["RGE"], ORANGE_D, rad=0.4, lw=2.4, label="plastic Ia→RG", lx=0.28)
+edge(ax, P["IaE"], P["InF"], ORANGE_L, rad=0.25, lw=1.3, label="Ia→In loop", lx=0.6, ly=0.34)
+edge(ax, P["IaE"], P["RGE"], ORANGE_D, rad=0.4, lw=2.4, label="plastic Ia→RG", lx=0.12, ly=0.28)
 edge(ax, P["IaF"], P["RGF"], ORANGE_D, rad=-0.3, lw=2.4)
 # commissural stub (informational note in the empty left-middle band)
 ax.annotate("commissural\n→ contralateral leg\nRG-E↔RG-E −8\nRG-F↔RG-F −20",
