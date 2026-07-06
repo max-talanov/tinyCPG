@@ -102,26 +102,29 @@ windows of the run --- early ($t\approx4$--9\,s), mid ($40$--45\,s) and
 late ($115$--120\,s) --- shows the counter-phase waveform sharpen as the
 plastic weight grows: early bursts are ragged with phase slips and
 amplitude jitter (CUT$\to$RG-E $\approx7$\,pA), whereas the late window is
-a clean, regular antiphase (CUT$\to$RG-E $\approx64$\,pA). The same
-progression holds across all five learning modes, including the two in
-which the plasticity is sited in the proprioceptive loop (the Ia$\to$RG
-weight self-stabilises at its low $\approx4$--5\,pA set-point while the
-cutaneous drive develops). For this figure the learning rate is
-$\lambda=10^{-4}$, chosen so that convergence spans the full run and the
-three stages are visibly distinct (at $\lambda=10^{-3}$ convergence is
-complete within $\approx8$\,s).
+a clean, regular antiphase (CUT$\to$RG-E $\approx64$\,pA). The progression
+holds across the loaded locomotion modes (slow, medium and fast walk reach
+$\mathrm{corr}\le-0.96$ by the end), degrades gracefully under toe stepping
+($-0.82$), and fails under air stepping (only $-0.51$): there the
+loading-gated afferents keep CUT$\to$RG-E weak ($\approx9\,$pA even at
+$t=120\,$s) and the extensor force never fully develops. For this figure
+the learning rate is $\lambda=10^{-4}$, chosen so that convergence spans
+the full run and the three stages are visibly distinct (at
+$\lambda=10^{-3}$ convergence is complete within $\approx8$\,s).
 
 \begin{figure}[t]
   \centering
   \includegraphics[width=0.8\textwidth]{fig_force_stages.png}
-  \caption{\textbf{Force profiles at three stages of STDP learning, all
-    five modes.} Rows: descending, sensory, epidural-stim, natural, and
-    sensory-ablation arms; columns: beginning / middle / end of the
-    120\,s run (leg L, $\lambda=10^{-4}$, $\mu=3.5$, CV$=0.30$). Solid =
-    Force-E, dashed = Force-F. Each panel is annotated with the driving
-    plastic weight (CUT$\to$RG-E, or Ia$+$CUT for the sensory arms) and
-    the in-window corr$(F_E,F_F)$. The waveform sharpens from ragged early
-    bursts to clean counter-phase as the weight converges.}
+  \caption{\textbf{Force profiles at three stages of STDP learning, across
+    the five locomotion modes} (canonical sensory model). Rows: slow /
+    medium\,$=$\,plantar\,$=$\,baseline / fast walk and toe / air stepping;
+    columns: beginning / middle / end of the 120\,s run (leg L,
+    $\lambda=10^{-4}$, $\mu=3.5$, CV$=0.30$). Solid = Force-E, dashed =
+    Force-F. Each panel is annotated with the mean CUT$\to$RG-E weight in
+    the window and the in-window corr$(F_E,F_F)$. The waveform sharpens
+    from ragged early bursts to clean counter-phase as the weight converges
+    in the loaded modes; under air stepping the gated afferents keep the
+    weight low and the extensor force never develops.}
   \label{fig:force_stages}
 \end{figure}
 
@@ -167,37 +170,41 @@ step length) crossed with three STDP learning rates spanning two
 decades below the bio-plausible cortical
 value~\cite{biPoo1998,morrison2007}
 ($\lambda \in \{1{\times}10^{-5},\,1{\times}10^{-4},\,1{\times}10^{-3}\}$).
-The measured cycle period tracks the commanded period within $\le 1$\,ms
-in 7 of 9 cells (the two exceptions are both the slowest learning rate,
-$\lambda=10^{-5}$, which has not converged within 120\,s), and the
-E$\leftrightarrow$F counter-phase is strong throughout
-($|\mathrm{corr}| \ge 0.81$). The counter-phase strength depends
-\emph{non-monotonically} on $\lambda$: at slow and medium walk it is
-strongest at the slowest rate ($\lambda=10^{-5}$, corr down to $-0.99$)
-and dips at $\lambda=10^{-4}$, whereas at the fast gait the baseline
-rate ($\lambda=10^{-3}$) is strongest ($-0.95$)
-(Fig.~\ref{fig:speed_stdp}, Table~\ref{tab:speed_stdp_metrics}).
+Once the learning has converged ($\lambda=10^{-4}$ and $10^{-3}$) the
+measured cycle period tracks the commanded period within the sampling
+resolution and the E$\leftrightarrow$F counter-phase is strong and
+speed-robust (corr $-0.96$ to $-0.99$ across the whole range). The
+counter-phase strengthens \emph{monotonically} with the learning rate: at
+the slowest rate ($\lambda=10^{-5}$) the plastic CUT$\to$RG-E has not
+converged within 120\,s, so the gait is under-developed --- weakest at the
+fast walk (corr $-0.34$), where the short 350\,ms cycle gives the
+slow-learning synapse the fewest events to integrate, recovering to
+$-0.60$ at medium and $-0.81$ at slow walk (the two period-tracking
+failures, $521.9\pm51$ and $321.2\pm74$\,ms, are also both at this
+under-converged rate) (Fig.~\ref{fig:speed_stdp},
+Table~\ref{tab:speed_stdp_metrics}).
 
 \begin{table}[h]
   \centering
-  \caption{Phase A --- speed $\times$ STDP metrics (last 20\,s of each
-    120\,s run, leg L). \emph{Computed from the canonical 2026-07-01
-    bio-plausible set} (\texttt{cpg\_speed\_stdp\_*}).}
+  \caption{Speed $\times$ STDP metrics (last 20\,s of each 120\,s run,
+    leg L, canonical sensory arm). \emph{Computed from the 2026-07-01
+    bio-plausible set} (\texttt{cpg\_sensory\_stdp\_*}). Bold = strongest
+    counter-phase per speed.}
   \label{tab:speed_stdp_metrics}
   \small
   \begin{tabular}{lrrrrrr}
     \toprule
     Speed & $\lambda$ & Cmd.\ (ms) & Measured (ms) & Peak $F_E$ & corr$(F_E, F_F)$ & Spec.\ conc. \\
     \midrule
-    6.0\ cm/s  & $1{\times}10^{-5}$ & 1200 & $1200.0 \pm 0$   & 17.46 & $\mathbf{-0.99}$ & 0.86 \\
-    6.0\ cm/s  & $1{\times}10^{-4}$ & 1200 & $1200.0 \pm 0$   & 17.46 & $-0.82$ & 0.86 \\
-    6.0\ cm/s  & $1{\times}10^{-3}$ & 1200 & $1200.0 \pm 0$   & 17.46 & $-0.97$ & 0.87 \\
-    13.5\ cm/s & $1{\times}10^{-5}$ &  520 & $519.6  \pm 45.0$ & 16.62 & $\mathbf{-0.93}$ & 0.87 \\
-    13.5\ cm/s & $1{\times}10^{-4}$ &  520 & $519.6  \pm 0$   & 16.72 & $-0.81$ & 0.89 \\
-    13.5\ cm/s & $1{\times}10^{-3}$ &  520 & $519.6  \pm 0$   & 16.72 & $-0.88$ & 0.89 \\
-    21.0\ cm/s & $1{\times}10^{-5}$ &  350 & $321.2 \pm 69.5$ & 12.69 & $-0.82$ & 0.85 \\
-    21.0\ cm/s & $1{\times}10^{-4}$ &  350 & $350.4 \pm 0$    & 15.46 & $-0.88$ & 0.94 \\
-    21.0\ cm/s & $1{\times}10^{-3}$ &  350 & $350.4 \pm 0$    & 15.49 & $\mathbf{-0.95}$ & 0.94 \\
+    6.0\ cm/s  & $1{\times}10^{-5}$ & 1200 & $1200.0 \pm 0$    & 17.46 & $-0.81$ & 0.86 \\
+    6.0\ cm/s  & $1{\times}10^{-4}$ & 1200 & $1200.0 \pm 0$    & 17.46 & $-0.99$ & 0.87 \\
+    6.0\ cm/s  & $1{\times}10^{-3}$ & 1200 & $1200.0 \pm 0$    & 17.46 & $\mathbf{-0.99}$ & 0.87 \\
+    13.5\ cm/s & $1{\times}10^{-5}$ &  520 & $521.9  \pm 51.3$ & 16.71 & $-0.60$ & 0.86 \\
+    13.5\ cm/s & $1{\times}10^{-4}$ &  520 & $519.6  \pm 0$    & 16.72 & $-0.98$ & 0.89 \\
+    13.5\ cm/s & $1{\times}10^{-3}$ &  520 & $519.6  \pm 0$    & 16.72 & $\mathbf{-0.98}$ & 0.90 \\
+    21.0\ cm/s & $1{\times}10^{-5}$ &  350 & $321.2 \pm 74.3$  & 14.33 & $-0.34$ & 0.86 \\
+    21.0\ cm/s & $1{\times}10^{-4}$ &  350 & $350.4 \pm 0$     & 15.48 & $-0.96$ & 0.95 \\
+    21.0\ cm/s & $1{\times}10^{-3}$ &  350 & $350.4 \pm 0$     & 15.47 & $\mathbf{-0.97}$ & 0.95 \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -205,7 +212,8 @@ rate ($\lambda=10^{-3}$) is strongest ($-0.95$)
 \begin{figure}[t]
   \centering
   \includegraphics[width=0.8\textwidth]{fig5_speed_stdp.png}
-  \caption{\textbf{Phase A --- speed $\times$ STDP learning-rate matrix.}
+  \caption{\textbf{Speed $\times$ STDP learning-rate matrix} (canonical
+    sensory arm).
     Rows = walking speed (slow / medium / fast walk;
     Courtine/Lavrov rat treadmill range~\cite{lavrov2008,courtine2009}).
     Columns = STDP learning rate $\lambda \in
@@ -218,8 +226,8 @@ rate ($\lambda=10^{-3}$) is strongest ($-0.95$)
     \textbf{Row 4:} Time-domain summary heat-tiles: (a) measured cycle
     period (ms) versus commanded; (b) peak Force-E (95th percentile,
     a.u.); (c) E$\leftrightarrow$F counter-phase Pearson correlation
-    --- note the non-monotonic $\lambda$ dependence, strongest at the
-    slowest rate.
+    --- note the monotonic $\lambda$ dependence: counter-phase strengthens
+    as the learning converges, weakest at the under-converged slow rate.
     \textbf{Row 5:} (d) CUT$\to$RG-E weight trajectory at the medium-walk
     anchor: the baseline rate ($\lambda=10^{-3}$, red) plateaus within
     $\sim$7\,s, the intermediate rate ($10^{-4}$, green) within
@@ -234,69 +242,38 @@ rate ($\lambda=10^{-3}$) is strongest ($-0.95$)
 
 \paragraph{Interpretation: period tracking and the fast-gait force
 compression.}
-The measured cycle period equals the commanded step period to within
-the sampling resolution (sub-millisecond) across all nine cells, with
-the only exception being the fastest gait (350\,ms commanded period)
-where cycle jitter rises to $\approx 11$\,ms\,s.d.\ at the converged
-learning rates. This is consistent with the rat fast-twitch fibre
+At the converged learning rates ($\lambda=10^{-4}$, $10^{-3}$) the
+measured cycle period equals the commanded step period to within the
+sampling resolution across all three speeds; the only period-tracking
+failures are at the under-converged slow rate ($\lambda=10^{-5}$, medium
+and fast walk). Independent of learning, peak Force-E drops from $17.46$
+to $15.5$\,a.u.\ as the step period shortens from 1200 to 350\,ms --- a
+$\approx 11\%$ compression --- consistent with the rat fast-twitch fibre
 rise-time limit ($\tau_F=80$\,ms) becoming a non-negligible fraction of
-the 175\,ms stance window: Hill-style saturation~\cite{zajac1989}
-prevents force from fully developing every stride. Peak Force-E
-correspondingly drops from $17.46$ to $15.5$\,a.u.\ as the step period
-shortens from 1200 to 350\,ms --- a $\approx 11\%$ compression.
+the 175\,ms stance window, where Hill-style saturation~\cite{zajac1989}
+prevents force from fully developing every stride.
 
-\paragraph{Interpretation: a non-monotonic, two-regime dependence on
-$\lambda$.}
-The counter-phase correlation (Fig.~\ref{fig:speed_stdp}, tile c)
-depends non-monotonically on the learning rate: at slow and medium walk
-it is strongest at the slowest rate ($\lambda=10^{-5}$: $-0.99$ at slow
-walk, $-0.93$ at medium walk), weakest at the intermediate rate
-($\lambda=10^{-4}$), and recovers at the baseline rate
-($\lambda=10^{-3}$); at the fast gait this inverts and the baseline
-rate is strongest ($-0.95$). The weight trajectories
-(Row 5, panel d; Fig.~\ref{fig:stdp_matrix}) explain why. At
-$\lambda=10^{-5}$ the plastic CUT$\to$RG-E weight is still climbing at the
-end of the run (medium-walk CUT$\to$RG-E reaches only $\sim 11$\,pA, versus
-$63$\,pA when fully converged): the plastic cutaneous pathway is \emph{weak},
-so the rhythm is dominated by the externally paced drive and the
-reciprocal-inhibition core, which together impose a near-perfect
-anti-phase. As $\lambda$ increases and the descending weights reach
-full strength, they begin to interact with that core rhythm; at the
-intermediate rate the fully-developed but tightly-distributed weights
-track the gait less cleanly, producing the counter-phase dip. The
-baseline rate recovers a broader, more heterogeneous weight
-distribution (quantified in Phase~B,
-\autoref{sec:results:ablation}) and with it a clean rhythm. In all
-nine cells the counter-phase remains strong ($|\mathrm{corr}|\ge0.81$),
-so the gait is robust across the learning-rate range; the
-non-monotonicity concerns the \emph{degree} of counter-phase, not its
-presence.
-
-\paragraph{Interpretation: the paced core carries gait quality;
-plasticity is extensor-biased.}
-That the counter-phase is \emph{cleanest at the slowest learning rate}
---- when the descending weights are least developed --- is at first
-counterintuitive, but follows from the model's division of labour. The
-near-perfect anti-phase is a property of the paced heel$\to$toe drive
-and the reciprocal-inhibition core, which are present from $t=0$
-independent of learning (the gait alternates cleanly within the first
-seconds even at $\lambda=10^{-5}$, before any weight has converged).
-The STDP-learned descending drive is an \emph{additional} input layered
-on this core, and crucially it is extensor-biased: the only large
-plastic projection, CUT$\to$RG-E, targets the extensor and has no
-flexor counterpart (\autoref{sec:methods:stdp}). At the medium walk the
-converged extensor drive (CUT$+$BS$\to$RG-E $\approx 78$\,pA) dwarfs the
-flexor drive (BS$\to$RG-F $\approx 16$\,pA). Strong learning therefore
-adds a large, extensor-weighted descending current that perturbs the
-balanced paced rhythm, slightly reducing counter-phase (medium walk:
-from $-0.93$ at the slowest rate to $-0.88$ at full drive). The same asymmetry leaves the
-flexor half-centre, which is intrinsically generated and never receives
-a comparable learned drive, visibly more variable than the extensor
-across all conditions. We interpret STDP here as self-organising the
-\emph{descending drive} --- the quantity that matters for operation
-without external pacing and for the epidural-stimulation contrast of
-Phase~B --- rather than as the source of counter-phase precision, which
-the paced spinal core already provides.
+\paragraph{Interpretation: counter-phase strengthens as learning
+converges.}
+The counter-phase correlation (Fig.~\ref{fig:speed_stdp}, tile c) depends
+\emph{monotonically} on the learning rate: it improves as the plastic
+CUT$\to$RG-E converges. At the slowest rate ($\lambda=10^{-5}$) the weight
+is still climbing at the end of the run (medium-walk CUT$\to$RG-E reaches
+only $\sim 11$\,pA versus $63$\,pA converged; Row 5 panel d,
+Fig.~\ref{fig:stdp_matrix}), so the learned cutaneous drive is too weak to
+firmly reinforce the paced rhythm and the counter-phase is
+under-developed --- and increasingly so at higher cadence, where the
+shorter cycle affords the slow synapse fewer spike pairings (fast walk
+falls to $-0.34$). Once the weight has converged ($\lambda=10^{-4}$ and
+$10^{-3}$, plateau by $\sim$75\,s and $\sim$7\,s) the counter-phase is
+strong and nearly speed-independent ($-0.96$ to $-0.99$). The near-perfect
+anti-phase of the converged gait is a joint property of the paced
+heel$\to$toe drive, the reciprocal-inhibition core, and the learned
+cutaneous and proprioceptive drive; the learning rate sets only how
+quickly that drive develops, and hence how much of the 120\,s run is spent
+in the under-developed regime. (The descending-plasticity arm shows a
+different, non-monotonic dependence; the two are contrasted directly in
+\autoref{sec:results:sensory}.)
 
 \paragraph{Interpretation: spectral concentration as a sensitive
 irregularity metric.}
@@ -307,9 +284,9 @@ panel f) measures the fraction of total PSD power within $\pm$10\% of
 the fundamental cycle frequency $f_0=1/P$. It rises monotonically from
 $\approx 0.86$ at slow walk to $\approx 0.95$ at fast walk, reflecting
 the increasing concentration of power at the fundamental as the rhythm
-locks more tightly to the external clock at higher cadence; the
-dependence on $\lambda$ within a given speed is weak and, like the
-counter-phase, non-monotonic. This metric does not saturate at the
+locks more tightly to the external clock at higher cadence; within a given
+speed it rises weakly with the learning rate, tracking the counter-phase.
+This metric does not saturate at the
 converged plateau and so provides a finer-grained diagnostic than
 period s.d.\ for future studies that probe sub-millisecond timing.
 
@@ -740,11 +717,11 @@ same attractor across four orders of magnitude of initialisation
 (2) The resulting paced gait is stable over \SI{120}{\second} with no
 drift in amplitude or period (\autoref{sec:results:stability}).
 (3) The gait tracks the commanded step period across the rat locomotor
-range (6--21\,cm/s) with sub-millisecond error; counter-phase remains
-strong throughout ($|\mathrm{corr}|\ge0.81$) but depends
-non-monotonically on the STDP rate --- cleanest at the slow rate for
-slow and medium walk, and at the baseline rate for the fast gait
-(\autoref{sec:results:speed}).
+range (6--21\,cm/s); once the learning has converged
+($\lambda\ge10^{-4}$) the counter-phase is strong and nearly
+speed-independent ($-0.96$ to $-0.99$), strengthening monotonically with
+the STDP rate --- at the under-converged slow rate it is weak,
+especially at the fast gait ($-0.34$) (\autoref{sec:results:speed}).
 (4) A paired loading experiment dissociates the two afferent channels:
 when the paced cutaneous drive is gated by loading (the natural,
 unassisted case) the rhythm degrades markedly under air stepping

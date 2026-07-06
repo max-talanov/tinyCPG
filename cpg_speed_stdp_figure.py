@@ -132,19 +132,19 @@ def _spectral_concentration(t_ms: np.ndarray, signal: np.ndarray,
     return float(psd[band_mask].sum() / total)
 
 
-def _resolve_files(indir: str):
+def _resolve_files(indir: str, prefix: str = "cpg_speed_stdp"):
     """Discover (speed_tag, lambda_tag) → path, plus the ordered λ tag list.
 
     The λ tags are read from the filenames and sorted ascending by value, so
     the figure adapts to whatever λ set was actually run (3, 4, 5, ... values).
     Returns (files_dict, lambda_order_list).
     """
-    files = sorted(glob.glob(os.path.join(indir, "cpg_speed_stdp_*.h5")))
+    files = sorted(glob.glob(os.path.join(indir, f"{prefix}_*.h5")))
     out: Dict[Tuple[str, str], str] = {}
     # Match any of the known speed tags (06cms, 13_5cms, 21cms) explicitly.
     # Using "[^_]+" fails for "13_5cms" because of the underscore inside.
     speed_re = "|".join(re.escape(s) for s in SPEED_ORDER)
-    rgx = re.compile(rf"cpg_speed_stdp_({speed_re})_(lam\d+em\d+)_")
+    rgx = re.compile(rf"{re.escape(prefix)}_({speed_re})_(lam\d+em\d+)_")
     lam_tags = set()
     for f in files:
         m = rgx.search(os.path.basename(f))
@@ -194,6 +194,8 @@ def _load(path: str) -> Dict:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--indir", type=str, default="results/2026-06-16")
+    ap.add_argument("--prefix", type=str, default="cpg_speed_stdp",
+                    help="Filename prefix / arm, e.g. cpg_sensory_stdp for the canonical sensory arm.")
     ap.add_argument("--outdir", type=str, default="plots/paper")
     ap.add_argument("--out", type=str, default=None)
     ap.add_argument("--trace-window", choices=["first", "last"], default="first",
@@ -208,9 +210,9 @@ def main():
     os.makedirs(args.outdir, exist_ok=True)
     out_path = args.out or os.path.join(args.outdir, "fig5_speed_stdp.png")
 
-    files, LAMBDA_ORDER = _resolve_files(args.indir)
+    files, LAMBDA_ORDER = _resolve_files(args.indir, args.prefix)
     if not LAMBDA_ORDER:
-        raise SystemExit(f"No cpg_speed_stdp_*.h5 files found in {args.indir}")
+        raise SystemExit(f"No {args.prefix}_*.h5 files found in {args.indir}")
 
     # Build display label dict; assign roles by position (slowest=slow STDP,
     # fastest=fast STDP, the rest baseline/intermediate).

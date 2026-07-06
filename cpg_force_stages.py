@@ -2,16 +2,12 @@
 """
 cpg_force_stages.py
 Force profiles at three stages of STDP learning (beginning / middle / end),
-one row per learning mode. Shows how the counter-phase force pattern sharpens
-as the plastic weights converge over the 120 s run. Each panel is annotated
-with the converged mean CUT->RG-E weight and the in-window corr(F_E,F_F).
+one row per locomotion mode (canonical sensory model). Shows how the
+counter-phase force pattern sharpens as the plastic weights converge over the
+120 s run. Each panel is annotated with the mean CUT->RG-E weight in the window
+and the in-window corr(F_E,F_F).
 
-Modes (representative canonical condition each):
-  descending   cpg_speed_stdp    medium walk (13.5 cm/s)
-  sensory      cpg_sensory_stdp  medium walk (13.5 cm/s)
-  epidural-stim cpg_ablstim      baseline loading
-  natural      cpg_ablgrad       baseline loading
-  sensory-abl  cpg_ablsens       baseline loading
+Modes: slow / medium=plantar=baseline / fast walk, toe / air stepping.
 """
 import argparse, glob, os
 import h5py, numpy as np
@@ -19,12 +15,13 @@ import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 # (row label, filename glob stem, [(weight-key, short-name), ...] to annotate)
+# The five locomotion modes of the canonical sensory model.
 MODES = [
-    ("descending\n(BS+CUT plastic)",  "cpg_speed_stdp_13_5cms",  [("cut->rge_mean", "CUT")]),
-    ("sensory\n(Ia→RG plastic)",  "cpg_sensory_stdp_13_5cms",[("ia->rge_mean", "Ia"), ("cut->rge_mean", "CUT")]),
-    ("epidural-stim\n(CUT intact)",    "cpg_ablstim_baseline",    [("cut->rge_mean", "CUT")]),
-    ("natural\n(CUT,Ia gated)",        "cpg_ablgrad_baseline",    [("cut->rge_mean", "CUT")]),
-    ("sensory-abl\n(Ia gated)",        "cpg_ablsens_baseline",    [("ia->rge_mean", "Ia"), ("cut->rge_mean", "CUT")]),
+    ("slow walk\n6 cm/s",            "cpg_sensory_stdp_06cms",   [("cut->rge_mean", "CUT")]),
+    ("medium / plantar\n13.5 cm/s",  "cpg_sensory_stdp_13_5cms", [("cut->rge_mean", "CUT")]),
+    ("fast walk\n21 cm/s",           "cpg_sensory_stdp_21cms",   [("cut->rge_mean", "CUT")]),
+    ("toe stepping\npartial unload", "cpg_ablsens_toe",          [("cut->rge_mean", "CUT")]),
+    ("air stepping\nfull unload",    "cpg_ablsens_air",          [("cut->rge_mean", "CUT")]),
 ]
 STAGES = [("beginning", (4000, 9000)), ("middle", (40000, 45000)), ("end", (115000, 120000))]
 WIN_LABEL = {"beginning": "early learning", "middle": "converging", "end": "converged"}
