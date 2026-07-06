@@ -52,10 +52,12 @@
 \begin{document}
 \maketitle
 
-\input{sections/abstract}
-
-\section{Introduction}\label{sec:intro}
-\input{sections/introduction}
+% NOTE: Abstract, Introduction and Discussion are temporarily removed while the
+% Methods + Results (figure descriptions) are finalised. Re-enable when ready.
+% \input{sections/abstract}
+%
+% \section{Introduction}\label{sec:intro}
+% \input{sections/introduction}
 
 \section{Methods}\label{sec:methods}
 \input{sections/methods}
@@ -63,18 +65,14 @@
 \section{Results}\label{sec:results}
 \input{sections/results}
 
-\section{Discussion}\label{sec:discussion}
-\input{sections/discussion}
+% \section{Discussion}\label{sec:discussion}
+% \input{sections/discussion}
 
 % --- Data, code, reproducibility ---
 \section*{Code and data availability}
-All source code is available at
+All source code and the raw HDF5 simulation outputs underlying the figures in
+this paper are available at
 \href{https://github.com/max-talanov/tinyCPG}{github.com/max-talanov/tinyCPG}.
-Raw HDF5 simulation outputs underlying Figures~\ref{fig:main}--\ref{fig:speed}
-are deposited at \todo{Zenodo DOI}.
-
-\section*{Acknowledgements}
-\todo{add funding, computational allocation MN5/BSC, collaborators.}
 
 % --- Bibliography ---
 \bibliographystyle{unsrt}   % switch to PLOS or Frontiers style at submission

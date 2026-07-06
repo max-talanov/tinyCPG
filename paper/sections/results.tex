@@ -1,758 +1,186 @@
-% Results — target 1500-2200 words for PLOS Comp Bio.
-%
-% Anchored on four figures:
-%   fig_stdp_weight_matrix.png        = STDP weights: both legs x 3 projections x 5 modes
-%   Fig 5 (fig5_speed_stdp.png)       = Phase A — speed × STDP learning rate matrix
-%   Fig 6 (fig6_ablation_graded.png)  = Phase B — graded sensory ablation × STDP matrix
-%
-% Each subsection: 1 anchor result sentence → narrative → quantitative
-% numbers → 1-2 sentences on interpretation.
+% Results — figure-driven description on the 5 locomotion modes x 3 STDP rates
+% ("rehabilitation modes") of the canonical sensory-sited model.
+%   fig_stdp_weight_matrix   = weights, both legs x 3 projections x 5 modes
+%   fig_stdp_weights_grid    = weights, 5 modes x 3 lambda (3 projections/panel)
+%   fig_force_stages_lam*    = force at 3 learning stages, 5 modes, per lambda
+%   fig_network_matrix_lam*  = 16 population rates x 5 modes, per lambda
+%   fig9_epidural_contrast   = epidural-stim vs natural loading contrast
 
-\subsection{Self-organisation of locomotor pattern via STDP}\label{sec:results:stdp}
+\subsection{Self-organisation of the three plastic projections}\label{sec:results:weights}
 
-\paragraph{Anchor result.}
-Across ten initialisations of the plastic weights --- a lognormal prior
-with $(\mu,\mathrm{CV})$ ranging from $(0,0)$ to $(16,0.05)$, i.e.\ four
-orders of magnitude in the initial mean --- STDP drives the cutaneous
-CUT$\to$RG-E projection to the \emph{same} converged strength,
-$63.6\pm0.3\,$pA (across-initialisation CV $0.4\%$), within
-$t\approx7$--$10\,$s, and holds it stable for the full \SI{120}{\second}
-(Fig.~\ref{fig:init_convergence}). The brainstem projections likewise
-reach a common value independent of the starting weights (BS$\to$RG-E
-$15.5\,$pA, BS$\to$RG-F $15.9\,$pA). The converged weights are therefore
-set by the closed-loop network dynamics, not by the initialisation: even
-starting every synapse at zero ($\mu=0$) the network self-organises to
-the identical attractor.
+\paragraph{The canonical model and its rehabilitation modes.}
+All results use the canonical sensory-sited model: the brainstem drive
+BS$\to$RG is frozen and the plasticity lives in three projections --- the
+cutaneous CUT$\to$RG-E and the two homonymous proprioceptive projections
+Ia-E$\to$RG-E and Ia-F$\to$RG-F. Every result is organised on the same
+$5\times3$ grid of \emph{rehabilitation modes}: five locomotion modes --- slow
+walk (6\,cm/s), medium walk $=$ plantar stepping $=$ baseline loading
+(13.5\,cm/s), fast walk (21\,cm/s), toe stepping (partial unloading) and air
+stepping (full unloading) --- crossed with three STDP learning rates
+$\lambda\in\{10^{-3},10^{-4},10^{-5}\}$.
+
+\paragraph{Weights converge symmetrically to a mode-independent set-point.}
+Figure~\ref{fig:weight_matrix} shows the weight trajectory of each plastic
+projection, for both legs, across the five locomotion modes (the three learning
+rates overlaid in each panel). The cutaneous CUT$\to$RG-E projection converges
+to $\approx63$\,pA in every loaded mode, while the two proprioceptive
+projections self-stabilise at a low $\approx4$--$5$\,pA set-point, well below
+their $10$\,pA cap --- the light, phased Ia feedback that reinforces each burst
+without filling the inter-burst trough. The left and right legs are
+indistinguishable.
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=0.8\textwidth]{fig_init_convergence.png}
-  \caption{\textbf{Initialisation-robustness of STDP self-organisation.}
-    \emph{Main idea: the learned synaptic weight is a property of the
-    network dynamics, not a value we tune --- whatever the weights start
-    at, STDP drives them to the same place.} Medium walk, $\lambda=10^{-3}$,
-    bio-plausible defaults. \textbf{(a)} Mean CUT$\to$RG-E weight trajectory for each
-    of the ten $(\mu,\mathrm{CV})$ initial-weight points (colour = initial
-    $\mu$); all converge to the same plateau (dashed) by $t\approx7$--%
-    $10\,$s, the smallest initial weights ($\mu=0$) taking only a few
-    seconds longer. \textbf{(b)} Converged CUT$\to$RG-E (last-20\,s mean)
-    versus initial $\mu$: flat at $63.6\pm0.3\,$pA across four orders of
-    magnitude, i.e.\ the attractor is independent of initialisation.}
-  \label{fig:init_convergence}
+  \includegraphics[width=0.92\textwidth]{fig_stdp_weight_matrix.png}
+  \caption{\textbf{STDP weight trajectories of the three plastic projections
+    across the five locomotion modes.} Rows: CUT$\to$RG-E, Ia-E$\to$RG-E,
+    Ia-F$\to$RG-F for the left leg (white) then the right leg (tinted); columns:
+    slow~/ medium\,$=$\,plantar\,$=$\,baseline / fast walk and toe / air
+    stepping. Each panel overlays the three learning rates $\lambda$. Weight
+    (pA) versus time (s). CUT$\to$RG-E converges to $\approx63$\,pA in every
+    mode; the two proprioceptive projections self-stabilise at a low
+    $\approx4$--$5$\,pA set-point; the two legs are symmetric.}
+  \label{fig:weight_matrix}
 \end{figure}
 
-\paragraph{Quantitative summary.}
-The canonical model sites its plasticity in the sensory loop (frozen
-BS$\to$RG; plastic CUT$\to$RG-E, Ia-E$\to$RG-E, Ia-F$\to$RG-F). At the
-baseline learning rate ($\lambda=10^{-3}$; last-20\,s window,
-Fig.~\ref{fig:stdp_matrix}):
-\begin{itemize}
-  \item CUT$\to$RG-E converges to $\approx63\,$pA --- the single large
-        plastic input --- with a fast plateau ($\approx52\,$pA at $t=5\,$s,
-        flat by $\approx7\,$s).
-  \item The two proprioceptive projections self-stabilise at a low
-        set-point: Ia-E$\to$RG-E and Ia-F$\to$RG-F at $\approx4$--$5\,$pA,
-        well below their $10\,$pA cap. This low Ia set-point is exactly the
-        regime that reinforces each burst without filling the inter-burst
-        trough (\autoref{sec:results:sensory}).
-  \item Time-to-plateau scales with the learning rate ($\approx7\,$s /
-        $\approx75\,$s / not-within-\SI{120}{\second} at
-        $\lambda=10^{-3}$/$10^{-4}$/$10^{-5}$), yet the asymptote is common.
-\end{itemize}
-All three projections behave identically in the left and right legs and
-across the five locomotion modes (Fig.~\ref{fig:stdp_matrix}); only under
-air stepping does the loading-gated afferent drive visibly slow
-CUT$\to$RG-E learning.
+\paragraph{Learning rate sets the time-to-plateau; unloading slows it.}
+Broken out per learning rate (Figure~\ref{fig:weights_grid}), CUT$\to$RG-E
+reaches its plateau within $\approx7$\,s at $\lambda=10^{-3}$, $\approx75$\,s at
+$10^{-4}$, and does not converge within the $120$\,s run at $10^{-5}$. Under
+progressive unloading the potentiation slows: at air stepping even the fast
+rate only climbs gradually (reaching $\approx50$\,pA at $t=120$\,s), because the
+loading-gated afferents that drive the learning are attenuated. The two
+proprioceptive projections stay at their low set-point throughout.
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=0.8\textwidth]{fig_stdp_weight_matrix.png}
-  \caption{\textbf{STDP weight trajectories of the three plastic
-    projections across the five locomotion modes} (canonical sensory
-    model: frozen BS$\to$RG; plastic CUT$\to$RG-E, Ia-E$\to$RG-E,
-    Ia-F$\to$RG-F). Rows: the three projections, left leg (white) then
-    right leg (tinted); columns: slow~/ medium\,$=$\,plantar\,$=$\,baseline
-    / fast walk and toe~/ air stepping. Each panel overlays the three
-    learning rates $\lambda$. CUT$\to$RG-E converges to $\approx63\,$pA in
-    every mode --- the rate sets only the time-to-plateau --- while the two
-    proprioceptive projections self-stabilise at a low $\approx4$--$5\,$pA
-    set-point. Left and right legs are symmetric; under air stepping the
-    loading-gated afferent drive slows CUT$\to$RG-E convergence.}
-  \label{fig:stdp_matrix}
-\end{figure}
-
-\paragraph{Interpretation.}
-That the converged weights are invariant to \emph{both} the
-initialisation (Fig.~\ref{fig:init_convergence}) and the learning rate
---- every starting weight and every $\lambda$ that plateaus reaches the
-same CUT$\to$RG-E $\approx63\,$pA and the same $\approx4$--$5\,$pA Ia
-set-point --- shows that the cutaneous and proprioceptive synaptic
-strengths are fixed points of the closed-loop dynamics rather than free
-parameters set by the experimenter. The learning rate governs only the
-\emph{time} to reach the attractor, not its location. This is the
-self-organisation claim of the paper: a spinal locomotor pattern and the
-synaptic weights that support it emerge from STDP acting on the
-sensory-entrained rhythm, with no hand-tuning, identically in both legs
-and across all five locomotion modes (Fig.~\ref{fig:stdp_matrix}).
-
-\paragraph{Force develops as the weights converge.}
-The consequence for motor output is direct
-(Fig.~\ref{fig:force_stages}). Sampling the extensor/flexor force in three
-windows of the run --- early ($t\approx4$--9\,s), mid ($40$--45\,s) and
-late ($115$--120\,s) --- shows the counter-phase waveform sharpen as the
-plastic weight grows: early bursts are ragged with phase slips and
-amplitude jitter (CUT$\to$RG-E $\approx7$\,pA), whereas the late window is
-a clean, regular antiphase (CUT$\to$RG-E $\approx64$\,pA). The progression
-holds across the loaded locomotion modes (slow, medium and fast walk reach
-$\mathrm{corr}\le-0.96$ by the end), degrades gracefully under toe stepping
-($-0.82$), and fails under air stepping (only $-0.51$): there the
-loading-gated afferents keep CUT$\to$RG-E weak ($\approx9\,$pA even at
-$t=120\,$s) and the extensor force never fully develops. For this figure
-the learning rate is $\lambda=10^{-4}$, chosen so that convergence spans
-the full run and the three stages are visibly distinct (at
-$\lambda=10^{-3}$ convergence is complete within $\approx8$\,s).
-
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=0.8\textwidth]{fig_force_stages.png}
-  \caption{\textbf{Force profiles at three stages of STDP learning, across
-    the five locomotion modes} (canonical sensory model). Rows: slow /
-    medium\,$=$\,plantar\,$=$\,baseline / fast walk and toe / air stepping;
-    columns: beginning / middle / end of the 120\,s run (leg L,
-    $\lambda=10^{-4}$, $\mu=3.5$, CV$=0.30$). Solid = Force-E, dashed =
-    Force-F. Each panel is annotated with the mean CUT$\to$RG-E weight in
-    the window and the in-window corr$(F_E,F_F)$. The waveform sharpens
-    from ragged early bursts to clean counter-phase as the weight converges
-    in the loaded modes; under air stepping the gated afferents keep the
-    weight low and the extensor force never develops.}
-  \label{fig:force_stages}
+  \includegraphics[width=0.92\textwidth]{fig_stdp_weights_grid.png}
+  \caption{\textbf{Weight trajectories of all three plastic projections, per
+    rehabilitation mode.} Rows: the five locomotion modes; columns: the three
+    learning rates. Each panel shows CUT$\to$RG-E (solid, left axis, pA) and the
+    two proprioceptive projections Ia-E$\to$RG-E and Ia-F$\to$RG-F (dashed, right
+    axis, pA) versus time (s). Panels (a)--(o). The learning rate sets the
+    time-to-plateau; unloading (bottom rows) slows CUT$\to$RG-E convergence.}
+  \label{fig:weights_grid}
 \end{figure}
 
 % =============================================================
-\subsection{Long-term stability of counter-phase locomotion}\label{sec:results:stability}
+\subsection{Rehabilitation progress: force develops as the weight converges}\label{sec:results:force}
 
-\paragraph{Anchor result.}
-Over \SI{120}{\second} at the production configuration ($\mu=3.5$,
-$\mathrm{CV}=0.30$, BS\,$=60\,$Hz, N$=$200 per half-centre; medium walk,
-520\,ms), Force-E peaks at 16.7\,a.u., Force-F at 16.9\,a.u.,
-with a Force-E$\leftrightarrow$Force-F Pearson correlation of $-0.88$ on
-the last 20\,s window. Cycle period jitter is $<\SI{1}{\milli\second}$.
-
-\paragraph{Quantitative summary.}
-Over the last 20\,s (38 cycles at the 520\,ms medium walk, leg L):
-Force-E peaks at 16.72\,a.u. and Force-F at 16.94\,a.u. --- a
-balanced half-centre output --- with an E$\leftrightarrow$F Pearson
-correlation of $-0.88$ (RG-E$\leftrightarrow$RG-F rate correlation
-$-0.96$). The rhythm shows \emph{no drift}: the 95th-percentile Force-E
-peak is identical at 20--40\,s and 100--120\,s (16.72\,a.u. in both
-windows), and the left and right legs hold a $180^{\circ}$ antiphase
-throughout (measured L$\to$R lag $260\,\mathrm{ms}=180^{\circ}$ of the
-520\,ms cycle). Cycle-period jitter is below the sampling resolution.
-
-\paragraph{Comparison with Zhang 2022.}
-Rybak-lineage half-centre models, including Zhang
-2022~\cite{zhang2022}, are typically reported as ${\sim}10$-cycle
-averages without a long-term stability quantification. Our
-\SI{120}{\second} run --- some $230$ cycles, an order of magnitude
-longer --- exhibits no amplitude or period drift, supporting the claim
-that the STDP-self-organised weights sit at a genuinely stable attractor
-rather than a slowly-drifting transient.
-
-% =============================================================
-\subsection{Speed by STDP matrix: gait tracks commanded step period across the rat locomotor range}\label{sec:results:speed}
-
-\paragraph{Anchor result.}
-We tested all nine combinations of three walking speeds
-(Courtine/Lavrov rat treadmill
-range~\cite{lavrov2008,courtine2009}: $\approx$\,6, 13.5, 21\,cm/s,
-corresponding to step periods of 1200, 520, 350\,ms with $\approx$\,7\,cm
-step length) crossed with three STDP learning rates spanning two
-decades below the bio-plausible cortical
-value~\cite{biPoo1998,morrison2007}
-($\lambda \in \{1{\times}10^{-5},\,1{\times}10^{-4},\,1{\times}10^{-3}\}$).
-Once the learning has converged ($\lambda=10^{-4}$ and $10^{-3}$) the
-measured cycle period tracks the commanded period within the sampling
-resolution and the E$\leftrightarrow$F counter-phase is strong and
-speed-robust (corr $-0.96$ to $-0.99$ across the whole range). The
-counter-phase strengthens \emph{monotonically} with the learning rate: at
-the slowest rate ($\lambda=10^{-5}$) the plastic CUT$\to$RG-E has not
-converged within 120\,s, so the gait is under-developed --- weakest at the
-fast walk (corr $-0.34$), where the short 350\,ms cycle gives the
-slow-learning synapse the fewest events to integrate, recovering to
-$-0.60$ at medium and $-0.81$ at slow walk (the two period-tracking
-failures, $521.9\pm51$ and $321.2\pm74$\,ms, are also both at this
-under-converged rate) (Fig.~\ref{fig:speed_stdp},
-Table~\ref{tab:speed_stdp_metrics}).
-
-\begin{table}[h]
-  \centering
-  \caption{Speed $\times$ STDP metrics (last 20\,s of each 120\,s run,
-    leg L, canonical sensory arm). \emph{Computed from the 2026-07-01
-    bio-plausible set} (\texttt{cpg\_sensory\_stdp\_*}). Bold = strongest
-    counter-phase per speed.}
-  \label{tab:speed_stdp_metrics}
-  \small
-  \begin{tabular}{lrrrrrr}
-    \toprule
-    Speed & $\lambda$ & Cmd.\ (ms) & Measured (ms) & Peak $F_E$ & corr$(F_E, F_F)$ & Spec.\ conc. \\
-    \midrule
-    6.0\ cm/s  & $1{\times}10^{-5}$ & 1200 & $1200.0 \pm 0$    & 17.46 & $-0.81$ & 0.86 \\
-    6.0\ cm/s  & $1{\times}10^{-4}$ & 1200 & $1200.0 \pm 0$    & 17.46 & $-0.99$ & 0.87 \\
-    6.0\ cm/s  & $1{\times}10^{-3}$ & 1200 & $1200.0 \pm 0$    & 17.46 & $\mathbf{-0.99}$ & 0.87 \\
-    13.5\ cm/s & $1{\times}10^{-5}$ &  520 & $521.9  \pm 51.3$ & 16.71 & $-0.60$ & 0.86 \\
-    13.5\ cm/s & $1{\times}10^{-4}$ &  520 & $519.6  \pm 0$    & 16.72 & $-0.98$ & 0.89 \\
-    13.5\ cm/s & $1{\times}10^{-3}$ &  520 & $519.6  \pm 0$    & 16.72 & $\mathbf{-0.98}$ & 0.90 \\
-    21.0\ cm/s & $1{\times}10^{-5}$ &  350 & $321.2 \pm 74.3$  & 14.33 & $-0.34$ & 0.86 \\
-    21.0\ cm/s & $1{\times}10^{-4}$ &  350 & $350.4 \pm 0$     & 15.48 & $-0.96$ & 0.95 \\
-    21.0\ cm/s & $1{\times}10^{-3}$ &  350 & $350.4 \pm 0$     & 15.47 & $\mathbf{-0.97}$ & 0.95 \\
-    \bottomrule
-  \end{tabular}
-\end{table}
+Figures~\ref{fig:force_l3}--\ref{fig:force_l5} track the extensor/flexor muscle
+force in three windows of the run --- beginning ($t\approx4$--$9$\,s), middle
+($40$--$45$\,s) and end ($115$--$120$\,s) --- for each locomotion mode, one
+figure per learning rate. As the CUT$\to$RG-E weight grows, the counter-phase
+force pattern sharpens from ragged early bursts into a clean antiphase. The
+progression completes in the loaded modes (slow, medium and fast walk reach
+corr$(F_E,F_F)\le-0.96$), degrades gracefully under toe stepping ($-0.82$), and
+fails under air stepping ($-0.51$): there the gated afferents keep CUT$\to$RG-E
+weak ($\approx9$\,pA even at $t=120$\,s) and the extensor force never fully
+develops. The learning rate sets how much of the run is spent in the
+under-developed regime --- at $\lambda=10^{-3}$ (Figure~\ref{fig:force_l3}) the
+rhythm is essentially converged by the first window, whereas at $10^{-5}$
+(Figure~\ref{fig:force_l5}) it remains under-developed throughout.
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=0.8\textwidth]{fig5_speed_stdp.png}
-  \caption{\textbf{Speed $\times$ STDP learning-rate matrix} (canonical
-    sensory arm).
-    Rows = walking speed (slow / medium / fast walk;
-    Courtine/Lavrov rat treadmill range~\cite{lavrov2008,courtine2009}).
-    Columns = STDP learning rate $\lambda \in
-    \{1{\times}10^{-5},\,1{\times}10^{-4},\,1{\times}10^{-3}\}$
-    (slow / intermediate / baseline), spanning two decades below the
-    cortical bio-plausible value~\cite{biPoo1998,morrison2007}.
-    \textbf{Rows 1--3 (panels A1--A9):} Force-E (blue) and Force-F
-    (orange) leg L, \emph{first} 20\,s of each 120\,s simulation --- the
-    window during which the gait self-organises.
-    \textbf{Row 4:} Time-domain summary heat-tiles: (a) measured cycle
-    period (ms) versus commanded; (b) peak Force-E (95th percentile,
-    a.u.); (c) E$\leftrightarrow$F counter-phase Pearson correlation
-    --- note the monotonic $\lambda$ dependence: counter-phase strengthens
-    as the learning converges, weakest at the under-converged slow rate.
-    \textbf{Row 5:} (d) CUT$\to$RG-E weight trajectory at the medium-walk
-    anchor: the baseline rate ($\lambda=10^{-3}$, red) plateaus within
-    $\sim$7\,s, the intermediate rate ($10^{-4}$, green) within
-    $\sim$75\,s, and the slow rate ($10^{-5}$, blue) climbs steadily
-    \emph{without} plateauing in 120\,s --- reaching only $\sim$17\% of the
-    converged weight. (The per-projection weight trajectories for all modes
-    are in Fig.~\ref{fig:stdp_matrix}.) (e) Spectral concentration ---
-    fraction of total PSD power within $\pm 10\%$ of the fundamental cycle
-    frequency.}
-  \label{fig:speed_stdp}
+  \includegraphics[width=0.9\textwidth]{fig_force_stages_lam1em3.png}
+  \caption{\textbf{Force at three learning stages, five locomotion modes,
+    $\lambda=10^{-3}$.} Rows: the five locomotion modes; columns: beginning /
+    middle / end of the $120$\,s run. Solid = Force-E, dashed = Force-F
+    (a.u.)\ versus time (s); panels annotated with the mean CUT$\to$RG-E weight
+    and in-window corr$(F_E,F_F)$. Panels (a)--(o).}
+  \label{fig:force_l3}
 \end{figure}
-
-\paragraph{Interpretation: period tracking and the fast-gait force
-compression.}
-At the converged learning rates ($\lambda=10^{-4}$, $10^{-3}$) the
-measured cycle period equals the commanded step period to within the
-sampling resolution across all three speeds; the only period-tracking
-failures are at the under-converged slow rate ($\lambda=10^{-5}$, medium
-and fast walk). Independent of learning, peak Force-E drops from $17.46$
-to $15.5$\,a.u.\ as the step period shortens from 1200 to 350\,ms --- a
-$\approx 11\%$ compression --- consistent with the rat fast-twitch fibre
-rise-time limit ($\tau_F=80$\,ms) becoming a non-negligible fraction of
-the 175\,ms stance window, where Hill-style saturation~\cite{zajac1989}
-prevents force from fully developing every stride.
-
-\paragraph{Interpretation: counter-phase strengthens as learning
-converges.}
-The counter-phase correlation (Fig.~\ref{fig:speed_stdp}, tile c) depends
-\emph{monotonically} on the learning rate: it improves as the plastic
-CUT$\to$RG-E converges. At the slowest rate ($\lambda=10^{-5}$) the weight
-is still climbing at the end of the run (medium-walk CUT$\to$RG-E reaches
-only $\sim 11$\,pA versus $63$\,pA converged; Row 5 panel d,
-Fig.~\ref{fig:stdp_matrix}), so the learned cutaneous drive is too weak to
-firmly reinforce the paced rhythm and the counter-phase is
-under-developed --- and increasingly so at higher cadence, where the
-shorter cycle affords the slow synapse fewer spike pairings (fast walk
-falls to $-0.34$). Once the weight has converged ($\lambda=10^{-4}$ and
-$10^{-3}$, plateau by $\sim$75\,s and $\sim$7\,s) the counter-phase is
-strong and nearly speed-independent ($-0.96$ to $-0.99$). The near-perfect
-anti-phase of the converged gait is a joint property of the paced
-heel$\to$toe drive, the reciprocal-inhibition core, and the learned
-cutaneous and proprioceptive drive; the learning rate sets only how
-quickly that drive develops, and hence how much of the 120\,s run is spent
-in the under-developed regime. (The descending-plasticity arm shows a
-different, non-monotonic dependence; the two are contrasted directly in
-\autoref{sec:results:sensory}.)
-
-\paragraph{Interpretation: spectral concentration as a sensitive
-irregularity metric.}
-Cycle-period s.d. is essentially zero for the externally paced rhythm
-($\ll$\,1\,ms in 7 of 9 cells), and is therefore an insensitive index
-of irregularity. The spectral concentration (Fig.~\ref{fig:speed_stdp},
-panel f) measures the fraction of total PSD power within $\pm$10\% of
-the fundamental cycle frequency $f_0=1/P$. It rises monotonically from
-$\approx 0.86$ at slow walk to $\approx 0.95$ at fast walk, reflecting
-the increasing concentration of power at the fundamental as the rhythm
-locks more tightly to the external clock at higher cadence; within a given
-speed it rises weakly with the learning rate, tracking the counter-phase.
-This metric does not saturate at the
-converged plateau and so provides a finer-grained diagnostic than
-period s.d.\ for future studies that probe sub-millisecond timing.
-
-\paragraph{Interpretation: bio-plausible mapping.}
-Our three speed conditions cover the canonical rat treadmill locomotor
-range used in the spinal cord injury literature: 6\,cm/s (slow
-exploration; Lavrov 2008~\cite{lavrov2008}), 13.5\,cm/s (medium walk;
-Courtine 2009~\cite{courtine2009}), and 21\,cm/s (fast walk / slow trot
-transition). Counter-phase correlation remains strong ($\le -0.81$)
-across the full range, indicating that paced sensory drive supports the
-rat locomotor speed range without retuning of the central architecture.
-
-% =============================================================
-\subsection{Network-level activity: every population alternates in counter-phase across all modes}\label{sec:results:network}
-
-\paragraph{Full-circuit population rates across the five modes.}
-Behind the muscle-force output, the counter-phase organisation is
-expressed at every level of the circuit. Fig.~\ref{fig:net_matrix} shows
-the population firing rates of all sixteen recorded groups --- both legs'
-RG-F/RG-E rhythm generators, InF/InE reciprocal-inhibition interneurons,
-IaInt-F/IaInt-E proprioceptive interneurons, and M-F/M-E motor pools ---
-over the last few cycles, across the five locomotion modes of the
-canonical (sensory) model. Three features hold across slow, medium and
-fast walk and under toe stepping: (i) within each leg every flexor-side
-population fires in strict antiphase to its extensor-side counterpart;
-(ii) the two legs hold a $180^{\circ}$ offset (right-leg panels, tinted,
-are half a cycle out of phase with the left); and (iii) the reciprocal
-InF/InE and IaInt interneurons carry the same clean alternation as the
-rhythm generators, so the inhibitory core --- not just the motor read-out
---- is phase-locked. The exception is the rightmost column: under
-\emph{air} stepping the loading-gated afferent drive is withdrawn and the
-extensor-side populations (RG-E, InE, IaInt-E, M-E) collapse while the
-intrinsically-bursting flexor side persists --- the population-level
-signature of the unloading failure quantified in
-\autoref{sec:results:ablation} and \autoref{sec:results:sensory}.
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=0.98\textwidth]{fig_network_matrix.png}
-  \caption{\textbf{Full-circuit population activity across the five
-    locomotion modes} (canonical sensory model, $\lambda=10^{-3}$,
-    last 5 cycles). Rows: both legs' RG-F/RG-E, InF/InE, IaInt-F/IaInt-E,
-    M-F/M-E population rates (spikes$\cdot$neuron$^{-1}\cdot$s$^{-1}$);
-    right-leg rows tinted. Columns: the unified matrix --- slow /
-    medium\,$=$\,plantar\,$=$\,baseline / fast walk and toe / air stepping.
-    Every population alternates in strict counter-phase with a
-    $180^{\circ}$ interlimb offset through toe stepping; under air stepping
-    the extensor side collapses as the loading-gated afferents withdraw.}
-  \label{fig:net_matrix}
+  \includegraphics[width=0.9\textwidth]{fig_force_stages_lam1em4.png}
+  \caption{\textbf{Force at three learning stages, five locomotion modes,
+    $\lambda=10^{-4}$.} Same layout as Figure~\ref{fig:force_l3}. At this
+    intermediate rate the three stages are most distinct, spanning the full
+    $120$\,s convergence.}
+  \label{fig:force_l4}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.9\textwidth]{fig_force_stages_lam1em5.png}
+  \caption{\textbf{Force at three learning stages, five locomotion modes,
+    $\lambda=10^{-5}$.} Same layout as Figure~\ref{fig:force_l3}. At this slow
+    rate the descending weight barely develops within the run, so the gait stays
+    under-developed across all three windows.}
+  \label{fig:force_l5}
 \end{figure}
 
 % =============================================================
-\subsection{Graded sensory ablation: epidural stimulation rescues stepping under unloading}\label{sec:results:ablation}
+\subsection{Network-level activity across the locomotion modes}\label{sec:results:network}
 
-\paragraph{Two loading models.}
-Limb unloading attenuates two afferent channels at once: proprioceptive
-Ia feedback (force and stretch) and cutaneous feedback (paw contact).
-We therefore ran the graded-ablation experiment in two versions. In the
-\emph{epidural-stim-assisted} version the paced cutaneous drive is held
-at full amplitude regardless of loading --- the computational analogue
-of epidural electrical stimulation, which supplies a rhythmic afferent
-volley independent of limb
-contact~\cite{lavrov2008,courtine2009,harkema2011} --- and only the
-closed-loop Ia is attenuated. In the \emph{natural} (unassisted)
-version both the cutaneous drive (via \verb|--cut-feedback-gain|) and
-the Ia feedback are scaled together by the loading level
-($G \in \{1.0, 0.5, 0.1\}$ for baseline / toe / air stepping). The
-external Ia-E heel$\to$toe ramp that clocks the cycle is left at full
-amplitude in both versions.
+Figures~\ref{fig:net_l3}--\ref{fig:net_l5} show the population firing rates of
+all sixteen recorded groups --- both legs' RG-F/RG-E rhythm generators, InF/InE
+reciprocal-inhibition interneurons, IaInt-F/IaInt-E proprioceptive interneurons
+and M-F/M-E motor pools --- across the five locomotion modes, one figure per
+learning rate. Through slow, medium and fast walk and under toe stepping, every
+flexor-side population fires in strict antiphase to its extensor-side
+counterpart, the two legs hold a $180^{\circ}$ offset (right-leg rows tinted),
+and the reciprocal In and IaInt interneurons carry the same clean alternation as
+the rhythm generators --- so the inhibitory core, not merely the motor read-out,
+is phase-locked. Under air stepping (rightmost column) the loading-gated
+afferent drive is withdrawn and the extensor-side populations (RG-E, InE,
+IaInt-E, M-E) collapse while the intrinsically-bursting flexor side persists ---
+the population-level signature of the unloading failure.
 
-\paragraph{Anchor result: the paced cutaneous drive preserves stepping.}
-The two versions are indistinguishable at full weight-bearing
-(baseline: corr $-0.90$ in both) but diverge sharply as the limb is
-unloaded (Fig.~\ref{fig:epidural}, at the baseline learning rate
-$\lambda=10^{-3}$). Under the natural model the counter-phase
-\emph{degrades markedly} --- from $-0.90$ (baseline) through $-0.77$ (toe) to
-$-0.52$ (air stepping) --- with the cycle period becoming highly
-irregular (s.d.\ $130$\,ms at air stepping), the extensor riding
-tonically high and the flexor alternating erratically. Under the
-epidural-stim-assisted model the same unloading leaves the rhythm intact
-(air stepping: corr $-0.98$, period s.d.\ $0$\,ms). The paced cutaneous
-drive --- the stimulation analogue --- is therefore what preserves
-stepping once limb-contact feedback is lost, directly reproducing the
-central finding of the Courtine/Lavrov SCI-rehabilitation program:
-epidural lumbar stimulation enables treadmill stepping in spinal animals
-that cannot otherwise step~\cite{lavrov2008,courtine2009,harkema2011}.
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.95\textwidth]{fig_network_matrix_lam1em3.png}
+  \caption{\textbf{Full-circuit population activity across the five locomotion
+    modes, $\lambda=10^{-3}$.} Rows: the sixteen recorded populations (both
+    legs; right-leg rows tinted); columns (a)--(e): slow / medium=plantar=%
+    baseline / fast walk and toe / air stepping. Population rate
+    (spikes$\cdot$neuron$^{-1}\cdot$s$^{-1}$) versus time (ms), last cycles.}
+  \label{fig:net_l3}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.95\textwidth]{fig_network_matrix_lam1em4.png}
+  \caption{\textbf{Full-circuit population activity, $\lambda=10^{-4}$.} Same
+    layout as Figure~\ref{fig:net_l3}.}
+  \label{fig:net_l4}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.95\textwidth]{fig_network_matrix_lam1em5.png}
+  \caption{\textbf{Full-circuit population activity, $\lambda=10^{-5}$.} Same
+    layout as Figure~\ref{fig:net_l3}. At this under-converged rate the
+    counter-phase is weaker, most visibly at the higher cadences.}
+  \label{fig:net_l5}
+\end{figure}
+
+% =============================================================
+\subsection{Epidural stimulation rescues stepping under unloading}\label{sec:results:epidural}
+
+Figure~\ref{fig:epidural} contrasts the two loading paradigms. In the natural
+(unassisted) case the cutaneous and proprioceptive drives are gated together by
+loading, and the rhythm collapses as the limb is unloaded (corr $-0.52$ at air
+stepping). When the paced cutaneous drive is instead held intact regardless of
+loading --- the computational analogue of epidural lumbar stimulation, which
+supplies a rhythmic afferent volley independent of limb
+contact~\cite{courtine2009,harkema2011} --- the counter-phase is preserved
+across the entire loading range (corr $\approx-0.98$). This double dissociation
+reproduces the mechanism underlying the clinical observation that motor-complete
+subjects cannot step unassisted but recover treadmill stepping under epidural
+stimulation~\cite{courtine2009,harkema2011}.
 
 \begin{figure}[t]
   \centering
   \includegraphics[width=0.8\textwidth]{fig9_epidural_contrast.png}
-  \caption{\textbf{Epidural-stimulation rescue --- the paced cutaneous
-    drive preserves stepping under unloading.} Air-stepping contrast at
-    $\lambda=10^{-3}$ between the epidural-stim-assisted model (cutaneous
-    drive intact, blue) and the natural model (cutaneous drive gated by
-    loading, red).
-    \textbf{(a)} counter-phase corr$(F_E,F_F)$ versus loading: identical
-    at baseline, the natural model degrades sharply with unloading
-    while the stim-assisted model stays strong.
-    \textbf{(b)} cycle-period s.d.\ versus loading.
-    \textbf{(c)} air-stepping force trace, stim-assisted --- clean E/F
-    alternation (corr $-0.98$).
-    \textbf{(d)} air-stepping force trace, natural --- degraded
-    alternation, tonic extensor (corr $-0.52$).}
+  \caption{\textbf{Epidural-stimulation rescue --- paced cutaneous drive
+    preserves stepping under unloading.} Loading swept from baseline to air
+    stepping. \textbf{(a)} counter-phase corr$(F_E,F_F)$ versus loading:
+    epidural-stim (CUT held intact) stays strong, the natural (CUT gated) arm
+    collapses. \textbf{(b)} cycle-period jitter versus loading.
+    \textbf{(c, d)} representative air-stepping force traces for the stim and
+    natural arms.}
   \label{fig:epidural}
 \end{figure}
-
-\paragraph{The natural arm across learning rates.}
-We now characterise the \emph{natural} (unassisted) arm --- in which
-both the cutaneous and the Ia feedback are gated by loading --- across
-the full loading $\times$ learning-rate matrix
-($\lambda \in \{1{\times}10^{-5},\,1{\times}10^{-4},\,1{\times}10^{-3}\}$),
-at the medium-walk anchor (520\,ms cycle period, 120\,s simulations).
-One relationship organises the matrix (Fig.~\ref{fig:ablgrad},
-Table~\ref{tab:ablgrad_metrics}): at full weight-bearing the rhythm
-alternates strongly at every learning rate (corr $-0.85$ to $-0.95$),
-but as the limb is unloaded the counter-phase degrades, and it degrades
-\emph{least where the learned descending drive is most developed}. Under
-air stepping the counter-phase strengthens monotonically with $\lambda$
---- from $-0.29$ at the slow rate (converged CUT$\to$RG-E only $4$\,pA)
-through $-0.22$ at the intermediate rate to $-0.52$ at the baseline rate
-(CUT$\to$RG-E $60$\,pA) --- and the same ordering holds under toe
-stepping ($-0.42 \to -0.65 \to -0.77$). Because in the natural arm the
-cutaneous drive is \emph{itself} gated by loading, even the
-fully-learned baseline rate cannot hold a clean rhythm under air stepping
-($-0.52$); restoring that requires the ungated cutaneous drive of the
-epidural-stim arm (Fig.~\ref{fig:epidural}, $-0.98$).
-
-\begin{table}[h]
-  \centering
-  \caption{Phase B --- graded Ia ablation $\times$ STDP metrics
-    (last 20\,s of each 120\,s run, leg L, 520\,ms commanded period).
-    \emph{Computed from the canonical 2026-07-01 bio-plausible set}
-    (\texttt{cpg\_ablgrad\_*}).}
-  \label{tab:ablgrad_metrics}
-  \small
-  \begin{tabular}{lrrrrr}
-    \toprule
-    Condition & $\lambda$ & Cycle (ms) & $\pm$ s.d.\ (ms) & Peak $F_E$ & corr$(F_E, F_F)$ \\
-    \midrule
-    baseline ($G=1.0$)   & $1{\times}10^{-5}$ & 519.6 &  49.3 & 16.68 & $\mathbf{-0.95}$ \\
-    baseline             & $1{\times}10^{-4}$ & 519.6 &   0.0 & 16.72 & $-0.85$ \\
-    baseline             & $1{\times}10^{-3}$ & 519.6 &   0.0 & 16.72 & $-0.90$ \\
-    toe step ($G=0.5$)   & $1{\times}10^{-5}$ & 493.0 &  90.2 & 13.23 & $-0.42$ \\
-    toe step             & $1{\times}10^{-4}$ & 519.6 &   0.0 & 16.72 & $-0.65$ \\
-    toe step             & $1{\times}10^{-3}$ & 519.6 &   0.0 & 16.73 & $\mathbf{-0.77}$ \\
-    air step ($G=0.1$)   & $1{\times}10^{-5}$ & 230.3 &  97.2 & 10.03 & $-0.29$ \\
-    air step             & $1{\times}10^{-4}$ & 438.9 & 124.4 & 15.60 & $-0.22$ \\
-    air step             & $1{\times}10^{-3}$ & 436.9 & 130.5 & 16.96 & $\mathbf{-0.52}$ \\
-    \bottomrule
-  \end{tabular}
-\end{table}
-
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=0.8\textwidth]{fig6_ablation_graded.png}
-  \caption{\textbf{Phase B --- graded sensory ablation $\times$ STDP
-    learning-rate matrix (Courtine/Lavrov SCI rehab paradigm).}
-    Rows = Ia feedback gain (baseline / toe stepping / air stepping).
-    Columns = STDP learning rate $\lambda \in
-    \{1{\times}10^{-5},\,1{\times}10^{-4},\,1{\times}10^{-3}\}$
-    (slow / intermediate / baseline).
-    \textbf{Rows 1--3 (panels B1--B9):} Force-E (blue) and Force-F
-    (orange) leg L, \emph{first} 20\,s of each 120\,s simulation. The
-    air-stepping row (B7--B9) is cleanest at the baseline rate (B9) and
-    degrades toward the slow rate (B7) as the learned descending drive
-    weakens.
-    \textbf{Row 4:} Quantitative summary heat-tiles across the
-    $3\times 3$ matrix: (a) measured cycle period (ms);
-    (b) peak Force-E (a.u.);
-    (c) E$\leftrightarrow$F counter-phase Pearson correlation
-    --- strengthening with $\lambda$ under unloading.
-    \textbf{Row 5:} STDP weight trajectories at air stepping.
-    (d) mean CUT$\to$RG-E weight vs time, three $\lambda$ overlaid --- at
-    the slow rate ($\lambda=10^{-5}$, blue) the gated cutaneous drive
-    learns to only $\approx 4$\,pA at $t=120$\,s (vs $\approx 60$\,pA at
-    the baseline rate), leaving the rhythm without a learned drive to fall
-    back on once the afferents are withdrawn.
-    (e) CUT$\to$RG-E mean $\pm$ across-connection std for the three rates.}
-  \label{fig:ablgrad}
-\end{figure}
-
-\paragraph{Interpretation: the learned descending drive compensates for
-lost feedback.}
-The matrix tells a single, coherent story that unifies Phase~B with the
-epidural contrast above. As the limb unloads, the two afferent channels
-that would otherwise sustain the rhythm --- cutaneous and Ia --- are both
-attenuated; what remains to hold the gait is the STDP-learned descending
-drive. The more that drive has developed (the higher the learning rate),
-the better the rhythm survives unloading, so under air stepping the
-counter-phase strengthens monotonically with $\lambda$
-(Table~\ref{tab:ablgrad_metrics}). At full weight-bearing the learned
-drive is not needed --- the intact afferents carry the rhythm and all
-three rates alternate strongly --- and under progressive unloading the
-learning rate becomes the decisive variable: the fully-converged baseline
-rate ($\lambda=10^{-3}$, CUT$\to$RG-E $\approx 60$\,pA) is the most
-robust, while the barely-developed slow rate ($\lambda=10^{-5}$,
-$\approx 4$\,pA) is the most fragile --- its peak force collapsing to
-$\approx 10$\,a.u.\ and its period losing lock ($230\pm97$\,ms). Where
-the rhythm does hold, peak force is preserved, so the degradation is
-primarily a \emph{timing} effect. The ceiling on this compensation is
-intrinsic to the natural arm: because its cutaneous drive is gated too,
-learning can only \emph{partially} substitute for lost feedback --- which
-is precisely the gap the exogenous epidural-stim drive fills.
-
-\paragraph{Frozen-weight control: does the imposed distribution suffice?}
-A residual question concerns the clean rhythm at full weight-bearing: is
-it carried merely by the \emph{marginal} statistics of the converged
-weights (their mean and spread), or by finer learning-induced structure?
-To isolate this we re-simulated \emph{baseline} loading with STDP switched off
-(\verb|--stdp-lambda 0|) and the CUT$\to$RG-E weights drawn from a
-prescribed lognormal of fixed mean and coefficient of variation (CV),
-BS$\to$RG-E scaled to the observed $0.25\times$ ratio, all other synapses
-at the bio-plausible defaults (Fig.~\ref{fig:frozen}). Two controlled
-sweeps isolate the candidate mechanisms: a \emph{mean} sweep at fixed
-tight spread (the weakness axis --- does a weak imposed drive give a
-clean rhythm and an intermediate one degrade it?) and a \emph{CV} sweep
-at fixed full mean (the heterogeneity axis --- does broadening the
-imposed distribution toward the converged spread, $\mathrm{CV}\approx
-0.05$, recover the clean rhythm?). The plastic reference to reproduce is
-the natural arm at baseline loading, corr $-0.90$ ($\lambda=10^{-3}$)
-with converged CUT$\to$RG-E mean $\approx63$\,pA.
-Across the mean sweep (Fig.~\ref{fig:frozen}a) the frozen rhythm is
-strong throughout but strikingly non-monotonic: correlation is cleanest
-at the \emph{weakest} imposed mean (corr $-0.99$ at $15$\,pA, weaker
-than the plastic reference), dips to its worst in the middle of the
-range ($-0.73$ to $-0.74$ at $35$--$45$\,pA), then partially recovers
-at the full converged mean ($-0.88$ at $63$\,pA, tight CV$=0.02$).
-Peak extensor force is essentially flat across the entire sweep
-($16.71$--$16.72$\,a.u.), so the imposed CUT$\to$RG-E weight does not
-gate \emph{whether} the rhythm exists at baseline loading --- the
-intact BS tonic drive, closed-loop Ia feedback, and cutaneous pacing
-ramp already carry most of it --- it mainly modulates phase-locking
-\emph{quality}. The CV sweep at the full mean (Fig.~\ref{fig:frozen}b)
-is comparatively flat ($-0.80$ to $-0.87$ across CV $0.02$--$0.10$) and
-non-monotonic in the same way; broadening the spread toward the
-converged heterogeneity does not recover the plastic reference ---
-imposing the true converged marginal (mean $63$\,pA, CV$\approx0.05$,
-interpolated corr $\approx-0.81$) falls \emph{short} of the plastic
-$-0.90$ by about $0.09$, while the tightest imposed spread at the same
-mean (CV$=0.02$, corr $-0.88$) comes within $0.02$ of it. So hand-tuning
-the exact converged CV does not close the gap and if anything goes the
-wrong way: the marginal distribution alone --- even matched in mean and
-spread --- does not fully reproduce the plastic baseline rhythm, so STDP
-organises weight \emph{structure} (which specific synapses are
-strengthened, correlated with each afferent's phase) beyond what its
-marginal mean and coefficient of variation capture.
-
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=0.8\textwidth]{fig8_frozen_control.png}
-  \caption{\textbf{Frozen-weight control --- is learning necessary, or is
-    the converged weight \emph{distribution} enough?}
-    \emph{Main idea: we switch STDP off and hand-impose the CUT$\to$RG-E
-    weights from a prescribed distribution (fixed mean and spread), then ask
-    whether the rhythm is as clean as the learned one. If a hand-imposed
-    distribution sufficed, STDP would be organising nothing beyond the
-    marginal statistics; it falls short, so the learning organises finer
-    weight structure.}
-    STDP off; CUT$\to$RG-E drawn from a prescribed lognormal (BS$\to$RG-E at
-    $0.25\times$ the mean); baseline loading, 520\,ms paced, 30\,s.
-    \textbf{(a)} corr$(F_E,F_F)$ versus imposed mean weight at fixed
-    tight spread (CV$=0.02$) --- the \emph{weakness} axis.
-    \textbf{(b)} corr versus imposed CV at fixed full mean ($63$\,pA)
-    --- the \emph{heterogeneity} axis.
-    \textbf{(c, d)} corresponding cycle-period jitter.
-    \textbf{(e--g)} representative force traces (weak / full+tight /
-    full+broad). Both axes are non-monotonic: correlation is cleanest at
-    the weak mean ($-0.99$) and at full mean with tight spread ($-0.88$),
-    weakest in the mid-range mean ($-0.73$ at $35$--$45$\,pA); force
-    output is unaffected by the imposed weight throughout. The full
-    converged marginal (mean $63$\,pA, CV$\approx0.05$) falls short of
-    the plastic reference ($-0.90$) by $\approx0.09$.}
-  \label{fig:frozen}
-\end{figure}
-
-\paragraph{Relation to SCI rehabilitation.}
-The paired contrast (Fig.~\ref{fig:epidural}) gives the model a direct
-SCI-rehabilitation reading. When the paced cutaneous drive is intact
-(the epidural-stimulation analogue), the spinal CPG maintains a stable
-counter-phase rhythm despite severely attenuated proprioceptive feedback
-across the entire loading range. When that drive is gated by loading
-(the natural, unassisted case), the rhythm collapses as the limb is
-unloaded. This double dissociation reproduces the mechanism underlying
-the clinical observations of Courtine 2009 and Harkema
-2011~\cite{courtine2009,harkema2011}: chronic SCI rats and humans with
-motor-complete paraplegia cannot step unassisted but recover treadmill
-stepping --- from weight-bearing through to limb-suspended air stepping
---- under epidural lumbar stimulation. In the model, the stimulation
-substitutes for the lost loading-dependent afferent drive, exactly the
-function the cutaneous pacing serves here.
-
-% =============================================================
-\subsection{Sensory-sited plasticity: relocating the learning to the proprioceptive loop}\label{sec:results:sensory}
-
-\paragraph{Freezing the descending plasticity, adding a plastic Ia$\to$RG loop.}
-In all experiments so far the plasticity lived in the \emph{descending}
-projections (cutaneous CUT$\to$RG-E and brainstem BS$\to$RG). We now ask
-whether the learning must be sited there, or whether it can instead be
-carried by the \emph{sensory} loop. We froze both BS$\to$RG projections
-as static synapses at their weak lognormal initialisation (removing all
-descending brainstem plasticity) and added a plastic homonymous
-proprioceptive projection --- Ia-E$\to$RG-E and Ia-F$\to$RG-F --- so that
-the muscle afferents become the learning input to the rhythm generators.
-Because this loop is in-phase positive feedback, its weight cap is
-critical: a low cap ($w_{\max}=10$\,pA) lets a light \emph{phased} boost
-reinforce each burst without filling the inter-burst trough, whereas a
-high cap saturates into tonic co-excitation of both half-centres that
-abolishes counter-phase (corr$(F_E,F_F)$ falls monotonically from
-$-0.98$ at $w_{\max}=10$ to $+0.12$ at $w_{\max}=120$). The plastic
-Ia$\to$RG weight self-stabilises at only $\approx4.5$\,pA --- well below
-the cap --- a genuine low-gain equilibrium rather than a clamp.
-
-\paragraph{At normal loading, relocation is cost-free.}
-Across the full speed range the sensory-learning model matches the
-descending control on counter-phase (last 20\,s, $\lambda=10^{-3}$):
-corr$(F_E,F_F) = -0.99,\,-0.98,\,-0.96$ for the sensory arm at
-$6/13.5/21$\,cm/s versus $-0.97,\,-0.88,\,-0.95$ for the descending arm,
-with identical force amplitudes ($16$--$17$\,a.u., balanced E/F) and the
-same load set-point on the still-plastic CUT$\to$RG-E weight
-($\approx63$\,pA). The descending arm's brainstem contribution is small
-to begin with (BS$\to$RG converges to only $\approx15$\,pA against its
-$30$\,pA cap, the bulk of the drive being cutaneous); the sensory arm
-replaces that small plastic descending term with an even lighter
-$\approx4.5$\,pA \emph{phased proprioceptive} term and loses nothing.
-The learning trajectory is likewise preserved: CUT$\to$RG-E climbs to the
-same attractor and the slow $\lambda=10^{-5}$ transient is still rising
-at 120\,s, exactly as in the descending arm
-(Fig.~\ref{fig:sensory}a).
-
-\paragraph{Under unloading, sensory plasticity is partially self-rescuing.}
-The decisive difference appears under limb unloading, where we now have a
-\emph{three-way} contrast at the medium-walk anchor: the epidural-stim
-arm (cutaneous drive intact), the natural arm (cutaneous drive gated by
-loading), and the new sensory-learning arm (Table~\ref{tab:sensory},
-$\lambda=10^{-3}$). At full weight-bearing all three are clean. Under
-\emph{toe} stepping ($G=0.5$) the sensory arm preserves the rhythm
-(corr $-0.99$) where the natural arm has already degraded ($-0.77$): the
-plastic Ia$\to$RG loop reinforces the pattern from the proprioception
-that is still present. Under \emph{air} stepping ($G=0.1$), however, the
-sensory arm degrades to $-0.51$ --- essentially tied with the natural
-arm ($-0.52$) and well short of the stim arm ($-0.98$). This is the
-central limit of sensory-sited learning: under total unloading the Ia
-feedback is the very input the pathway learns from, so it cannot
-bootstrap a pattern from proprioception it no longer receives, and its
-advantage over the unassisted natural arm vanishes. Epidural-stim drive,
-being exogenous to the sensory loss, is unaffected. The sensory arm's
-gain is therefore specific to \emph{partial} unloading (toe stepping),
-where residual proprioception still carries a learnable pattern.
-
-\paragraph{Mechanism and rehabilitation reading.}
-The three arms separate at the extensor (Fig.~\ref{fig:sensory}c). With
-the stim drive intact the extensor half-centre rate is held or rises with
-unloading (RG-E mean $418\to458\to487$\,Hz); in the natural arm it
-collapses ($419\to267\to128$\,Hz) as the flexor takes over
-($197\to222\to257$\,Hz); the sensory arm's extensor rate falls with the
-natural collapse ($419\to261\to78$\,Hz) yet it keeps
-the E/F \emph{force} balanced down to toe stepping, and recovers extensor
-force at air stepping only for fast learning ($\lambda=10^{-3}$: peak
-$F_E=16.7$ vs $\lambda=10^{-5}$: $8.1$\,a.u.). Read against
-SCI-rehabilitation physiology, the three arms reproduce a graded
-hierarchy: load-independent epidural stimulation restores stepping across
-the full unloading range~\cite{courtine2009,harkema2011}; proprioceptive
-reinforcement improves weight-supported (toe) stepping but cannot
-substitute for load feedback during suspension~\cite{edgerton2008,rossignol2006};
-and passive descending drive without either loses the pattern as load is
-withdrawn. The model thus makes a sharp statement: \emph{where the
-plasticity is sited determines which rehabilitation regime it survives}
---- sensory-sited learning is self-rescuing under partial loading but
-hostage to its own gated input under total unloading.
-
-\begin{table}[h]
-  \centering
-  \caption{Three-way loading contrast: counter-phase corr$(F_E, F_F)$
-    versus loading at $\lambda=10^{-3}$ (last 20\,s, leg L, 520\,ms
-    commanded period). Stim = cutaneous drive intact; natural = cutaneous
-    and Ia gated by loading; sensory = frozen BS$\to$RG with plastic
-    Ia$\to$RG (Ia is itself the gated learning drive).}
-  \label{tab:sensory}
-  \small
-  \begin{tabular}{lrrr}
-    \toprule
-    Loading & Stim & Sensory & Natural \\
-    \midrule
-    baseline ($G=1.0$) & $-0.90$ & $\mathbf{-0.98}$ & $-0.90$ \\
-    toe step ($G=0.5$) & $-0.98$ & $\mathbf{-0.99}$ & $-0.77$ \\
-    air step ($G=0.1$) & $\mathbf{-0.98}$ & $-0.51$ & $-0.52$ \\
-    \bottomrule
-  \end{tabular}
-\end{table}
-
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=0.8\textwidth]{fig_descending_vs_sensory.png}
-  \caption{\textbf{Sensory-sited plasticity --- relocating the learning
-    from the descending to the proprioceptive loop.}
-    \emph{Main idea: does it matter \emph{where} the plasticity lives?
-    We move the learning from the brainstem (descending) pathway into the
-    muscle-afferent (Ia) loop and ask whether the gait still works and how
-    it holds up as the limb is unloaded. Answer: identical at normal
-    loading, and it self-rescues toe stepping --- but because the Ia drive
-    is itself gated by loading, it cannot rescue air stepping the way the
-    load-independent epidural-stim drive can.}
-    Frozen BS$\to$RG + plastic homonymous Ia$\to$RG ($w_{\max}=10$\,pA);
-    production $N$, 120\,s, last 20\,s, $\lambda=10^{-3}$.
-    \textbf{(a)} counter-phase corr$(F_E,F_F)$ versus speed: the sensory
-    arm (green) matches the descending control (blue) across the locomotor
-    range --- relocation is cost-free at normal loading.
-    \textbf{(b)} counter-phase versus loading for the three arms: the
-    sensory arm rescues toe stepping where the natural arm collapses, and
-    partially holds air stepping, but cannot match the load-independent
-    stim arm.
-    \textbf{(c)} extensor RG-E mean rate versus loading --- the mechanism:
-    stim holds the extensor while both the natural and sensory arms let it
-    collapse under unloading.
-    \textbf{(d)} force-peak balance versus loading: the sensory arm keeps
-    $F_E$ and $F_F$ balanced under unloading, where the natural arm loses
-    extensor force.}
-  \label{fig:sensory}
-\end{figure}
-
-% =============================================================
-\subsection{Summary of results}\label{sec:results:summary}
-
-Eight findings emerge across the experiments.
-(1) STDP self-organises the descending and cutaneous weights to the
-same attractor across four orders of magnitude of initialisation
-(\autoref{sec:results:stdp}).
-(2) The resulting paced gait is stable over \SI{120}{\second} with no
-drift in amplitude or period (\autoref{sec:results:stability}).
-(3) The gait tracks the commanded step period across the rat locomotor
-range (6--21\,cm/s); once the learning has converged
-($\lambda\ge10^{-4}$) the counter-phase is strong and nearly
-speed-independent ($-0.96$ to $-0.99$), strengthening monotonically with
-the STDP rate --- at the under-converged slow rate it is weak,
-especially at the fast gait ($-0.34$) (\autoref{sec:results:speed}).
-(4) A paired loading experiment dissociates the two afferent channels:
-when the paced cutaneous drive is gated by loading (the natural,
-unassisted case) the rhythm degrades markedly under air stepping
-(corr $-0.52$), whereas holding that drive intact (the epidural-stim
-analogue) preserves it (corr $-0.98$) --- a direct model of the
-Courtine/Lavrov epidural-stimulation rescue
-(\autoref{sec:results:ablation}, Fig.~\ref{fig:epidural}).
-(5) In the natural (unassisted) arm, unloading degrades the rhythm, and
-it does so \emph{least} where the learned descending drive is most
-developed: under air stepping the counter-phase strengthens monotonically
-with the STDP rate ($-0.29$ at the slow rate, CUT$\to$RG-E $\approx4$\,pA,
-to $-0.52$ at the baseline rate, $\approx60$\,pA), so learning partially
-compensates for lost feedback (\autoref{sec:results:ablation}).
-(6) A frozen-weight control (STDP off, CUT$\to$RG-E drawn from a
-prescribed lognormal at baseline loading) shows the rhythm's
-\emph{existence} is robust to the imposed CUT$\to$RG-E weight (force
-output unchanged across a $15$--$63$\,pA sweep) but its \emph{quality}
-is not: the converged marginal distribution (mean $63$\,pA,
-CV$\approx0.05$) falls short of the plastic reference by $\approx0.09$
-correlation, so STDP organises weight structure beyond the marginal
-mean and spread (\autoref{sec:results:ablation}, Fig.~\ref{fig:frozen}).
-(7) The plasticity can be relocated from the descending pathway to the
-proprioceptive loop --- freezing BS$\to$RG and adding a light
-($\approx4.5$\,pA) plastic Ia$\to$RG projection --- with no loss of
-counter-phase at normal loading across the entire speed range
-(\autoref{sec:results:sensory}, Fig.~\ref{fig:sensory}).
-(8) Under unloading the three learning loci form a hierarchy: the
-sensory-sited model self-rescues \emph{toe} stepping (corr $-0.99$ vs
-natural $-0.77$) but under \emph{air} stepping degrades to $-0.51$ ---
-tied with the natural arm ($-0.52$) --- because its Ia learning drive is
-itself gated away, whereas the load-independent epidural-stim drive
-remains robust ($-0.98$) --- so where the plasticity is sited determines
-which rehabilitation regime it survives
-(\autoref{sec:results:sensory}, Table~\ref{tab:sensory}).

@@ -164,10 +164,10 @@ $\alpha=0.95$, $\mu_+=\mu_-=0.4$, $w_{\max}=120$\,pA for CUT and
 $w_{\max}=30$\,pA for BS)~\cite{biPoo1998,morrison2007}. Initial
 weights are drawn from a lognormal distribution with mean $\mu$ and
 coefficient of variation CV. We swept $(\mu,\text{CV})$ across ten
-diagnostic points (Table~\ref{tab:sweep}) spanning four orders of
+diagnostic points (the ten 20 20 12 61 79 80 81 701 33 98 100 204 250 395 398 399 400\mu,\mathrm{CV}) points) spanning four orders of
 magnitude to verify that the post-training weight distribution
 converges to the same plateau regardless of initialisation (see
-Section~\ref{sec:results:stdp}).
+Section~\ref{sec:results:weights}).
 
 \paragraph{Extensor-biased plasticity and stance/swing asymmetry.}
 The plastic and paced drives are deliberately extensor-weighted, mirroring
@@ -185,7 +185,7 @@ half-centre is sensory-driven and tightly clocked while the flexor is
 centrally generated and intrinsically more variable; and because the
 dominant plastic projection is extensor-only, increasing $\lambda$
 strengthens the descending drive asymmetrically, in favour of the
-extensor (analysed in Section~\ref{sec:results:speed}).
+extensor (analysed in Section~\ref{sec:results:force}).
 
 \paragraph{Learning-rate variation.}
 For the speed-by-STDP and graded-ablation matrices
@@ -222,7 +222,7 @@ experiments~\cite{lavrov2008,courtine2009,edgerton2008}, we expose a
 multiplicative Ia-feedback gain $G_{\text{Ia}} \in [0, 1]$ via the
 \verb|--ia-feedback-gain| CLI flag, applied after Eq.~\ref{eq:ia}:
 $\tilde{r}_{\text{Ia}} = G_{\text{Ia}}\cdot r_{\text{Ia}}$. The three
-operating regimes used in Section~\ref{sec:results:ablation} are:
+operating regimes used in Section~\ref{sec:results:epidural} are:
 $G_{\text{Ia}}=1.0$ (\emph{baseline}, full weight-bearing);
 $G_{\text{Ia}}=0.5$ (\emph{toe stepping}, partial weight); and
 $G_{\text{Ia}}=0.1$ (\emph{air stepping}, limb unloaded, residual
@@ -294,20 +294,20 @@ a 120\,s simulation in $\sim$2\,h.
 Three classes of in-silico experiments are reported in this paper. Each
 is encoded as a stand-alone shell script that submits a single
 multi-task SLURM array and writes one HDF5 file per array task.
-Algorithms~\ref{alg:main}--\ref{alg:speed} give the pseudocode.
+Algorithms~\ref{alg:main}--\ref{alg:speed_stdp} give the pseudocode.
 
 \paragraph{Main experiment: long-term self-organisation.}
 A 10-point sweep over the initial-weight distribution $(\mu,\mathrm{CV})$
 for the STDP synapses, run as a SLURM job array. Each task simulates
 \SI{120}{\second} of paced locomotion at $\mu, \mathrm{CV}$ drawn from
-Table~\ref{tab:sweep}. Used in Section~\ref{sec:results:stdp} and
-Section~\ref{sec:results:stability}.
+the ten 20 20 12 61 79 80 81 701 33 98 100 204 250 395 398 399 400\mu,\mathrm{CV}) points. Used in Section~\ref{sec:results:weights} and
+Section~\ref{sec:results:weights}.
 
 \begin{algorithm}[h]
 \caption{Main experiment --- long-term self-organisation sweep over
 $(\mu,\mathrm{CV})$.}\label{alg:main}
 \begin{algorithmic}[1]
-\Require Ten $(\mu_i,\mathrm{CV}_i)$ pairs from Table~\ref{tab:sweep}; base seed $S_0=12345$
+\Require Ten $(\mu_i,\mathrm{CV}_i)$ pairs from the ten 20 20 12 61 79 80 81 701 33 98 100 204 250 395 398 399 400\mu,\mathrm{CV}) points; base seed $S_0=12345$
 \Ensure Ten HDF5 files \texttt{cpg\_bursting\_paced\_120s\_idx<i>\_*.h5}
 \For{$i \in \{0, 1, \dots, 9\}$ \textbf{in parallel} (SLURM array task $i$)}
   \State $\text{seed} \gets S_0 + 10007 \cdot i$
@@ -330,7 +330,7 @@ $(\mu,\mathrm{CV})$.}\label{alg:main}
 \paragraph{Phase A --- speed-by-STDP matrix.}
 Nine 120\,s runs spanning three walking speeds (rat locomotor range,
 \cite{lavrov2008,courtine2009}) crossed with three bio-plausible STDP
-learning rates. Used in Section~\ref{sec:results:speed}.
+learning rates. Used in Section~\ref{sec:results:force}.
 
 \begin{algorithm}[h]
 \caption{Phase A --- speed $\times$ STDP learning rate matrix.}\label{alg:speed_stdp}
@@ -356,7 +356,7 @@ learning rates. Used in Section~\ref{sec:results:speed}.
 (Courtine/Lavrov SCI paradigm).}
 Nine 120\,s runs at the medium-walk anchor ($P=520$\,ms) crossing three
 Ia feedback gains with three STDP rates. Used in
-Section~\ref{sec:results:ablation}.
+Section~\ref{sec:results:epidural}.
 
 \begin{algorithm}[h]
 \caption{Phase B --- graded Ia ablation $\times$ STDP learning rate
