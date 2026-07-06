@@ -49,7 +49,7 @@ def main():
     os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
 
     nr, nc = len(MODES), len(STAGES)
-    fig, axes = plt.subplots(nr, nc, figsize=(3.6 * nc, 1.5 * nr), squeeze=False, sharey=True)
+    fig, axes = plt.subplots(nr, nc, figsize=(3.9 * nc, 1.6 * nr), squeeze=False, sharey=True)
 
     for r, (mlabel, stem, wkeys) in enumerate(MODES):
         f = _find(args.indir, stem, args.lambda_tag)
@@ -79,17 +79,17 @@ def main():
                     if v.size:
                         parts.append(f"{name} {np.mean(v):.0f}")
             wtxt = "  ".join(parts)
-            ax.set_title(f"{wtxt} pA   r={corr:+.2f}", fontsize=8)
+            ax.set_title(f"{wtxt} pA   r={corr:+.2f}", fontsize=10)
             ax.set_xlim(0, (hi - lo) / 1000.0)
-            ax.grid(alpha=0.2)
+            ax.grid(alpha=0.2); ax.tick_params(labelsize=9)
             if r == 0:
-                ax.text(0.5, 1.32, f"{sname.upper()}  ({WIN_LABEL[sname]})", ha="center",
-                        va="bottom", fontsize=11, fontweight="bold", transform=ax.transAxes)
+                ax.text(0.5, 1.30, f"{sname.upper()}  ({WIN_LABEL[sname]})", ha="center",
+                        va="bottom", fontsize=14, fontweight="bold", transform=ax.transAxes)
             if c == 0:
-                ax.set_ylabel(mlabel, rotation=0, ha="right", va="center", fontsize=9, labelpad=42)
+                ax.set_ylabel(f"{mlabel}\nForce (a.u.)", fontsize=11)
             if r == nr - 1:
-                ax.set_xlabel("time in window (s)")
-    axes[0][0].legend(loc="upper right", fontsize=6, ncol=2, framealpha=0.9)
+                ax.set_xlabel("time in window (s)", fontsize=12)
+    axes[0][0].legend(loc="upper right", fontsize=9, ncol=2, framealpha=0.9)
     lamtxt = args.lambda_tag.replace("lam1em", "1·10⁻")
     fig.tight_layout(rect=(0.04, 0, 1, 0.975))
     fig.savefig(args.out, dpi=args.dpi, bbox_inches="tight")

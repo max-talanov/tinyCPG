@@ -78,13 +78,14 @@ def main():
                 ax.set_facecolor("#f3f6fb")
             if c == 0:
                 ax.set_ylabel(rlabel, rotation=0, ha="right", va="center",
-                              fontsize=9, labelpad=24)
+                              fontsize=11, labelpad=26)
             if r == 0:
-                ax.set_title(clabel, fontsize=10, fontweight="bold")
+                ax.set_title(clabel, fontsize=13, fontweight="bold")
             if r == nr - 1:
-                ax.set_xlabel("time (ms, last cycles)", fontsize=8)
-            ax.tick_params(labelsize=6)
+                ax.set_xlabel("time (ms, last cycles)", fontsize=11)
+            ax.tick_params(labelsize=8)
 
+    fig.supylabel("population rate  (spikes·neuron⁻¹·s⁻¹)", fontsize=14, x=0.005)
     fig.tight_layout()
     fig.savefig(args.out, dpi=args.dpi, bbox_inches="tight")
     plt.close(fig)
