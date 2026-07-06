@@ -316,30 +316,14 @@ def main():
     ax_d.legend(loc="lower right", fontsize=7)
     ax_d.grid(alpha=0.2)
 
+    # (BS->RG-E panel removed: BS is frozen in the canonical sensory model.)
     if n_cols > 1:
-        ax_e = fig.add_subplot(gs[4, 1])
-        for l in LAMBDA_ORDER:
-            d = data.get((anchor_gain, l))
-            if d is None or "bs->rge_mean" not in d["weights"]:
-                continue
-            w = d["weights"]["bs->rge_mean"]
-            tt = d["t"][: w.size]
-            ax_e.plot(tt / 1000.0, w, color=lam_color[l], linewidth=1.2,
-                      label=LAMBDA_LABEL[l].split("\n")[0])
-        ax_e.axhline(30.0, linestyle="--", color="grey", alpha=0.6,
-                     label="W_max (BS) = 30 pA")
-        ax_e.set_xlabel("time (s)"); ax_e.set_ylabel("mean weight (pA)")
-        ax_e.set_title("(e) BS→RG-E weight trajectory\n(air stepping; saturates at W_max)")
-        ax_e.legend(loc="lower right", fontsize=7)
-        ax_e.grid(alpha=0.2)
-
-    if n_cols > 2:
-        # (f) CUT->RG-E mean ± std band at air stepping, λ overlaid. Reveals
+        # (e) CUT->RG-E mean ± std band at air stepping, λ overlaid. Reveals
         # the rescue mechanism: faster λ settles at a LOWER mean with a much
         # BROADER weight distribution (heterogeneous), which supports cleaner
         # counter-phase under degraded sensory feedback — the opposite of a
         # simple "stronger descending weight" account.
-        ax_f = fig.add_subplot(gs[4, 2])
+        ax_f = fig.add_subplot(gs[4, 1:])
         for l in LAMBDA_ORDER:
             d = data.get((anchor_gain, l))
             if d is None or "cut->rge_mean" not in d["weights"]:
@@ -353,7 +337,7 @@ def main():
                 ax_f.fill_between(tt / 1000.0, w - sd, w + sd,
                                   color=lam_color[l], alpha=0.15)
         ax_f.set_xlabel("time (s)"); ax_f.set_ylabel("weight (pA)")
-        ax_f.set_title("(f) CUT→RG-E mean ± std — air stepping\n(fast λ: lower mean, broader distribution)")
+        ax_f.set_title("(e) CUT→RG-E mean ± std — air stepping (fast λ: lower mean, broader distribution)")
         ax_f.legend(loc="lower right", fontsize=7)
         ax_f.grid(alpha=0.2)
 

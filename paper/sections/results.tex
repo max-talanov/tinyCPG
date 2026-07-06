@@ -325,75 +325,40 @@ rat locomotor speed range without retuning of the central architecture.
 % =============================================================
 \subsection{Network-level activity: every population alternates in counter-phase across all modes}\label{sec:results:network}
 
-\paragraph{Full-circuit population rates.}
+\paragraph{Full-circuit population rates across the five modes.}
 Behind the muscle-force output, the counter-phase organisation is
-expressed at every level of the circuit. Figs.~\ref{fig:net_speed}--%
-\ref{fig:net_ablsens} show the population firing rates of all sixteen
-recorded groups --- both legs' RG-F/RG-E rhythm generators, InF/InE
-reciprocal-inhibition interneurons, IaInt-F/IaInt-E proprioceptive
-interneurons, and M-F/M-E motor pools --- over the last few cycles of
-each 120\,s run. Three features are consistent across all five learning
-modes and all conditions: (i) within each leg, every flexor-side
+expressed at every level of the circuit. Fig.~\ref{fig:net_matrix} shows
+the population firing rates of all sixteen recorded groups --- both legs'
+RG-F/RG-E rhythm generators, InF/InE reciprocal-inhibition interneurons,
+IaInt-F/IaInt-E proprioceptive interneurons, and M-F/M-E motor pools ---
+over the last few cycles, across the five locomotion modes of the
+canonical (sensory) model. Three features hold across slow, medium and
+fast walk and under toe stepping: (i) within each leg every flexor-side
 population fires in strict antiphase to its extensor-side counterpart;
 (ii) the two legs hold a $180^{\circ}$ offset (right-leg panels, tinted,
 are half a cycle out of phase with the left); and (iii) the reciprocal
 InF/InE and IaInt interneurons carry the same clean alternation as the
-rhythm generators, confirming that the inhibitory core --- not just the
-motor read-out --- is phase-locked. The descending (Fig.~\ref{fig:net_speed})
-and sensory-sited (Fig.~\ref{fig:net_sensory}) arms are essentially
-indistinguishable at the population level across the speed range, and the
-loading arms (Figs.~\ref{fig:net_ablstim}--\ref{fig:net_ablsens}) show the
-same organisation at baseline loading; where it degrades under unloading
-is quantified in \autoref{sec:results:ablation} and
-\autoref{sec:results:sensory}.
+rhythm generators, so the inhibitory core --- not just the motor read-out
+--- is phase-locked. The exception is the rightmost column: under
+\emph{air} stepping the loading-gated afferent drive is withdrawn and the
+extensor-side populations (RG-E, InE, IaInt-E, M-E) collapse while the
+intrinsically-bursting flexor side persists --- the population-level
+signature of the unloading failure quantified in
+\autoref{sec:results:ablation} and \autoref{sec:results:sensory}.
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=0.8\textwidth]{fig_network_speed.png}
-  \caption{\textbf{Descending arm --- full-circuit population activity
-    across walking speed.} Rows: both legs' RG-F/RG-E, InF/InE,
-    IaInt-F/IaInt-E, M-F/M-E (spikes$\cdot$neuron$^{-1}\cdot$s$^{-1}$).
-    Columns: slow / medium / fast walk. Last 5 cycles;
-    $\lambda=10^{-3}$, $\mu=3.5$, CV$=0.30$. Right-leg panels tinted.}
-  \label{fig:net_speed}
-\end{figure}
-
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=0.8\textwidth]{fig_network_sensory.png}
-  \caption{\textbf{Sensory arm (plastic Ia$\to$RG, frozen BS) ---
-    full-circuit population activity across walking speed.} Same layout as
-    Fig.~\ref{fig:net_speed}; indistinguishable from the descending arm at
-    the population level.}
-  \label{fig:net_sensory}
-\end{figure}
-
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=0.8\textwidth]{fig_network_ablstim.png}
-  \caption{\textbf{Epidural-stim arm --- population activity across
-    loading} (baseline / toe / air stepping). Cutaneous drive held intact;
-    the counter-phase organisation is preserved as loading is removed.}
-  \label{fig:net_ablstim}
-\end{figure}
-
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=0.8\textwidth]{fig_network_natural.png}
-  \caption{\textbf{Natural (unassisted) arm --- population activity across
-    loading.} Cutaneous and Ia drive gated together by loading; the rhythm
-    degrades as the limb is unloaded (air column).}
-  \label{fig:net_natural}
-\end{figure}
-
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=0.8\textwidth]{fig_network_ablsens.png}
-  \caption{\textbf{Sensory-ablation arm --- population activity across
-    loading.} Plastic Ia$\to$RG with loading-gated Ia; self-rescues toe
-    stepping but degrades under air stepping as the Ia learning drive is
-    gated away.}
-  \label{fig:net_ablsens}
+  \includegraphics[width=0.98\textwidth]{fig_network_matrix.png}
+  \caption{\textbf{Full-circuit population activity across the five
+    locomotion modes} (canonical sensory model, $\lambda=10^{-3}$,
+    last 5 cycles). Rows: both legs' RG-F/RG-E, InF/InE, IaInt-F/IaInt-E,
+    M-F/M-E population rates (spikes$\cdot$neuron$^{-1}\cdot$s$^{-1}$);
+    right-leg rows tinted. Columns: the unified matrix --- slow /
+    medium\,$=$\,plantar\,$=$\,baseline / fast walk and toe / air stepping.
+    Every population alternates in strict counter-phase with a
+    $180^{\circ}$ interlimb offset through toe stepping; under air stepping
+    the extensor side collapses as the loading-gated afferents withdraw.}
+  \label{fig:net_matrix}
 \end{figure}
 
 % =============================================================
@@ -516,14 +481,13 @@ epidural-stim arm (Fig.~\ref{fig:epidural}, $-0.98$).
     (b) peak Force-E (a.u.);
     (c) E$\leftrightarrow$F counter-phase Pearson correlation
     --- strengthening with $\lambda$ under unloading.
-    \textbf{Row 5:} STDP weight trajectories at air
-    stepping. (d, e) mean CUT$\to$RG-E and BS$\to$RG-E weight vs time,
-    three $\lambda$ overlaid --- at the slow rate ($\lambda=10^{-5}$,
-    blue) the gated cutaneous drive learns to only CUT$\to$RG-E
-    $\approx 4$\,pA at $t=120$\,s (vs $\approx 60$\,pA at the baseline
-    rate), leaving the rhythm without a descending drive to fall back on
-    once the afferents are withdrawn. (f) CUT$\to$RG-E mean $\pm$
-    across-connection std for the three rates.}
+    \textbf{Row 5:} STDP weight trajectories at air stepping.
+    (d) mean CUT$\to$RG-E weight vs time, three $\lambda$ overlaid --- at
+    the slow rate ($\lambda=10^{-5}$, blue) the gated cutaneous drive
+    learns to only $\approx 4$\,pA at $t=120$\,s (vs $\approx 60$\,pA at
+    the baseline rate), leaving the rhythm without a learned drive to fall
+    back on once the afferents are withdrawn.
+    (e) CUT$\to$RG-E mean $\pm$ across-connection std for the three rates.}
   \label{fig:ablgrad}
 \end{figure}
 
