@@ -305,7 +305,13 @@ TAU_ACT_RISE_MS = 20.0   # fast rise: activation tracks burst onset in ~20ms (wa
 TAU_ACT_DECAY_MS = 20.0  # fast decay: activation drops in ~20ms so force clears baseline in 75ms off-phase (was 35ms)
 ACT_MAX = 1.2
 ACT_SAT_K = 0.02          # slope for activation from muscle relay rate; saturates at ~100-150 Hz (was 5e-4, ~40× too small)
-ACT_GATE_POWER = 2.0      # squared gate sharpens burst/trough discrimination
+ACT_GATE_POWER = 2.0      # (legacy) squared clamp gate — superseded by the logistic gate
+# MOD_LOGISTIC_GATE: smooth (bio-plausible) sigmoidal activation gate replacing the
+# hard clamp(x,0,1)^p. d = sigma(ACT_GATE_K * (r_RG/rg_ref - ACT_GATE_X0)). The
+# steepness/mid-point are tuned to preserve the burst/trough discrimination of the
+# old clamp^2 gate (trough r/ref~0.25 -> d~0.06; burst ~0.8 -> d~0.83; saturates at 1).
+ACT_GATE_K = 8.0          # logistic steepness
+ACT_GATE_X0 = 0.6         # logistic mid-point (fraction of rg_ref)
 
 TAU_FORCE_RISE_MS = 30.0   # rat fast-twitch twitch rise ~15-30ms; shorter allows force to track 150ms bursts
 TAU_FORCE_DECAY_MS = 30.0  # fast relaxation: force drops below 2 in 75ms off-phase (was 60ms)
@@ -1541,18 +1547,18 @@ def main():
         # when bursting at 300+ Hz). ACT_GATE_POWER=2 sharpens discrimination: at trough
         # (~25 Hz) d_e=(25/100)^2=0.063 → force<2; at burst peak (~80 Hz) d_e=0.64 → force>12.
         rg_ref = 100.0
-        d_e = clamp(r_rge / rg_ref, 0.0, 1.0)
-        d_f = clamp(r_rgf / rg_ref, 0.0, 1.0)
-        d_e = float(d_e) ** float(ACT_GATE_POWER)
-        d_f = float(d_f) ** float(ACT_GATE_POWER)
+        # MOD_LOGISTIC_GATE: smooth sigmoidal gate (replaces the hard clamp^power).
+        d_e = 1.0 / (1.0 + np.exp(-ACT_GATE_K * (float(r_rge) / rg_ref - ACT_GATE_X0)))
+        d_f = 1.0 / (1.0 + np.exp(-ACT_GATE_K * (float(r_rgf) / rg_ref - ACT_GATE_X0)))
 
         # Saturating mapping from muscle relay rate to activation
         a_raw_e = ACT_MAX * (1.0 - np.exp(-ACT_SAT_K * float(r_muse)))
         a_raw_f = ACT_MAX * (1.0 - np.exp(-ACT_SAT_K * float(r_musf)))
 
-        # Gate by brainstem drive (enforces correct phase and duration)
-        target_ae = clamp(a_raw_e * d_e, 0.0, ACT_MAX)
-        target_af = clamp(a_raw_f * d_f, 0.0, ACT_MAX)
+        # Gated activation target. a_raw already saturates at ACT_MAX and d in (0,1),
+        # so the product is bounded in [0, ACT_MAX) without a hard clamp.
+        target_ae = a_raw_e * d_e
+        target_af = a_raw_f * d_f
 
         tau_rise_s = TAU_ACT_RISE_MS / 1000.0
         tau_decay_s = TAU_ACT_DECAY_MS / 1000.0

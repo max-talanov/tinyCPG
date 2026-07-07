@@ -3,7 +3,6 @@
 % a markdown subsection in methods_skeleton.md.
 
 \subsection{Model overview}\label{sec:methods:overview}
-\todo{1 paragraph. Anchor on \autoref{fig:schematic}.}
 The two-leg spinal CPG presented here extends the canonical Rybak-style
 architecture~\cite{rybak2006,shevtsova2015} with four mechanisms not
 present in the Zhang 2022 reference model~\cite{zhang2022}:
@@ -52,7 +51,6 @@ available at \href{https://github.com/max-talanov/tinyCPG}{github.com/max-talano
 \end{figure}
 
 \subsection{Single-neuron model}\label{sec:methods:neuron}
-\todo{1-2 paragraphs.}
 All spiking neurons are modelled as Izhikevich quadratic-integrate-fire
 units~\cite{izhikevich2003}, implemented in NEST as \verb|izhikevich|.
 Excitatory extensor RG-E neurons use the regular-spiking set
@@ -65,7 +63,6 @@ rat \texttt{length\_velocity} preset (Table~\ref{tab:delays}) with
 $\sigma=0.2$\,ms Gaussian jitter.
 
 \subsection{Network architecture}\label{sec:methods:network}
-\todo{Subsections per modulation tag.}
 
 \paragraph{Asymmetric reciprocal inhibition (Zhang 2022).}
 The F$\to$InF$\to$E pathway is strong ($W_{\text{InF}\to\text{RG-E}}=-48$\,pA,
@@ -127,7 +124,6 @@ transduction (force and length $\to$ Ia firing rate), not a synaptic
 projection, and so has no weight/delay entry.
 Figure~\ref{fig:connectivity} shows the weight and delay distributions.
 
-\input{connectivity_table}
 
 \begin{figure}[t]
   \centering
@@ -147,7 +143,6 @@ Figure~\ref{fig:connectivity} shows the weight and delay distributions.
 \end{figure}
 
 \subsection{Brainstem drive}\label{sec:methods:bs}
-\todo{2 short paragraphs.}
 Reticulospinal input is modelled as a tonic Poisson process at
 $BS_{\text{regular}}=60$\,Hz with $\sigma=0.25$\,Hz noise, identical for
 both legs (\texttt{-{}-enforce-tonic-bs}). The 60\,Hz value sits in the
@@ -164,7 +159,7 @@ $\alpha=0.95$, $\mu_+=\mu_-=0.4$, $w_{\max}=120$\,pA for CUT and
 $w_{\max}=30$\,pA for BS)~\cite{biPoo1998,morrison2007}. Initial
 weights are drawn from a lognormal distribution with mean $\mu$ and
 coefficient of variation CV. We swept $(\mu,\text{CV})$ across ten
-diagnostic points (the ten 20 20 12 61 79 80 81 701 33 98 100 204 250 395 398 399 400\mu,\mathrm{CV}) points) spanning four orders of
+diagnostic points (the ten $(\mu,\mathrm{CV})$ initialisation points) spanning four orders of
 magnitude to verify that the post-training weight distribution
 converges to the same plateau regardless of initialisation (see
 Section~\ref{sec:results:weights}).
@@ -201,7 +196,6 @@ is exposed via the \verb|--stdp-lambda| CLI flag and recorded to the
 HDF5 output as \verb|stdp_lambda|.
 
 \subsection{Sensory feedback and Ia rate coding}\label{sec:methods:ia}
-\todo{1 paragraph + equation.}
 Ia afferent firing rate $r_{\text{Ia}}$ is updated every 100\,ms as a
 linear combination of muscle force $F$ and stretch $\Delta\ell$:
 \begin{equation}
@@ -231,16 +225,24 @@ inherits the same gain, so the manipulation reduces \emph{all} Ia
 output uniformly.
 
 \subsection{Activation and force dynamics}\label{sec:methods:muscle}
-\todo{Equations + 1 paragraph.}
 The muscle relay rate $r_{\text{mus}}$ is mapped to activation $a$
-through a saturating nonlinearity gated by RG-rate:
+through a saturating nonlinearity gated by RG-rate. The gate is a smooth
+logistic (sigmoid) of the normalised RG population rate --- a
+bio-plausible soft saturation in place of a hard clip:
 \begin{align}
   a_{\text{raw}} &= a_{\max} \, \bigl(1 - \exp(-k_a \, r_{\text{mus}})\bigr), \label{eq:araw}\\
-  d &= \mathrm{clamp}(r_{\text{RG}} / r_{\text{ref}}, 0, 1)^{p_g}, \label{eq:gate}\\
-  a_{\text{tgt}} &= \mathrm{clamp}(a_{\text{raw}} \cdot d, 0, a_{\max}), \label{eq:atgt}\\
+  d &= \sigma\!\Bigl(k_g\bigl(r_{\text{RG}}/r_{\text{ref}} - x_0\bigr)\Bigr),
+       \qquad \sigma(z)=\frac{1}{1+e^{-z}}, \label{eq:gate}\\
+  a_{\text{tgt}} &= a_{\text{raw}} \cdot d, \label{eq:atgt}\\
   a(t+\Delta t) &= a(t) + \bigl(1 - e^{-\Delta t/\tau_a}\bigr)\bigl(a_{\text{tgt}} - a(t)\bigr).
   \label{eq:alp}
 \end{align}
+with gate steepness $k_g=8$ and mid-point $x_0=0.6$. The logistic
+saturates smoothly at $1$ and suppresses the inter-burst trough
+($d\approx0.06$ at $r_{\text{RG}}/r_{\text{ref}}\approx0.25$ versus
+$d\approx0.83$ at a burst peak), so the gated target $a_{\text{tgt}}$ is
+bounded in $[0,a_{\max})$ by construction --- without the hard clip used
+in earlier versions of the model.
 Force follows an identical first-order low-pass driven by a saturating
 function of activation:
 \begin{align}
@@ -268,7 +270,6 @@ $0.30$--$0.40$\,N. Nothing in the model dynamics depends on this
 choice of units; we use a.u.\ throughout for transparency.
 
 \subsection{Paced gait protocol}\label{sec:methods:paced}
-\todo{1 paragraph.}
 Each step period (\verb|--step-period-ms|, default 1000\,ms) is divided
 into two 500\,ms half-cycles. During the stance half of leg L, the L
 cutaneous generator fires at $CUT_{\text{on}}=100$\,Hz, and three
@@ -281,7 +282,6 @@ intrinsic-bursting dynamics maintain the swing-leg flexor burst without
 external pacing.
 
 \subsection{Simulation setup}\label{sec:methods:sim}
-\todo{1 paragraph.}
 All simulations were performed with NEST~3.9~\cite{nest2002} using a
 kernel resolution of 0.2\,ms, simulation chunks of 100\,ms, and 64
 OpenMP threads per task on a single AMD EPYC node (MN5 system,
@@ -294,63 +294,20 @@ a 120\,s simulation in $\sim$2\,h.
 Three classes of in-silico experiments are reported in this paper. Each
 is encoded as a stand-alone shell script that submits a single
 multi-task SLURM array and writes one HDF5 file per array task.
-Algorithms~\ref{alg:main}--\ref{alg:speed_stdp} give the pseudocode.
+Pseudocode for all three is given in the Supplementary material (Algorithms~\ref{alg:main}--\ref{alg:ablgrad}).
 
 \paragraph{Main experiment: long-term self-organisation.}
 A 10-point sweep over the initial-weight distribution $(\mu,\mathrm{CV})$
 for the STDP synapses, run as a SLURM job array. Each task simulates
 \SI{120}{\second} of paced locomotion at $\mu, \mathrm{CV}$ drawn from
-the ten 20 20 12 61 79 80 81 701 33 98 100 204 250 395 398 399 400\mu,\mathrm{CV}) points. Used in Section~\ref{sec:results:weights} and
-Section~\ref{sec:results:weights}.
+the ten $(\mu,\mathrm{CV})$ initialisation points. Used in Section~\ref{sec:results:weights}.
 
-\begin{algorithm}[h]
-\caption{Main experiment --- long-term self-organisation sweep over
-$(\mu,\mathrm{CV})$.}\label{alg:main}
-\begin{algorithmic}[1]
-\Require Ten $(\mu_i,\mathrm{CV}_i)$ pairs from the ten 20 20 12 61 79 80 81 701 33 98 100 204 250 395 398 399 400\mu,\mathrm{CV}) points; base seed $S_0=12345$
-\Ensure Ten HDF5 files \texttt{cpg\_bursting\_paced\_120s\_idx<i>\_*.h5}
-\For{$i \in \{0, 1, \dots, 9\}$ \textbf{in parallel} (SLURM array task $i$)}
-  \State $\text{seed} \gets S_0 + 10007 \cdot i$
-  \State Initialise STDP weights $w_{\text{init}} \sim \mathrm{Lognormal}(\mu_i, \mathrm{CV}_i)$
-  \State Configure BS$=60$\,Hz tonic, paced gait
-         (\verb|--step-period-ms 1000|, \verb|--n-ia-groups 3|, \verb|--ia-ext-hz 60 80 100|)
-  \For{half-cycle $h = 0, 1, \dots, 239$ \Comment{$120$\,s / $500$\,ms}}
-    \State $L \gets$ stance leg, $R \gets$ swing leg (alternates each $h$)
-    \For{Ia sub-group $g \in \{0, 1, 2\}$} \Comment{heel, mid, toe}
-      \State Set Ia-E rate of leg $L$, group $g$ to $\{60, 80, 100\}$\,Hz
-      \State Simulate $167$\,ms; update activation, force, length, $r_{\text{Ia}}$ (Eq.~\ref{eq:ia})
-      \State Sample STDP weights every $1000$\,ms; record force/RG-rate every $100$\,ms
-    \EndFor
-  \EndFor
-  \State Write HDF5 with rates, weights, attrs (sim\_ms, $\mu_i$, $\mathrm{CV}_i$, seed, paced\_gait)
-\EndFor
-\end{algorithmic}
-\end{algorithm}
 
 \paragraph{Phase A --- speed-by-STDP matrix.}
 Nine 120\,s runs spanning three walking speeds (rat locomotor range,
 \cite{lavrov2008,courtine2009}) crossed with three bio-plausible STDP
 learning rates. Used in Section~\ref{sec:results:force}.
 
-\begin{algorithm}[h]
-\caption{Phase A --- speed $\times$ STDP learning rate matrix.}\label{alg:speed_stdp}
-\begin{algorithmic}[1]
-\Require Operating point $(\mu, \mathrm{CV}) = (3.5, 0.30)$, $\mathrm{seed} = 12345$
-\Ensure Nine HDF5 files \texttt{cpg\_speed\_stdp\_<spd>\_<lam>\_*.h5}
-\For{$i \in \{0, 1, \dots, 8\}$ \textbf{in parallel} (SLURM array task $i$)}
-  \State $\mathrm{speed\_idx} \gets \lfloor i / 3 \rfloor$;\ \ $\mathrm{lambda\_idx} \gets i \bmod 3$
-  \State $P \gets \{1200,\ 520,\ 350\}[\mathrm{speed\_idx}]$ \Comment{ms; $\approx$ 6 / 13.5 / 21 cm/s}
-  \State $\lambda \gets \{1{\times}10^{-5},\ 1{\times}10^{-4},\ 1{\times}10^{-3}\}[\mathrm{lambda\_idx}]$
-  \State Configure paced gait with \verb|--step-period-ms|$=P$,
-         \verb|--stdp-lambda|$=\lambda$
-  \State Simulate $120$\,s at BS$=60$\,Hz with the standard 3-group Ia
-         ramp (60, 80, 100\,Hz)
-  \State Write HDF5 with \texttt{step\_period\_ms}=$P$, \texttt{stdp\_lambda}=$\lambda$
-\EndFor
-\State Report metrics over the last 20\,s of each cell: measured cycle
-       period, peak Force-E, $\mathrm{corr}(F_E, F_F)$
-\end{algorithmic}
-\end{algorithm}
 
 \paragraph{Phase B --- graded sensory ablation by STDP matrix
 (Courtine/Lavrov SCI paradigm).}
@@ -358,26 +315,6 @@ Nine 120\,s runs at the medium-walk anchor ($P=520$\,ms) crossing three
 Ia feedback gains with three STDP rates. Used in
 Section~\ref{sec:results:epidural}.
 
-\begin{algorithm}[h]
-\caption{Phase B --- graded Ia ablation $\times$ STDP learning rate
-matrix (SCI-rehab paradigm).}\label{alg:ablgrad}
-\begin{algorithmic}[1]
-\Require Operating point $(\mu, \mathrm{CV}) = (3.5, 0.30)$,
-$P=520$\,ms, $\mathrm{seed} = 12345$
-\Ensure Nine HDF5 files \texttt{cpg\_ablgrad\_<gain>\_<lam>\_*.h5}
-\For{$i \in \{0, 1, \dots, 8\}$ \textbf{in parallel} (SLURM array task $i$)}
-  \State $\mathrm{gain\_idx} \gets \lfloor i / 3 \rfloor$;\ \ $\mathrm{lambda\_idx} \gets i \bmod 3$
-  \State $G_{\text{Ia}} \gets \{1.0,\ 0.5,\ 0.1\}[\mathrm{gain\_idx}]$
-         \Comment{baseline / toe step / air step}
-  \State $\lambda \gets \{1{\times}10^{-5},\ 1{\times}10^{-4},\ 1{\times}10^{-3}\}[\mathrm{lambda\_idx}]$
-  \State Configure paced gait with \verb|--step-period-ms|$=520$,
-         \verb|--ia-feedback-gain|$=G_{\text{Ia}}$, \verb|--stdp-lambda|$=\lambda$
-  \State Simulate $120$\,s; write HDF5 with the two new attrs
-\EndFor
-\State Report metrics over the last 20\,s of each cell: cycle period
-       (mean $\pm$ s.d.), peak Force-E, $\mathrm{corr}(F_E, F_F)$
-\end{algorithmic}
-\end{algorithm}
 
 \paragraph{Legacy ablation experiment (supplementary).}
 For completeness we retain the earlier 5-condition ablation experiment
@@ -394,7 +331,6 @@ node; the 120\,s task takes $\sim$2\,h. Total compute for all three
 experiments: $\sim$60 core-hours.
 
 \subsection{Data analysis}\label{sec:methods:analysis}
-\todo{1 paragraph.}
 Cycle period was computed as the Force-E peak-to-peak interval over the
 last 20\,s, using a 5\,a.u.\ minimum peak height and a 300\,ms minimum
 inter-peak gap. Counter-phase strength was reported as Pearson's
@@ -408,7 +344,3 @@ is therefore exact, and uncertainty is captured by the $(\mu,\text{CV})$
 initialisation sweep rather than by stochastic repetition.
 
 % --- Parameter tables go in supplementary ---
-\todo{In Supplementary: paste \texttt{paper/params.tex} as
-Supplementary Table~S1; add the 10-point $(\mu,\text{CV})$ sweep as
-Table~S2. (Per-projection weight/delay specification is now
-Table~\ref{tab:delays} in the main text.)}

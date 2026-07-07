@@ -64,18 +64,20 @@ def edge(ax, a, b, color, style="-", rad=0.0, lw=2.0, label=None, lx=0.5, ly=0.1
         ax.text(mx, my, label, fontsize=9, color=color, ha="center", style="italic", zorder=6)
 
 
-fig, ax = plt.subplots(figsize=(10.5, 12.0))
-ax.set_xlim(0, 10); ax.set_ylim(2.6, 14.2); ax.axis("off")
+fig, ax = plt.subplots(figsize=(16, 9))
+ax.set_xlim(0, 16.2); ax.set_ylim(0.4, 8.7); ax.axis("off")
 
+# Horizontal left->right flow (like Fig. 1): drives -> RG core -> Ia interneurons
+# -> motoneurons -> muscles, with the proprioceptive loop closing along the bottom.
 P = dict(
-    BS=(5.0, 13.4), CUT=(2.3, 13.4), base=(7.6, 13.4),
-    RGE=(3.1, 10.7), RGF=(6.9, 10.7),
-    InE=(5.0, 11.5), InF=(5.0, 9.9),
-    ME=(3.1, 7.2), MF=(6.9, 7.2),
-    IaIntE=(5.0, 8.0), IaIntF=(5.0, 6.4),
-    musE=(3.1, 3.9), musF=(6.9, 3.9),
-    IaE=(9.1, 6.0), IaF=(9.1, 4.2),
-    flexAff=(0.9, 9.9), IaEramp=(0.9, 11.3),
+    BS=(1.3, 7.6), CUT=(1.3, 6.2), base=(1.3, 4.8),
+    IaEramp=(1.3, 3.1), flexAff=(1.3, 1.7),
+    RGE=(4.7, 6.3), RGF=(4.7, 2.5),
+    InE=(6.1, 5.2), InF=(6.1, 3.6),
+    IaIntE=(8.0, 7.0), IaIntF=(8.0, 1.8),
+    ME=(9.9, 6.3), MF=(9.9, 2.5),
+    musE=(12.4, 6.3), musF=(12.4, 2.5),
+    IaE=(15.0, 5.4), IaF=(15.0, 3.4),
 )
 # nodes
 for k in ("BS", "CUT", "base"): inp(ax, P[k], k)
@@ -118,9 +120,9 @@ edge(ax, P["IaIntF"], P["ME"], BLUE, lw=1.4, rad=0.15)
 edge(ax, P["IaE"], P["InF"], ORANGE_L, rad=0.25, lw=1.3, label="Ia→In loop", lx=0.6, ly=0.34)
 edge(ax, P["IaE"], P["RGE"], ORANGE_D, rad=0.4, lw=2.4, label="plastic Ia→RG", lx=0.12, ly=0.28)
 edge(ax, P["IaF"], P["RGF"], ORANGE_D, rad=-0.3, lw=2.4)
-# commissural stub (informational note in the empty left-middle band)
-ax.annotate("commissural\n→ contralateral leg\nRG-E↔RG-E −8\nRG-F↔RG-F −20",
-            (1.35, 6.6), fontsize=9.5, color=BLUE, ha="center",
+# commissural stub (informational note in the empty top-left band)
+ax.annotate("commissural → contralateral leg\nRG-E↔RG-E −8,  RG-F↔RG-F −20",
+            (3.2, 8.2), fontsize=10, color=BLUE, ha="center",
             bbox=dict(boxstyle="round", fc="#eef7fb", ec=BLUE, lw=1.2))
 
 # legend
