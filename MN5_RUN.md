@@ -3,6 +3,16 @@
 What to upload to MN5, what to submit, and what to bring back for local plotting.
 Plotting is done **locally** (after `scp`-ing results back), not on MN5.
 
+> **NOTE — 5×5 matrix + logistic gate (post 2026-07-07).** Two changes require a
+> re-run of the sensory arms: (i) the activation gate is now a smooth logistic
+> (`MOD_LOGISTIC_GATE`, replaces the hard clamp — bio-plausibility) so all figures
+> should be regenerated against the new equations; (ii) `run_sensory_stdp.sh` and
+> `run_ablation_sensory.sh` now sweep **5 STDP rates** (λ = 1e-6 … 1e-2, arrays
+> `0-14`) for the 5 modes × 5 λ comparison. Submit both, bring back
+> `cpg_sensory_stdp_*` and `cpg_ablsens_*`, then run
+> `cpg_mode_lambda_summary.py --indir <dated>` (heatmaps + trends + table, auto-detects
+> the 5 λ) plus the per-λ figure scripts (which loop `lam1em2..lam1em6`).
+
 > **NOTE — bio-plausibility defaults changed (post 2026-06-30).** The model now
 > defaults to lognormal static-weight heterogeneity (`--static-weight-cv 0.5`) and
 > a single plastic cutaneous projection (`--cut-static-w 0`, the static co-activation

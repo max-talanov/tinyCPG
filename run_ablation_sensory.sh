@@ -4,7 +4,7 @@
 #SBATCH --error=Nest_ablsens_%A_%a.slurmerr
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --array=0-8
+#SBATCH --array=0-14
 #SBATCH --cpus-per-task=64
 #SBATCH --time=10:00:00
 #SBATCH --partition=acc
@@ -22,9 +22,9 @@
 # sensory input it learns from is progressively removed? (Lavrov/Courtine
 # air-stepping ≈ deafferentation of the learning pathway itself.)
 #
-# array_task = 3 * gain_idx + lambda_idx
+# array_task = 5 * gain_idx + lambda_idx  (3 loadings x 5 STDP rates = 15 tasks)
 #   gain_idx 0/1/2 → Ia,CUT gain 1.0 / 0.5 / 0.1  (baseline / toe / air)
-#   lambda_idx 0/1/2 → λ = 1e-5 / 1e-4 / 1e-3
+#   lambda_idx 0..4 → λ = 1e-6 / 1e-5 / 1e-4 / 1e-3 / 1e-2
 #
 # Output: results/cpg_ablsens_<gain>_<lam>_idx00_*.h5
 
@@ -42,8 +42,8 @@ SIM_MS=120000            # 120 s — long enough for slow λ=1e-4 to converge
 PERIOD=520               # medium walk (≈13.5 cm/s)
 
 T=${SLURM_ARRAY_TASK_ID:-0}
-GAIN_IDX=$(( T / 3 ))
-LAM_IDX=$(( T % 3 ))
+GAIN_IDX=$(( T / 5 ))
+LAM_IDX=$(( T % 5 ))
 
 # IA_GAIN drives BOTH the proprioceptive (Ia) and cutaneous (CUT) feedback
 # gains, since both scale with limb loading. The external Ia-E heel→toe ramp
@@ -56,9 +56,11 @@ case $GAIN_IDX in
 esac
 
 case $LAM_IDX in
-    0) LAMBDA=1e-5; LAM_LABEL="lam1em5" ;;
-    1) LAMBDA=1e-4; LAM_LABEL="lam1em4" ;;
-    2) LAMBDA=1e-3; LAM_LABEL="lam1em3" ;;
+    0) LAMBDA=1e-6; LAM_LABEL="lam1em6" ;;
+    1) LAMBDA=1e-5; LAM_LABEL="lam1em5" ;;
+    2) LAMBDA=1e-4; LAM_LABEL="lam1em4" ;;
+    3) LAMBDA=1e-3; LAM_LABEL="lam1em3" ;;
+    4) LAMBDA=1e-2; LAM_LABEL="lam1em2" ;;
     *) echo "Unknown LAM_IDX=$LAM_IDX"; exit 1 ;;
 esac
 
