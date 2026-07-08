@@ -19,7 +19,8 @@ MODES = [
     ("toe stepping\npartial unloading",       "cpg_ablsens_toe"),
     ("air stepping\nfull unloading",          "cpg_ablsens_air"),
 ]
-LAMBDAS = [("lam1em3", "λ = 10⁻³"), ("lam1em4", "λ = 10⁻⁴"), ("lam1em5", "λ = 10⁻⁵")]
+LAMBDAS = [("lam1em2", "λ = 10⁻²"), ("lam1em3", "λ = 10⁻³"), ("lam1em4", "λ = 10⁻⁴"),
+           ("lam1em5", "λ = 10⁻⁵"), ("lam1em6", "λ = 10⁻⁶")]
 CUT = ("cut->rge_mean", "CUT→RG-E", "#c1440e")
 IAS = [("ia->rge_mean", "Ia-E→RG-E", "#1f77b4"), ("ia->rgf_mean", "Ia-F→RG-F", "#2ca02c")]
 

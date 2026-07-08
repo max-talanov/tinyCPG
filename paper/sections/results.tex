@@ -16,8 +16,9 @@ Ia-E$\to$RG-E and Ia-F$\to$RG-F. Every result is organised on the same
 $5\times3$ grid of \emph{rehabilitation modes}: five locomotion modes --- slow
 walk (6\,cm/s), medium walk $=$ plantar stepping $=$ baseline loading
 (13.5\,cm/s), fast walk (21\,cm/s), toe stepping (partial unloading) and air
-stepping (full unloading) --- crossed with three STDP learning rates
-$\lambda\in\{10^{-3},10^{-4},10^{-5}\}$.
+stepping (full unloading) --- crossed with five STDP learning rates
+$\lambda\in\{10^{-2},10^{-3},10^{-4},10^{-5},10^{-6}\}$, giving a
+$5\times5$ matrix of rehabilitation modes.
 
 \paragraph{Weights converge symmetrically to a mode-independent set-point.}
 Figure~\ref{fig:weight_matrix} shows the weight trajectory of each plastic
@@ -59,7 +60,7 @@ proprioceptive projections stay at their low set-point throughout.
     rehabilitation mode.} Rows: the five locomotion modes; columns: the three
     learning rates. Each panel shows CUT$\to$RG-E (solid, left axis, pA) and the
     two proprioceptive projections Ia-E$\to$RG-E and Ia-F$\to$RG-F (dashed, right
-    axis, pA) versus time (s). Panels (a)--(o). The learning rate sets the
+    axis, pA) versus time (s). Panels (a)--(y). The learning rate sets the
     time-to-plateau; unloading (bottom rows) slows CUT$\to$RG-E convergence.}
   \label{fig:weights_grid}
 \end{figure}
@@ -67,28 +68,37 @@ proprioceptive projections stay at their low set-point throughout.
 % =============================================================
 \subsection{Rehabilitation progress: force develops as the weight converges}\label{sec:results:force}
 
-Figures~\ref{fig:force_l3}--\ref{fig:force_l5} track the extensor/flexor muscle
+Figures~\ref{fig:force_l2}--\ref{fig:force_l6} track the extensor/flexor muscle
 force in three windows of the run --- beginning ($t\approx4$--$9$\,s), middle
 ($40$--$45$\,s) and end ($115$--$120$\,s) --- for each locomotion mode, one
-figure per learning rate. As the CUT$\to$RG-E weight grows, the counter-phase
-force pattern sharpens from ragged early bursts into a clean antiphase. The
-progression completes in the loaded modes (slow, medium and fast walk reach
-corr$(F_E,F_F)\le-0.96$), degrades gracefully under toe stepping ($-0.82$), and
-fails under air stepping ($-0.51$): there the gated afferents keep CUT$\to$RG-E
-weak ($\approx9$\,pA even at $t=120$\,s) and the extensor force never fully
-develops. The learning rate sets how much of the run is spent in the
-under-developed regime --- at $\lambda=10^{-3}$ (Figure~\ref{fig:force_l3}) the
-rhythm is essentially converged by the first window, whereas at $10^{-5}$
-(Figure~\ref{fig:force_l5}) it remains under-developed throughout.
+figure for each of the five learning rates. As the CUT$\to$RG-E weight grows,
+the counter-phase force pattern sharpens from ragged early bursts into a clean
+antiphase. At the fast and intermediate rates ($\lambda=10^{-2}$ to $10^{-4}$)
+the weight converges within the run and the loaded modes reach
+corr$(F_E,F_F)$ down to $-0.99$; toe stepping is strong at the faster rates but
+degrades as the rate slows ($-0.96$ at $10^{-2}$ to $-0.39$ at $10^{-6}$); and
+under air stepping the loading-gated afferents keep the extensor drive weak
+(CUT$\to$RG-E $\approx4$\,pA at the slowest rate) so the counter-phase never
+exceeds $\approx-0.55$ at any rate. At the slowest rates
+($\lambda=10^{-5},10^{-6}$) the descending weight barely develops within
+$120$\,s and the gait stays under-developed throughout.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.9\textwidth]{fig_force_stages_lam1em2.png}
+  \caption{\textbf{Force at three learning stages, five locomotion modes,
+    $\lambda=10^{-2}$ (fastest rate).} Rows: the five locomotion modes; columns:
+    beginning / middle / end of the $120$\,s run. Solid = Force-E, dashed =
+    Force-F (a.u.)\ versus time (s); panels annotated with the mean CUT$\to$RG-E
+    weight and in-window corr$(F_E,F_F)$. Panels (a)--(o).}
+  \label{fig:force_l2}
+\end{figure}
 
 \begin{figure}[t]
   \centering
   \includegraphics[width=0.9\textwidth]{fig_force_stages_lam1em3.png}
   \caption{\textbf{Force at three learning stages, five locomotion modes,
-    $\lambda=10^{-3}$.} Rows: the five locomotion modes; columns: beginning /
-    middle / end of the $120$\,s run. Solid = Force-E, dashed = Force-F
-    (a.u.)\ versus time (s); panels annotated with the mean CUT$\to$RG-E weight
-    and in-window corr$(F_E,F_F)$. Panels (a)--(o).}
+    $\lambda=10^{-3}$.} Same layout as Figure~\ref{fig:force_l2}.}
   \label{fig:force_l3}
 \end{figure}
 
@@ -106,10 +116,20 @@ rhythm is essentially converged by the first window, whereas at $10^{-5}$
   \centering
   \includegraphics[width=0.9\textwidth]{fig_force_stages_lam1em5.png}
   \caption{\textbf{Force at three learning stages, five locomotion modes,
-    $\lambda=10^{-5}$.} Same layout as Figure~\ref{fig:force_l3}. At this slow
+    $\lambda=10^{-5}$.} Same layout as Figure~\ref{fig:force_l2}. At this slow
     rate the descending weight barely develops within the run, so the gait stays
     under-developed across all three windows.}
   \label{fig:force_l5}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.9\textwidth]{fig_force_stages_lam1em6.png}
+  \caption{\textbf{Force at three learning stages, five locomotion modes,
+    $\lambda=10^{-6}$ (slowest rate).} Same layout as Figure~\ref{fig:force_l2};
+    the descending weight remains near its initial value throughout, so
+    counter-phase is carried almost entirely by the paced core.}
+  \label{fig:force_l6}
 \end{figure}
 
 % =============================================================
@@ -118,8 +138,9 @@ rhythm is essentially converged by the first window, whereas at $10^{-5}$
 Figures~\ref{fig:net_l3}--\ref{fig:net_l5} show the population firing rates of
 all sixteen recorded groups --- both legs' RG-F/RG-E rhythm generators, InF/InE
 reciprocal-inhibition interneurons, IaInt-F/IaInt-E proprioceptive interneurons
-and M-F/M-E motor pools --- across the five locomotion modes, one figure per
-learning rate. Through slow, medium and fast walk and under toe stepping, every
+and M-F/M-E motor pools --- across the five locomotion modes, one figure for
+each of the five learning rates (Figures~\ref{fig:net_l2}--\ref{fig:net_l6}).
+Through slow, medium and fast walk and under toe stepping, every
 flexor-side population fires in strict antiphase to its extensor-side
 counterpart, the two legs hold a $180^{\circ}$ offset (right-leg rows tinted),
 and the reciprocal In and IaInt interneurons carry the same clean alternation as
@@ -131,12 +152,20 @@ the population-level signature of the unloading failure.
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=0.95\textwidth]{fig_network_matrix_lam1em3.png}
+  \includegraphics[width=0.95\textwidth]{fig_network_matrix_lam1em2.png}
   \caption{\textbf{Full-circuit population activity across the five locomotion
-    modes, $\lambda=10^{-3}$.} Rows: the sixteen recorded populations (both
-    legs; right-leg rows tinted); columns (a)--(e): slow / medium=plantar=%
-    baseline / fast walk and toe / air stepping. Population rate
+    modes, $\lambda=10^{-2}$ (fastest rate).} Rows: the sixteen recorded
+    populations (both legs; right-leg rows tinted); columns (a)--(e): slow /
+    medium=plantar=baseline / fast walk and toe / air stepping. Population rate
     (spikes$\cdot$neuron$^{-1}\cdot$s$^{-1}$) versus time (ms), last cycles.}
+  \label{fig:net_l2}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.95\textwidth]{fig_network_matrix_lam1em3.png}
+  \caption{\textbf{Full-circuit population activity, $\lambda=10^{-3}$.} Same
+    layout as Figure~\ref{fig:net_l2}.}
   \label{fig:net_l3}
 \end{figure}
 
@@ -152,10 +181,64 @@ the population-level signature of the unloading failure.
   \centering
   \includegraphics[width=0.95\textwidth]{fig_network_matrix_lam1em5.png}
   \caption{\textbf{Full-circuit population activity, $\lambda=10^{-5}$.} Same
-    layout as Figure~\ref{fig:net_l3}. At this under-converged rate the
+    layout as Figure~\ref{fig:net_l2}. At this under-converged rate the
     counter-phase is weaker, most visibly at the higher cadences.}
   \label{fig:net_l5}
 \end{figure}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.95\textwidth]{fig_network_matrix_lam1em6.png}
+  \caption{\textbf{Full-circuit population activity, $\lambda=10^{-6}$
+    (slowest rate).} Same layout as Figure~\ref{fig:net_l2}.}
+  \label{fig:net_l6}
+\end{figure}
+
+% =============================================================
+\subsection{Comparison across the 5 locomotion modes $\times$ 5 STDP rates}\label{sec:results:comparison}
+
+The full $5\times5$ matrix of rehabilitation modes is summarised in
+Figures~\ref{fig:mode_lambda_heat} and~\ref{fig:mode_lambda_trend} and
+Table~\ref{tab:mode_lambda}, quantifying four metrics per cell (last-20\,s
+window, leg L): the counter-phase correlations corr$(F_E,F_F)$ and
+corr(RG-E,RG-F), the peak extensor force, and the converged CUT$\to$RG-E
+weight. Three regularities stand out. \textbf{(i) A learning-rate optimum.}
+The converged weight is a monotone function of $\lambda$ --- CUT$\to$RG-E
+reaches $\approx64$\,pA for $\lambda\in\{10^{-2},10^{-3},10^{-4}\}$, falls to
+$\approx10$\,pA at $10^{-5}$ and to the $\approx4$\,pA floor at $10^{-6}$ ---
+but counter-phase is \emph{not} monotone: it is strongest at the intermediate
+rates and slightly noisier at the fastest rate ($10^{-2}$), so a broad optimum
+sits around $10^{-3}$--$10^{-4}$. \textbf{(ii) A loading gradient.} Across
+every learning rate the counter-phase and peak force decline from the loaded
+modes (slow/medium/fast walk, toe stepping) to air stepping, where corr$(F_E,F_F)$
+saturates near $-0.5$ regardless of $\lambda$ because the loading-gated
+afferents cap the achievable descending drive. \textbf{(iii) Speed
+robustness.} Within the loaded modes the metrics are nearly flat across
+walking speed at the converged rates, confirming that the paced sensorimotor
+core carries the gait across the rat locomotor range once learning has
+developed.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.95\textwidth]{fig_mode_lambda_heatmaps.png}
+  \caption{\textbf{Metric heatmaps across the $5\times5$ rehabilitation-mode
+    matrix} (rows: locomotion modes; columns: STDP rate $\lambda$). corr$(F_E,F_F)$
+    and corr(RG-E,RG-F) (diverging scale), peak Force-E (a.u.), and converged
+    CUT$\to$RG-E weight (pA). Last-20\,s window, canonical sensory model.}
+  \label{fig:mode_lambda_heat}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.9\textwidth]{fig_mode_lambda_trends.png}
+  \caption{\textbf{Metric trends across the locomotion modes, one line per STDP
+    rate $\lambda$.} Same four metrics as Figure~\ref{fig:mode_lambda_heat},
+    plotted against the locomotion mode (slow walk $\to$ air stepping) to expose
+    the loading gradient and the learning-rate ordering.}
+  \label{fig:mode_lambda_trend}
+\end{figure}
+
+\input{mode_lambda_table}
 
 % =============================================================
 \subsection{Epidural stimulation rescues stepping under unloading}\label{sec:results:epidural}

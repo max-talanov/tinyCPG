@@ -31,9 +31,11 @@ COLS = [
     ("toe stepping\npartial unloading",    "cpg_ablsens_toe"),
     ("air stepping\nfull unloading",       "cpg_ablsens_air"),
 ]
-LAMBDAS = [("lam1em3", "λ=10⁻³", "#d62728"),
+LAMBDAS = [("lam1em2", "λ=10⁻²", "#7f1d1d"),
+           ("lam1em3", "λ=10⁻³", "#d62728"),
            ("lam1em4", "λ=10⁻⁴", "#2ca02c"),
-           ("lam1em5", "λ=10⁻⁵", "#1f77b4")]
+           ("lam1em5", "λ=10⁻⁵", "#1f77b4"),
+           ("lam1em6", "λ=10⁻⁶", "#9467bd")]
 
 
 def _find(indir, stem, lam):
