@@ -6,29 +6,50 @@
 %   fig_network_matrix_lam*  = 16 population rates x 5 modes, per lambda
 %   fig9_epidural_contrast   = epidural-stim vs natural loading contrast
 
-\subsection{Self-organisation of the three plastic projections}\label{sec:results:weights}
+Before the individual results we fix the terms used throughout. The model is a
+two-legged spinal central pattern generator (CPG): a spiking network that,
+driven only by a weak constant brainstem input and rhythmic sensory feedback,
+produces the alternating extensor/flexor muscle activity of walking. Each leg
+contains two mutually-inhibiting neuron pools --- an \emph{extensor} and a
+\emph{flexor} rhythm generator (RG-E and RG-F) --- that drive motor neurons and
+simple muscle models. A good walking rhythm is one in which extensor and flexor
+are active in strict alternation (``counter-phase''); we measure this by the
+Pearson correlation between the two muscle forces, which is $-1$ for perfect
+alternation and $0$ for none. Three synapses in the model are \emph{plastic} ---
+their strengths change as the network runs, through spike-timing-dependent
+plasticity (STDP). The Results ask how this self-tuning builds the gait, and how
+well the learned gait survives when sensory feedback is progressively removed,
+as it is in spinal-cord-injury rehabilitation.
 
-\paragraph{The canonical model and its rehabilitation modes.}
-All results use the canonical sensory-sited model: the brainstem drive
-BS$\to$RG is frozen and the plasticity lives in three projections --- the
-cutaneous CUT$\to$RG-E and the two homonymous proprioceptive projections
-Ia-E$\to$RG-E and Ia-F$\to$RG-F. Every result is organised on the same
-$5\times3$ grid of \emph{rehabilitation modes}: five locomotion modes --- slow
-walk (6\,cm/s), medium walk $=$ plantar stepping $=$ baseline loading
-(13.5\,cm/s), fast walk (21\,cm/s), toe stepping (partial unloading) and air
-stepping (full unloading) --- crossed with five STDP learning rates
-$\lambda\in\{10^{-2},10^{-3},10^{-4},10^{-5},10^{-6}\}$, giving a
-$5\times5$ matrix of rehabilitation modes.
+\subsection{The network tunes its own synapses to a stable set-point}\label{sec:results:weights}
 
-\paragraph{Weights converge symmetrically to a mode-independent set-point.}
-Figure~\ref{fig:weight_matrix} shows the weight trajectory of each plastic
-projection, for both legs, across the five locomotion modes (the three learning
-rates overlaid in each panel). The cutaneous CUT$\to$RG-E projection converges
-to $\approx63$\,pA in every loaded mode, while the two proprioceptive
-projections self-stabilise at a low $\approx4$--$5$\,pA set-point, well below
-their $10$\,pA cap --- the light, phased Ia feedback that reinforces each burst
-without filling the inter-burst trough. The left and right legs are
-indistinguishable.
+\paragraph{The model and its $5\times5$ grid of test conditions.}
+We place the learning in the sensory pathways and hold the brainstem input
+fixed, so the three plastic synapses are: the cutaneous CUT$\to$RG-E projection
+(paw-contact skin feedback onto the extensor generator) and two proprioceptive
+projections, Ia-E$\to$RG-E and Ia-F$\to$RG-F (muscle-stretch feedback onto the
+matching generator). Every result is reported on the same grid crossing
+\emph{five locomotion modes} with \emph{five learning rates}. The locomotion
+modes span a rehabilitation continuum: slow, medium and fast walk (6, 13.5 and
+21\,cm/s, all at full weight-bearing --- medium walk is also called
+\emph{plantar stepping} or \emph{baseline}), then \emph{toe stepping} (partial
+body-weight support) and \emph{air stepping} (the limb fully unloaded, as when a
+spinal rat is suspended). The learning rate $\lambda$ sets how much each plastic
+synapse changes per correlated pre/post spike pair --- larger $\lambda$ means
+faster learning --- and we sweep it across five decades,
+$\lambda\in\{10^{-2},10^{-3},10^{-4},10^{-5},10^{-6}\}$.
+
+\paragraph{The synapses grow, then settle at values that do not depend on the
+walking mode.}
+Starting from weak random values, STDP drives each plastic synapse to a steady
+strength and holds it there (Figure~\ref{fig:weight_matrix}). The cutaneous
+CUT$\to$RG-E synapse grows strong --- to $\approx63$\,pA --- in every
+weight-bearing mode, whereas the two proprioceptive synapses settle at a low
+$\approx4$--$5$\,pA, well below their $10$\,pA ceiling. This low set-point is
+functionally important: a light, correctly-timed proprioceptive input reinforces
+each burst without ``filling in'' the silent gap between bursts, which would
+otherwise abolish the alternation. The left and right legs learn identical
+values.
 
 \begin{figure}[t]
   \centering
@@ -44,14 +65,16 @@ indistinguishable.
   \label{fig:weight_matrix}
 \end{figure}
 
-\paragraph{Learning rate sets the time-to-plateau; unloading slows it.}
-Broken out per learning rate (Figure~\ref{fig:weights_grid}), CUT$\to$RG-E
-reaches its plateau within $\approx7$\,s at $\lambda=10^{-3}$, $\approx75$\,s at
-$10^{-4}$, and does not converge within the $120$\,s run at $10^{-5}$. Under
-progressive unloading the potentiation slows: at air stepping even the fast
-rate only climbs gradually (reaching $\approx50$\,pA at $t=120$\,s), because the
-loading-gated afferents that drive the learning are attenuated. The two
-proprioceptive projections stay at their low set-point throughout.
+\paragraph{The learning rate sets only how fast the synapse settles; unloading
+slows it.}
+Faster learning reaches the plateau sooner (Figure~\ref{fig:weights_grid}):
+CUT$\to$RG-E settles within $\approx7$\,s at $\lambda=10^{-3}$, but takes
+$\approx75$\,s at $10^{-4}$ and has not finished settling within the $120$\,s run
+at $10^{-5}$. Removing body-weight support slows learning further, because the
+paw-contact feedback that drives the synapse is itself weakened when the limb is
+unloaded: under air stepping even the fastest rate climbs only gradually (to
+$\approx50$\,pA by the end of the run). The proprioceptive synapses stay at
+their low set-point in every condition.
 
 \begin{figure}[t]
   \centering
@@ -68,20 +91,22 @@ proprioceptive projections stay at their low set-point throughout.
 % =============================================================
 \subsection{Rehabilitation progress: force develops as the weight converges}\label{sec:results:force}
 
-Figures~\ref{fig:force_l2}--\ref{fig:force_l6} track the extensor/flexor muscle
-force in three windows of the run --- beginning ($t\approx4$--$9$\,s), middle
-($40$--$45$\,s) and end ($115$--$120$\,s) --- for each locomotion mode, one
-figure for each of the five learning rates. As the CUT$\to$RG-E weight grows,
-the counter-phase force pattern sharpens from ragged early bursts into a clean
-antiphase. At the fast and intermediate rates ($\lambda=10^{-2}$ to $10^{-4}$)
-the weight converges within the run and the loaded modes reach
-corr$(F_E,F_F)$ down to $-0.99$; toe stepping is strong at the faster rates but
-degrades as the rate slows ($-0.96$ at $10^{-2}$ to $-0.39$ at $10^{-6}$); and
-under air stepping the loading-gated afferents keep the extensor drive weak
-(CUT$\to$RG-E $\approx4$\,pA at the slowest rate) so the counter-phase never
-exceeds $\approx-0.55$ at any rate. At the slowest rates
-($\lambda=10^{-5},10^{-6}$) the descending weight barely develops within
-$120$\,s and the gait stays under-developed throughout.
+Does this self-tuned wiring actually produce good walking, and how does the gait
+build up over a session? Figures~\ref{fig:force_l2}--\ref{fig:force_l6} show the
+extensor and flexor muscle forces in three short windows --- the beginning,
+middle and end of each $120$\,s run --- so that reading a figure left-to-right
+traces how the gait develops as the synapse strengthens (one figure per learning
+rate). Early in the run the two forces overlap in ragged, poorly-timed bursts;
+as CUT$\to$RG-E grows they separate into a clean alternation. At the fast and
+intermediate rates ($\lambda=10^{-2}$ to $10^{-4}$) the synapse converges within
+the run and the weight-bearing modes reach near-perfect counter-phase (muscle-%
+force correlation down to $-0.99$, where $-1$ is ideal). Toe stepping is clean at
+the faster rates but degrades as learning slows (correlation $-0.96$ at $10^{-2}$
+down to $-0.39$ at $10^{-6}$), and air stepping never exceeds $\approx-0.55$ at
+any rate, because with the limb unloaded the extensor synapse stays weak
+($\approx4$\,pA). At the two slowest rates ($\lambda=10^{-5},10^{-6}$) the synapse
+barely develops within $120$\,s, so the gait stays under-formed from beginning to
+end.
 
 \begin{figure}[t]
   \centering
@@ -135,20 +160,21 @@ $120$\,s and the gait stays under-developed throughout.
 % =============================================================
 \subsection{Network-level activity across the locomotion modes}\label{sec:results:network}
 
-Figures~\ref{fig:net_l3}--\ref{fig:net_l5} show the population firing rates of
-all sixteen recorded groups --- both legs' RG-F/RG-E rhythm generators, InF/InE
-reciprocal-inhibition interneurons, IaInt-F/IaInt-E proprioceptive interneurons
-and M-F/M-E motor pools --- across the five locomotion modes, one figure for
-each of the five learning rates (Figures~\ref{fig:net_l2}--\ref{fig:net_l6}).
-Through slow, medium and fast walk and under toe stepping, every
-flexor-side population fires in strict antiphase to its extensor-side
-counterpart, the two legs hold a $180^{\circ}$ offset (right-leg rows tinted),
-and the reciprocal In and IaInt interneurons carry the same clean alternation as
-the rhythm generators --- so the inhibitory core, not merely the motor read-out,
-is phase-locked. Under air stepping (rightmost column) the loading-gated
-afferent drive is withdrawn and the extensor-side populations (RG-E, InE,
-IaInt-E, M-E) collapse while the intrinsically-bursting flexor side persists ---
-the population-level signature of the unloading failure.
+The muscle force is only the read-out of a whole network, so we next ask whether
+the clean alternation is a property of the entire circuit.
+Figures~\ref{fig:net_l2}--\ref{fig:net_l6} show the firing rates of all sixteen
+recorded neuron pools --- for both legs, the rhythm generators (RG-E, RG-F), the
+reciprocal-inhibition interneurons (InE, InF), the proprioceptive interneurons
+(IaInt-E, IaInt-F) and the motor pools (M-E, M-F) --- one figure per learning
+rate. In slow, medium and fast walk and in toe stepping, every extensor-side
+pool fires in strict alternation with its flexor-side partner, the two legs stay
+half a cycle apart (a $180^{\circ}$ offset, as in a real trot), and the
+inhibitory interneurons alternate just as cleanly as the rhythm generators --- so
+the alternation is built into the core circuit, not imposed only at the muscle.
+The exception is air stepping (rightmost column): with the sensory feedback
+withdrawn, the extensor-side pools (RG-E, InE, IaInt-E, M-E) fall nearly silent
+while the flexor side, which bursts on its own intrinsic dynamics, keeps going
+--- the network-level signature of the walking failure seen in the muscle forces.
 
 \begin{figure}[t]
   \centering
@@ -197,26 +223,25 @@ the population-level signature of the unloading failure.
 % =============================================================
 \subsection{Comparison across the 5 locomotion modes $\times$ 5 STDP rates}\label{sec:results:comparison}
 
-The full $5\times5$ matrix of rehabilitation modes is summarised in
-Figures~\ref{fig:mode_lambda_heat} and~\ref{fig:mode_lambda_trend} and
-Table~\ref{tab:mode_lambda}, quantifying four metrics per cell (last-20\,s
-window, leg L): the counter-phase correlations corr$(F_E,F_F)$ and
-corr(RG-E,RG-F), the peak extensor force, and the converged CUT$\to$RG-E
-weight. Three regularities stand out. \textbf{(i) A learning-rate optimum.}
-The converged weight is a monotone function of $\lambda$ --- CUT$\to$RG-E
-reaches $\approx64$\,pA for $\lambda\in\{10^{-2},10^{-3},10^{-4}\}$, falls to
-$\approx10$\,pA at $10^{-5}$ and to the $\approx4$\,pA floor at $10^{-6}$ ---
-but counter-phase is \emph{not} monotone: it is strongest at the intermediate
-rates and slightly noisier at the fastest rate ($10^{-2}$), so a broad optimum
-sits around $10^{-3}$--$10^{-4}$. \textbf{(ii) A loading gradient.} Across
-every learning rate the counter-phase and peak force decline from the loaded
-modes (slow/medium/fast walk, toe stepping) to air stepping, where corr$(F_E,F_F)$
-saturates near $-0.5$ regardless of $\lambda$ because the loading-gated
-afferents cap the achievable descending drive. \textbf{(iii) Speed
-robustness.} Within the loaded modes the metrics are nearly flat across
-walking speed at the converged rates, confirming that the paced sensorimotor
-core carries the gait across the rat locomotor range once learning has
-developed.
+To compare all twenty-five conditions at a glance, Figures~\ref{fig:mode_lambda_heat}
+and~\ref{fig:mode_lambda_trend} and Table~\ref{tab:mode_lambda} reduce each
+condition to four numbers (measured over the last $20$\,s of the run): the
+alternation of the two muscle forces [corr$(F_E,F_F)$] and of the two rhythm
+generators [corr(RG-E,RG-F)] --- both near $-1$ when alternation is clean --- the
+peak extensor force, and the final strength of the learned CUT$\to$RG-E synapse.
+Three patterns stand out. \textbf{(i) A ``sweet spot'' for the learning rate.}
+The final synaptic strength grows steadily with $\lambda$ --- from the
+$\approx4$\,pA floor at $10^{-6}$ up to $\approx64$\,pA for $10^{-4}$ and faster
+--- but the \emph{quality} of the alternation does not follow suit: it is best at
+the intermediate rates and slightly noisier at the very fastest rate, giving a
+broad optimum around $\lambda=10^{-3}$--$10^{-4}$. \textbf{(ii) A loading
+gradient.} At every learning rate the alternation and the peak force fall as the
+limb is unloaded, and under air stepping the muscle-force alternation settles
+near $-0.5$ regardless of $\lambda$ --- the withdrawn feedback caps how much
+descending drive the network can build. \textbf{(iii) Robustness to walking
+speed.} Among the weight-bearing modes the four numbers are almost flat across
+speed once learning has converged, showing that the sensory-paced core carries
+the gait across the whole rat locomotor range.
 
 \paragraph{Why counter-phase \emph{recovers} from toe to air stepping at the
 slow learning rates.}
@@ -277,16 +302,20 @@ at the rhythm-generator level.
 % =============================================================
 \subsection{Epidural stimulation rescues stepping under unloading}\label{sec:results:epidural}
 
-Figure~\ref{fig:epidural} contrasts the two loading paradigms. In the natural
-(unassisted) case the cutaneous and proprioceptive drives are gated together by
-loading, and the rhythm collapses as the limb is unloaded (corr $-0.52$ at air
-stepping). When the paced cutaneous drive is instead held intact regardless of
-loading --- the computational analogue of epidural lumbar stimulation, which
-supplies a rhythmic afferent volley independent of limb
-contact~\cite{courtine2009,harkema2011} --- the counter-phase is preserved
-across the entire loading range (corr $\approx-0.98$). This double dissociation
-reproduces the mechanism underlying the clinical observation that motor-complete
-subjects cannot step unassisted but recover treadmill stepping under epidural
+Finally, the model speaks to a striking clinical observation: people and animals
+with severe spinal cord injury often cannot step on their own, yet regain
+stepping when the lumbar spinal cord is electrically stimulated (\emph{epidural
+stimulation}). We reproduce the two situations by choosing how the paw-contact
+drive behaves under unloading (Figure~\ref{fig:epidural}). In the \emph{natural}
+(unassisted) case both the cutaneous and the proprioceptive feedback fade
+together as the limb is unloaded, and the rhythm collapses (muscle-force
+correlation $-0.52$ at air stepping). When the rhythmic cutaneous drive is
+instead held on regardless of loading --- the model's stand-in for epidural
+stimulation, which supplies a rhythmic input that does not depend on limb
+contact~\cite{courtine2009,harkema2011} --- the alternation is preserved across
+the whole loading range (correlation $\approx-0.98$). This double dissociation
+captures the mechanism behind the clinical finding that motor-complete subjects
+cannot step unassisted but recover treadmill stepping under epidural
 stimulation~\cite{courtine2009,harkema2011}.
 
 \begin{figure}[t]
