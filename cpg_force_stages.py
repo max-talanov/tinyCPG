@@ -93,7 +93,7 @@ def main():
     for i, ax in enumerate(axes.flat):
         ax.text(0.02, 0.95, f"({_L[i]})", transform=ax.transAxes, fontsize=11,
                 fontweight="bold", va="top", ha="left")
-    axes[0][0].legend(loc="upper right", fontsize=9, ncol=2, framealpha=0.9)
+    axes[-1][-1].legend(loc="lower right", fontsize=9, ncol=1, framealpha=0.9)
     lamtxt = args.lambda_tag.replace("lam1em", "1·10⁻")
     fig.tight_layout(rect=(0.04, 0, 1, 0.975))
     fig.savefig(args.out, dpi=args.dpi, bbox_inches="tight")

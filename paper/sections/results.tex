@@ -218,6 +218,40 @@ walking speed at the converged rates, confirming that the paced sensorimotor
 core carries the gait across the rat locomotor range once learning has
 developed.
 
+\paragraph{Why counter-phase \emph{recovers} from toe to air stepping at the
+slow learning rates.}
+A counterintuitive feature of Figure~\ref{fig:mode_lambda_trend} is that at
+the under-converged rates ($\lambda=10^{-5},10^{-6}$) both correlations do not
+decrease monotonically with unloading: they are \emph{weakest at toe stepping}
+and then \emph{strengthen} again at air stepping (e.g.\ at $\lambda=10^{-6}$,
+corr$(F_E,F_F)$ goes $-0.39$ at toe $\to -0.51$ at air, and corr(RG) $-0.74\to
+-0.81$), whereas at the fast rates the correlations fall monotonically. This is
+the same non-monotonic ``intermediate drive is worst'' effect seen in the
+descending-arm learning-rate dependence and in the frozen-weight control: a
+\emph{partially}-developed CUT$\to$RG-E weight (toe stepping, where the gated
+afferents leave the projection at an intermediate $\approx7$--$18$\,pA) is
+strong enough to perturb the paced reciprocal-inhibition core but too weak and
+too poorly-timed to cleanly reinforce it, so it desynchronises the rhythm. Under
+air stepping the afferents are withdrawn almost entirely (CUT$\to$RG-E gated to
+$\approx4$--$8$\,pA), removing that interfering intermediate drive, and the
+rhythm reverts to the clean counter-phase \emph{floor} imposed by the paced
+heel$\to$toe drive and reciprocal inhibition alone. The paced core therefore
+sets a lower bound on counter-phase that the mid-loading, mid-learning regime
+can actually fall below.
+
+\paragraph{Why the RG correlation stays stronger than the force correlation.}
+Across the whole matrix corr(RG-E,RG-F) is consistently more negative than
+corr$(F_E,F_F)$ --- most visibly under air stepping ($\approx-0.8$ versus
+$\approx-0.5$). The rhythm generators keep alternating there because their
+antiphase is produced by reciprocal inhibition plus the external pacing, neither
+of which requires the plastic drive; what fails under unloading is the
+\emph{muscle-force expression} of the extensor. Because the only large plastic
+projection is extensor-biased (CUT$\to$RG-E, with no flexor counterpart), gating
+the afferents starves the extensor of the activation it needs to develop force,
+so the extensor force collapses while the flexor --- intrinsically bursting ---
+persists. The counter-phase is thus lost at the muscle level before it is lost
+at the rhythm-generator level.
+
 \begin{figure}[t]
   \centering
   \includegraphics[width=0.95\textwidth]{fig_mode_lambda_heatmaps.png}

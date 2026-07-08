@@ -60,9 +60,9 @@ def main():
         ax.set_xlabel("weight (pA)");
         if i == 0:
             ax.set_ylabel("count")
+            ax.text(-0.28, 1.12, "(a)", transform=ax.transAxes, fontsize=15,
+                    fontweight="bold", va="bottom", ha="left")
         ax.grid(alpha=0.2)
-    fig.text(0.5, 0.985, "(a) Plastic / learned-projection weight distributions (STDP + lognormal init)",
-             ha="center", fontsize=13, weight="bold")
 
     # (b) weight per projection — signed bar with the per-connection spread (s.d.)
     ax = fig.add_subplot(gs[1])

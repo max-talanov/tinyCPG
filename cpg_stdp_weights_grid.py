@@ -79,9 +79,9 @@ def main():
     h1 = [plt.Line2D([0], [0], color=CUT[2], lw=2.0, label=CUT[1] + " (left axis)")]
     h2 = [plt.Line2D([0], [0], color=c, lw=1.6, ls="--", label=n + " (right axis)")
           for _, n, c in IAS]
-    fig.legend(handles=h1 + h2, loc="upper center", ncol=3, fontsize=12,
-               bbox_to_anchor=(0.5, 1.005), frameon=True)
-    fig.tight_layout(rect=(0, 0, 1, 0.98))
+    axes[-1][-1].legend(handles=h1 + h2, loc="lower right", ncol=1, fontsize=10,
+                        frameon=True, framealpha=0.95)
+    fig.tight_layout()
     fig.savefig(args.out, dpi=args.dpi, bbox_inches="tight")
     plt.close(fig)
     print(f"[stdp-weights-grid] saved {args.out}")

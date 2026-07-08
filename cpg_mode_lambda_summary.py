@@ -90,12 +90,12 @@ def main():
             for j in range(nL):
                 if np.isfinite(M[i, j]):
                     val = f"{M[i,j]:.2f}" if mk.startswith("corr") else f"{M[i,j]:.0f}"
-                    ax.text(j, i, val, ha="center", va="center", fontsize=9,
-                            color="white" if (cmap in ("viridis", "magma") and M[i, j] < (vmax*0.55)) else "black")
+                    # white text on the diverging (corr) panels and on dark
+                    # viridis/magma cells; black otherwise.
+                    tcol = "white" if (cmap == "RdBu" or (cmap in ("viridis", "magma") and M[i, j] < vmax * 0.55)) else "black"
+                    ax.text(j, i, val, ha="center", va="center", fontsize=9, color=tcol)
         plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
-    fig.suptitle("Comparison across 5 locomotion modes × STDP rates λ (canonical sensory model, last 20 s)",
-                 fontsize=13, fontweight="bold")
-    fig.tight_layout(rect=(0, 0, 1, 0.97))
+    fig.tight_layout()
     fig.savefig(args.out + "_heatmaps.png", dpi=170, bbox_inches="tight"); plt.close(fig)
 
     # (b) line-plot trends: metric vs mode, one line per lambda

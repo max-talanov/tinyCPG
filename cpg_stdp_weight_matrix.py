@@ -85,7 +85,7 @@ def main():
     for i, ax in enumerate(axes.flat):
         ax.text(0.03, 0.94, f"({_L[i]})", transform=ax.transAxes, fontsize=9,
                 fontweight="bold", va="top", ha="left")
-    axes[0][nc - 1].legend(fontsize=9, loc="lower right", framealpha=0.92)
+    axes[-1][-1].legend(fontsize=9, loc="lower right", framealpha=0.92)
     fig.tight_layout()
     fig.savefig(args.out, dpi=args.dpi, bbox_inches="tight")
     plt.close(fig)
