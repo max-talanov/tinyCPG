@@ -10,7 +10,7 @@ Plotting is done **locally** (after `scp`-ing results back), not on MN5.
 > `run_ablation_sensory.sh` now sweep **5 STDP rates** (λ = 1e-6 … 1e-2, arrays
 > `0-14`) for the 5 modes × 5 λ comparison. Submit both, bring back
 > `cpg_sensory_stdp_*` and `cpg_ablsens_*`, then run
-> `cpg_mode_lambda_summary.py --indir <dated>` (heatmaps + trends + table, auto-detects
+> `scripts/cpg_mode_lambda_summary.py --indir <dated>` (heatmaps + trends + table, auto-detects
 > the 5 λ) plus the per-λ figure scripts (which loop `lam1em2..lam1em6`).
 
 > **NOTE — bio-plausibility defaults changed (post 2026-06-30).** The model now
@@ -107,33 +107,43 @@ scp shows up as a few MB and breaks the plotters).
 
 ## 4. Plot locally (after transfer)
 
-Point `--indir` at the dated results folder. Sensory arm uses the new modes:
+Point `--indir` at the dated results folder. These are the **current** generators
+(all write straight into `paper/figures/`, the single source of truth for the
+manuscript — see `paper/README.md`). Superseded generators live in
+`scripts/legacy/` and are not part of this pipeline.
+
 ```bash
 INDIR=results/$(date +%F)
 
-# Paper figures with committed generators (all recompute metrics from the HDF5s)
-python3 cpg_anchor_figure.py          --indir $INDIR --out plots/paper/fig2_main.png
-python3 cpg_speed_stdp_figure.py      --indir $INDIR --outdir plots/paper          # fig5 + CSV
-python3 cpg_ablation_graded_figure.py --indir $INDIR --outdir plots/paper          # fig6 + CSV
-python3 cpg_epidural_contrast.py --stim-dir $INDIR --natural-dir $INDIR --lambda-tag lam1em3 \
-        --out plots/paper/fig9_epidural_contrast.png                                # fig9 + CSV
-python3 cpg_descending_vs_sensory.py  --indir $INDIR --out plots/paper/fig_descending_vs_sensory.png
-python3 cpg_frozen_figure.py          --indir $INDIR --outdir plots/paper           # fig8 (needs cpg_frozen_*_baseline_*)
+# Architecture + connectivity (Methods) — only need re-running after a --dump-connectivity change
+python3 scripts/cpg_architecture_diagram.py
+python3 scripts/cpg_connectivity_figure.py --in results/connectivity/conn_dump_sensory.h5 \
+        --out paper/figures/fig_connectivity.png
 
-# STDP weight matrices (sensory tracks CUT + Ia->RG; descending tracks CUT + BS->RG)
-python3 cpg_stdp_matrix.py --mode speed    --indir $INDIR --out plots/paper/fig_stdp_descending.png
-python3 cpg_stdp_matrix.py --mode sensory  --indir $INDIR --out plots/paper/fig_stdp_sensory.png
-python3 cpg_stdp_matrix.py --mode ablsens  --indir $INDIR --out plots/paper/fig_stdp_ablsens.png
+# STDP weights: both legs x 3 projections x 5 modes, and 5 modes x 5 lambda
+python3 scripts/cpg_stdp_weight_matrix.py --indir $INDIR --out paper/figures/fig_stdp_weight_matrix.png
+python3 scripts/cpg_stdp_weights_grid.py  --indir $INDIR --out paper/figures/fig_stdp_weights_grid.png
 
-# Network activity (descending vs sensory at matched speeds)
-python3 cpg_network_activity.py --mode speed --speed-prefix cpg_speed_stdp   --indir $INDIR --out plots/paper/fig_net_descending.png
-python3 cpg_network_activity.py --mode speed --speed-prefix cpg_sensory_stdp --indir $INDIR --out plots/paper/fig_net_sensory.png
-python3 cpg_network_activity.py --mode ablation --ablation-prefix cpg_ablsens --indir $INDIR --out plots/paper/fig_net_ablsens.png
+# Force at 3 learning stages x 5 modes, one figure per lambda
+for lam in lam1em2 lam1em3 lam1em4 lam1em5 lam1em6; do
+  python3 scripts/cpg_force_stages.py --indir $INDIR --lambda-tag $lam \
+          --out paper/figures/fig_force_stages_$lam.png
+done
 
-# Ia afferent activity
-python3 cpg_ia_figure.py --mode sensory --indir $INDIR --out plots/paper/fig_ia_sensory.png
-python3 cpg_ia_figure.py --mode ablsens --indir $INDIR --out plots/paper/fig_ia_ablsens.png
+# Full-circuit population activity x 5 modes, one figure per lambda
+for lam in lam1em2 lam1em3 lam1em4 lam1em5 lam1em6; do
+  python3 scripts/cpg_network_matrix.py --indir $INDIR --lambda-tag $lam \
+          --out paper/figures/fig_network_matrix_$lam.png
+done
 
-# Per-run gait/force/weights for any single file
-python3 cpg_plot_from_hdf5.py --in $INDIR/cpg_sensory_stdp_13_5cms_lam1em3_*.h5 --save-prefix sensory_med
+# 5x5 mode x lambda comparison: heatmaps + trends + table (auto-detects available lambda tags)
+python3 scripts/cpg_mode_lambda_summary.py --indir $INDIR --out paper/figures/fig_mode_lambda
+cp paper/figures/fig_mode_lambda_table.tex paper/mode_lambda_table.tex
+
+# Epidural-stim vs natural loading contrast (needs cpg_ablstim_* and cpg_ablgrad_*)
+python3 scripts/cpg_epidural_contrast.py --stim-dir $INDIR --natural-dir $INDIR \
+        --out paper/figures/fig9_epidural_contrast.png
+
+# Per-run gait/force/weights for any single file (debug tool, writes to results/)
+python3 scripts/cpg_plot_from_hdf5.py --in $INDIR/cpg_sensory_stdp_13_5cms_lam1em3_*.h5 --save-prefix sensory_med
 ```

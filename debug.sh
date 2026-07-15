@@ -4,7 +4,7 @@
 # Output goes to results/debug.h5.
 #
 # After running, plot with:
-#   python3 cpg_plot_from_hdf5.py --in results/debug.h5 --save-prefix debug
+#   python3 scripts/cpg_plot_from_hdf5.py --in results/debug.h5 --save-prefix debug
 
 set -e
 
@@ -45,5 +45,5 @@ python3 -u cpg_2legs_fast.py \
 echo ""
 echo "=========================================="
 echo "Done. To plot:"
-echo "  python3 cpg_plot_from_hdf5.py --in results/debug.h5 --save-prefix debug"
+echo "  python3 scripts/cpg_plot_from_hdf5.py --in results/debug.h5 --save-prefix debug"
 echo "=========================================="

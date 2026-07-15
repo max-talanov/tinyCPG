@@ -25,7 +25,7 @@ feedback (Ia → InE/InF → RG).
 ./debug.sh
 
 # Plot results
-python3 cpg_plot_from_hdf5.py --in results/debug.h5 --save-prefix debug
+python3 scripts/cpg_plot_from_hdf5.py --in results/debug.h5 --save-prefix debug
 
 # Production run on MN5 (don't touch unless ready)
 sbatch run.sh
@@ -36,7 +36,9 @@ sbatch run.sh
 | File | Purpose |
 |---|---|
 | `cpg_2legs_fast.py` | The model. Neurons, connections, sim loop, HDF5 export. |
-| `cpg_plot_from_hdf5.py` | Reads HDF5, makes per-leg PNGs. |
+| `scripts/` | Current figure/analysis scripts (feed `paper/figures/`), `cpg_param_table.py`, `cpg_plot_from_hdf5.py`, `build_deck.py`. |
+| `scripts/legacy/` | Superseded figure scripts, kept for reference only — not used by the current paper. |
+| `scripts/cpg_plot_from_hdf5.py` | Reads HDF5, makes per-leg PNGs. |
 | `run.sh` | MN5 SLURM array script (N=100, 10-point μ:CV sweep). |
 | `run_speed_stdp.sh` | Phase A: 3 speeds × 3 λ {1e-5,1e-4,1e-3}, 120 s. (descending/BS-plastic arm) |
 | `run_sensory_stdp.sh` | Sensory-learning arm: same 3×3 matrix but `--freeze-bs-rg --stdp-ia-rg --wmax-ia 10`. Pair with `run_speed_stdp.sh` for descending-vs-sensory contrast. Outputs `cpg_sensory_stdp_*`. |
@@ -55,7 +57,7 @@ distribution of prescribed (mean, CV) via `--stdp-winit-dist lognormal_cv
 --stdp-winit-mean <M> --stdp-winit-std <CV> --stdp-winit-bs-mean-mul 0.25`,
 all at air stepping (`--ia-feedback-gain 0.1`). Two sweeps isolate the
 mechanisms: **mean** sweep at fixed CV=0.02 (weakness), **CV** sweep at fixed
-mean=63 (heterogeneity). Plot with `cpg_frozen_figure.py`. No `--sweep-pairs`
+mean=63 (heterogeneity). Plot with `scripts/legacy/cpg_frozen_figure.py`. No `--sweep-pairs`
 (non-sweep mode uses `--out` directly).
 
 ## Current model state (as of this debug session)
@@ -151,7 +153,7 @@ Cross-leg: L↔R commissural inhibition on RG-F (strong) and RG-E (weak).
 | `--cut-feedback-gain` | Multiplicative gain on cutaneous CUT stance drive (loading-dependent paw contact). Scaled with loading alongside `--ia-feedback-gain`; the external Ia-E heel→toe ramp (stim pacing) stays at full. |
 | `--ia-ext-f-hz` | MOD_FLEXOR_AFFERENT: rate (Hz) of the external flexor swing-afferent (hip/flexor-stretch signal; Grillner & Rossignol 1978). Drives RG-F directly + InF during swing, clocking the flexor symmetrically to the stance Ia-E ramp. 0 = off (intrinsic-only flexor); 80 = on. Un-gated by loading (joint-position, not load-based). |
 | `--stdp-lambda` | Override STDP LAMBDA (default 1e-3). Bio-plausible range 5e-4 to 5e-3 (Bi & Poo 1998; Morrison 2007). |
-| `--dump-connectivity` | Build the network, write per-connection WEIGHT + DELAY arrays for all 18 named projections to an HDF5, then exit (no sim — runs in seconds at production N). Feeds the connectivity-statistics figure (`cpg_connectivity_figure.py`) and CSV table. Static weights are delta-valued; plastic are lognormal-init; delays follow the rat `length_velocity` preset + 0.2 ms jitter. |
+| `--dump-connectivity` | Build the network, write per-connection WEIGHT + DELAY arrays for all 18 named projections to an HDF5, then exit (no sim — runs in seconds at production N). Feeds the connectivity-statistics figure (`scripts/cpg_connectivity_figure.py`) and CSV table. Static weights are delta-valued; plastic are lognormal-init; delays follow the rat `length_velocity` preset + 0.2 ms jitter. |
 | `--freeze-bs-rg` | MOD_FREEZE_BS: freeze BS→RG (static at weak init). Removes descending plasticity; pair with `--stdp-ia-rg`. Frozen runs drop `bs->rge`/`bs->rgf` from the tracked plastic-weight keys. |
 | `--stdp-ia-rg` | MOD_IA_RG_STDP: add plastic homonymous Ia→RG. Adds `ia->rge`/`ia->rgf` weight keys. Shifts learning from descending (BS) to sensory (Ia) pathway. Pair with `--freeze-bs-rg`. |
 | `--wmax-ia` | Weight cap for Ia→RG STDP (default 10). **Low cap is critical**: homonymous Ia→RG is in-phase positive feedback — light (≤10) reinforces bursts without filling troughs; high (≥60) saturates into tonic co-excitation that destroys counter-phase. |
@@ -191,7 +193,7 @@ Don't push values outside these ranges without flagging it.
 
 1. Edit one knob in `cpg_2legs_fast.py` (typically `W_IA2IN`, `P_IA2IN`, `BS_REGULAR_HZ`, or one of the `W_*2*` weights)
 2. `./debug.sh`
-3. `python3 cpg_plot_from_hdf5.py --in results/debug.h5 --save-prefix debug`
+3. `python3 scripts/cpg_plot_from_hdf5.py --in results/debug.h5 --save-prefix debug`
 4. Inspect `debug_legL_rg_rate.png`, `debug_legL_force.png`, `debug_legL_activation.png`
 5. Repeat
 
@@ -202,7 +204,7 @@ Each iteration is ~30 s. Don't edit `run.sh` during debug.
 1. Verify alternation works at BS=20 Hz with `./debug.sh`
 2. Verify it still works at BS=60 Hz: remove `--debug-small` from `debug.sh` and re-run with `--sim-ms 5000`
 3. `sbatch run.sh`
-4. After completion, plot one HDF5 to confirm: `python3 cpg_plot_from_hdf5.py --in results/cpg_bursting_commfix_idx04_*.h5 --save-prefix solid_bs`
+4. After completion, plot one HDF5 to confirm: `python3 scripts/cpg_plot_from_hdf5.py --in results/cpg_bursting_commfix_idx04_*.h5 --save-prefix solid_bs`
 
 ## Things NOT to touch without flagging the user
 
