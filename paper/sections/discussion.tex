@@ -1,97 +1,221 @@
-% Discussion — to be expanded. Anchored on novelty_vs_zhang2021.md.
-
-\todo{Target 1500-1800 words. Suggested structure:}
-
 \subsection{Summary of contributions}
-\todo{1-2 paragraphs restating the four extensions
-(STDP self-organisation, Ia closed loop, motoneurons/muscle, paced
-sensory drive) and the three main empirical findings (self-organisation
-across 4 orders of magnitude in init weights; long-term stability
-over 120\,s; identification of commissural inhibition and paced drive
-as the two load-bearing components).}
+We extended a Rybak-style two-legged spinal central pattern generator (CPG)
+with four mechanisms absent from the canonical Hodgkin--Huxley lineage
+(Rybak 2006 $\to$ Shevtsova 2015 $\to$ Danner 2017 $\to$
+Zhang 2022)~\cite{rybak2006,shevtsova2015,danner2017,zhang2022}: (i)
+spike-timing-dependent plasticity (STDP) that lets the network tune its own
+sensory-to-rhythm-generator synapses rather than have them hand-set; (ii) a
+closed loop from muscle-force feedback (Ia) into the reciprocal-inhibition
+core; (iii) motoneuron pools driving explicit muscle proxies with force and
+length dynamics; and (iv) an externally paced cutaneous drive that emulates
+heel-to-toe pressure transfer during stance. Using this model we asked how a
+spinal CPG's own synaptic weights should be organised to produce a stable
+walking rhythm, and how that self-tuned rhythm degrades as sensory feedback
+is progressively withdrawn --- the central manipulation in rodent and human
+studies of spinal-cord-injury (SCI) rehabilitation.
 
-\subsection{Comparison with Rybak-lineage models}
-\todo{Anchor on \texttt{paper/novelty\_vs\_zhang2021.md}. Address:
-\begin{itemize}
-  \item Architectural realism: we have fewer genetically typed
-        interneurons (no V0V/V0D/V2a distinction explicitly), but we
-        add the missing motoneurons, muscle, and Ia loop.
-  \item Self-organisation vs.\ hand-tuning: the contribution is
-        methodological --- demonstrating that a Rybak-style
-        architecture can self-tune its descending weights via STDP.
-  \item Biomechanical closed loop: the force-driven Ia rate code
-        provides the closed-loop substrate that~\cite{zhang2022}
-        explicitly list as missing.
-\end{itemize}}
+Three findings anchor the paper. First, the three plastic synapses --- the
+cutaneous CUT$\to$RG-E projection and the homonymous proprioceptive
+projections Ia-E$\to$RG-E, Ia-F$\to$RG-F --- converge to the same steady
+strength regardless of where they start, of which leg they are in, and of
+walking speed (\autoref{sec:results:weights}); the network organises its own
+descending gain rather than requiring it to be prescribed by the modeller.
+Second, across the full grid of five locomotion modes and five learning
+rates the quality of the alternating gait is not maximised by the fastest
+learning, but peaks at an intermediate rate and falls off at both extremes
+(\autoref{sec:results:comparison}). Third, removing load-dependent sensory
+feedback and removing the cutaneous pacing drive have dissociable effects:
+a model with only the pacing drive intact keeps stepping right through full
+unloading, while a model in which both proprioceptive and cutaneous
+feedback are gated by load collapses --- reproducing, in a spiking
+closed-loop network, the clinical dissociation between unassisted and
+epidurally-stimulated stepping after motor-complete SCI
+(\autoref{sec:results:epidural}).
 
-\subsection{Self-organisation finding and its limits}
-\todo{2 paragraphs:
-\begin{itemize}
-  \item Why does the same plateau emerge from 4 orders of magnitude in
-        initial $\mu$? Discuss the role of STDP weight ceilings
-        ($W_{\max}$, $W_{\max,\text{BS}}$) as attractor boundaries.
-  \item What's NOT self-organised: the asymmetric reciprocal inhibition
-        constants $W_{\text{InF}\to\text{RG-E}}$, $W_{\text{InE}\to\text{RG-F}}$
-        are hand-set; the commissural inhibition $W_{\text{COMM}}$ is
-        hand-set; intrinsic Izhikevich parameters are hand-set. Self-
-        organisation here is limited to descending and cutaneous
-        afferent gains.
-\end{itemize}}
+\subsection{Relation to Rybak-lineage spinal CPG models}
+Zhang et al.\ (2022)~\cite{zhang2022} name two limitations of their own
+four-rhythm-generator model explicitly: it has no biomechanics or sensory
+feedback, and it has no motoneurons, treating rhythm-generator output as a
+direct stand-in for motor output. Every synaptic weight in their model,
+like its Rybak/Shevtsova/Danner predecessors, is hand-tuned. Our model
+addresses both limitations for a single hindlimb pair: the Ia force/length
+feedback loop supplies the missing sensory closed loop, and explicit
+motoneuron pools driving a saturating muscle model supply the missing motor
+periphery. On top of this we add a mechanism none of these models have ---
+activity-dependent plasticity on the afferent synapses --- so that the
+descending and cutaneous gains are discovered by the network rather than
+fixed by the experimenter.
 
-\subsection{Ablation interpretation and clinical/translational angle}
-\todo{1-2 paragraphs:
-\begin{itemize}
-  \item The redundancy under paced drive (noIa and symInh both leave the
-        gait intact) is consistent with the deafferented fictive
-        locomotion literature \cite{pearson1995,rossignol2006}.
-  \item The commissural-inhibition load-bearing role mirrors V0-silencing
-        studies \cite{kiehn2016,talpalar2013}.
-  \item Speculative angle: \emph{if} the closed-loop sensory pacing
-        substitutes for descending drive, this supports the idea that
-        intact afferent feedback can compensate for descending pathway
-        disruption --- relevant to spinal cord injury recovery
-        models~\cite{harkema2011}.
-\end{itemize}}
+The trade-off is architectural detail. Zhang et al.\ resolve genetically
+identified commissural and long-propriospinal interneuron classes (V0V,
+V0D, V1, V2a, V3, Shox2) across four limbs and reproduce V3-silencing
+experiments quantitatively; our model collapses the commissural pathway to
+two hand-set inhibitory projections between homologous half-centres and
+covers only one limb pair. We also do not reproduce gait-transition
+phenomena (walk $\to$ trot $\to$ gallop $\to$ bound): our gait is
+externally paced rather than emergent from a single tonic-drive parameter.
+The two efforts are complementary rather than competing: theirs
+demonstrates architectural realism at the cost of a closed loop; ours
+demonstrates a closed, self-organising loop at the cost of architectural
+detail. A natural synthesis --- hand-curated interlimb architecture wrapped
+in a plastic, closed sensorimotor loop --- is a direct extension of both.
 
-\subsection{Limitations and future work}
-\todo{Mandatory subsection. Discuss:
+\subsection{Why an intermediate learning rate and an intermediate load are
+both optimal}
+Two of our findings share the same underlying mechanism, which is worth
+making explicit before turning to its clinical reading. Learning only
+improves the gait once it has had time to organise the cutaneous weight
+appropriately, and only within a specific range of final weight: at the
+fastest rate ($\lambda=10^{-2}$) the descending weight overshoots useful
+values and the alternation becomes slightly noisier, while at the slower
+rates ($\lambda=10^{-5}, 10^{-6}$) the weight never gets there at all, so
+the comparison across learning rates (\autoref{sec:results:comparison})
+shows a broad optimum around $\lambda=10^{-3}$--$10^{-4}$ rather than a
+monotonic benefit of faster learning. The same logic explains the
+non-monotonic recovery we observe from toe to air stepping at slow learning
+rates: an intermediate, partially-developed weight is poorly enough timed
+to \emph{interfere} with the paced core's own alternation, whereas a fully
+withdrawn afferent drive (air stepping) simply leaves the paced core to run
+on its own, unperturbed floor. In both the learning-rate axis and the
+loading axis, then, \emph{some} plastic drive organised correctly is better
+than none, but a large, poorly-organised drive can be worse than either
+extreme.
+
+\subsection{Clinical implications for spinal cord injury rehabilitation}
+Beyond recapitulating locomotor rhythmicity, the model offers a mechanistic
+account of how sensorimotor interaction and activity-dependent plasticity
+could support functional recovery after SCI, and several of its
+quantitative findings map directly onto clinical observations.
+
+\paragraph{Sensory input as a catalyst for plasticity, not a replacement for
+descending drive.} In our model the brainstem input is held fixed and weak
+throughout; every gain in gait quality comes from tuning the
+\emph{afferent} synapses. Weight-bearing locomotion drives strong,
+consistent potentiation of the cutaneous projection across the loaded
+modes and toe stepping ($\mathrm{CUT}\to\mathrm{RG\text{-}E}\approx$
+55--65\,pA at the fast and intermediate learning rates), whereas full
+unloading suppresses that potentiation almost entirely ($\approx4$\,pA at
+the slowest rates) and yields a markedly less organised
+gait (\autoref{sec:results:weights}, \autoref{sec:results:comparison}).
+Load- and activity-appropriate sensory input is therefore not a substitute
+for the lost supraspinal drive in this model; it is what the spinal network
+uses to reorganise itself. This parallels the clinical observation that
+task-specific gait training, robot-assisted locomotion, and body-weight-supported
+treadmill training improve walking performance by engaging residual
+plasticity in spinal circuitry rather than by regenerating damaged
+descending pathways\todo{cite task-specific / robot-assisted / BWSTT gait
+training literature}.
+
+\paragraph{A mechanistic hypothesis for epidural stimulation.} The paired
+loading contrast (\autoref{sec:results:epidural}) gives this a direct
+reading in terms of assisted stepping. When cutaneous input is gated by
+loading along with everything else (the unassisted case), alternation
+collapses under full unloading (corr$(F_E,F_F)=-0.41$, with the cycle
+period becoming irregular); when the same rhythmic cutaneous drive is held
+on regardless of load --- the model's analogue of epidural spinal cord
+stimulation (ESCS), which delivers a rhythmic afferent volley independent
+of limb contact --- alternation is preserved across the entire loading
+range ($-0.94$ at full weight-bearing to $-0.97$ at full unloading). This
+double dissociation offers a candidate mechanism for the clinical benefit
+of ESCS in motor-complete SCI~\cite{harkema2011,courtine2009,edgerton2008,
+lavrov2008}: rather than (or in addition to) simply raising spinal
+excitability, rhythmic epidural stimulation may act by restoring the
+timed sensory volley that the spinal CPG needs to organise alternating
+output, in effect substituting for the loading-dependent afferent signal
+that unassisted stepping has lost. If this mechanism holds, neuromodulation
+protocols that pair electrical stimulation with functionally patterned
+sensory input --- rather than tonic or unpatterned stimulation alone ---
+would be expected to engage the spinal locomotor circuitry more
+effectively.
+
+\paragraph{An intermediate degree of plasticity, not the maximum, supports
+the best gait.} The learning-rate sweep (\autoref{sec:results:comparison})
+shows that the most robust, cleanly-alternating gait is produced by an
+intermediate learning rate ($\lambda\approx10^{-3}$--$10^{-4}$); both
+slower and --- more surprisingly --- the very fastest learning rate we
+tested give a noisier or less-converged result. If a similar
+weakest-at-the-extremes relationship holds between plasticity and recovery
+in vivo, it offers a heuristic for titrating rehabilitation intensity or
+the dose of pharmacological and electrical neuromodulation therapies aimed
+at spinal adaptation: the goal would be to find the degree of induced
+plasticity that lets spinal circuits reorganise without destabilising them
+through excessive rewiring, and that optimum would plausibly need to be
+set individually, given how much a single parameter's value shifted the
+outcome in our sweep.
+
+\paragraph{An in-silico platform for designing interventions.} Because
+every manipulation in this model --- loading level, learning rate,
+stimulation pattern, which synapses are plastic --- is an explicit,
+inspectable parameter, the same framework could be used prospectively:
+running simulated variants of robot-assisted training at different
+assistance levels, ESCS at different sites, frequencies, or timings
+relative to the gait cycle, and combinations of the two, to narrow the
+candidate space before a clinical trial or a specific patient protocol is
+committed to. Coupled with patient-specific data this points toward a
+``virtual twin'' use case --- simulating, and eventually helping to select
+among, candidate rehabilitation strategies for an individual before they
+are applied.
+
+\subsection{Limitations}
+The model trades biological detail for a tractable, fully closed
+sensorimotor loop, and several simplifications bound how far its
+quantitative predictions should be read.
+
 \begin{enumerate}
-  \item \textbf{Two legs, not four.} Our model omits V3 ascending
-        long-propriospinal pathways and fore--hindlimb coordination
-        --- the central topic of~\cite{zhang2022}. Extending to
-        4 legs is straightforward (replicate the L/R hindlimb pair into
-        a forelimb pair, add V3 aLPN-like diagonal synchronisation).
-  \item \textbf{Single gait.} We pace one gait (paced trot at
-        600--1400\,ms cycle); we do not reproduce walk$\to$trot$\to$
-        gallop$\to$bound transitions. This is structural: our paced
-        gait is externally driven, not self-emergent at varying
-        descending-drive levels.
-  \item \textbf{Izhikevich, not Hodgkin--Huxley.} We trade
-        biophysical detail for simulation efficiency. The persistent
-        sodium (INaP) dynamics are approximated by the intrinsic-
-        bursting Izhikevich parameter set ($c=-55, d=4$). For
-        questions specifically about INaP pharmacology our model is
-        not appropriate; for questions about network-level rhythm
-        organisation it is.
-  \item \textbf{No statistical replication.} Our results are
-        deterministic point estimates from fixed-seed runs; the
-        $(\mu, \mathrm{CV})$ sweep substitutes for stochastic
-        replication.
-  \item \textbf{Self-organisation is local.} Only the descending
-        BS$\to$RG and CUT$\to$RG synapses are plastic; the central
-        reciprocal-inhibition and commissural weights are
-        hand-tuned. A fully self-organising spinal CPG remains future
-        work.
-\end{enumerate}}
+  \item \textbf{Abstracted sensorimotor pathways.} Interneuron populations,
+        proprioceptive transduction, and motor output are represented at a
+        level of abstraction chosen for tractability, not anatomical
+        completeness: we resolve two hand-set commissural projections
+        rather than the genetically identified V0/V1/V2a/V3 interneuron
+        classes, and we model one hindlimb pair rather than
+        fore--hindlimb coordination~\cite{zhang2022}.
+  \item \textbf{No supraspinal control, fatigue, or longer-term structural
+        plasticity.} The brainstem drive is a fixed tonic input, not an
+        adaptive descending controller; muscle fatigue and slower forms of
+        structural plasticity beyond STDP are not modelled.
+  \item \textbf{No SCI pathology.} The model represents reduced
+        \emph{sensory drive}, not the injury itself: chronic dorsal- or
+        ventral-root damage, glial scarring, and the substantial
+        heterogeneity of human SCI presentations are not represented.
+  \item \textbf{Not calibrated to patient or animal data.} No experimental
+        recordings from an SCI preparation were used to fit any parameter,
+        including the STDP rate and weight ceilings. The model should
+        therefore be read as hypothesis-generating --- a candidate
+        mechanism and a set of qualitative and quantitative predictions to
+        be tested --- rather than as a validated predictive tool.
+        Establishing greater biological realism will require incorporating
+        more detailed muscle dynamics, more realistic sensory transduction,
+        an explicit supraspinal controller, and eventually patient-specific
+        data.
+  \item \textbf{Izhikevich, not Hodgkin--Huxley.} We trade biophysical
+        detail for simulation efficiency; persistent-sodium
+        (\textit{I}$_\text{NaP}$)-like bursting is approximated by the
+        intrinsic-bursting Izhikevich parameter set rather than derived
+        from channel kinetics, so the model is not appropriate for
+        questions specific to \textit{I}$_\text{NaP}$ pharmacology.
+  \item \textbf{No stochastic replication.} Results are deterministic,
+        fixed-seed point estimates; the ten-point initial-weight sweep
+        (\autoref{sec:results:weights}) substitutes for repeated stochastic
+        trials in establishing that a result is not an artefact of a
+        particular initialisation.
+\end{enumerate}
 
 \subsection{Concluding remark}
-\todo{1 paragraph: ``The Rybak central spinal CPG, when closed in the
-loop with motoneurons, muscle proxies, Ia feedback, and paced cutaneous
-drive, self-organises its descending and cutaneous weights to a robust
-locomotor attractor that is stable for 120\,s, tracks commanded gait
-period across the rat locomotor range, and is robust to the loss of
-individual components except commissural inhibition and the paced
-drive itself. Together this defines a minimal closed-loop spinal CPG
-that bridges the Rybak central architecture to a sensorimotor
-substrate amenable to extensions in neural prosthetics and spinal
-injury models.''}
+A Rybak-style spinal half-centre oscillator, closed in the loop with
+motoneurons, muscle proxies, and load-dependent sensory feedback, tunes its
+own descending gain through spike-timing-dependent plasticity to a stable
+locomotor attractor --- one that is largely independent of how the network
+starts, robust across the rat locomotor speed range, and best expressed at
+an intermediate degree of plasticity rather than the maximum
+achievable. Withdrawing load-dependent sensory feedback degrades that gait,
+and restoring a rhythmic, load-independent afferent volley --- the model's
+analogue of epidural stimulation --- rescues it, reproducing a central
+dissociation in the SCI rehabilitation literature within a single
+mechanistic, closed-loop model. Beyond the specific findings, the model
+demonstrates that a spinal CPG's descending and sensory gains need not be
+prescribed by the modeller: given a plastic synapse, appropriately timed
+sensory drive, and enough time, the network finds them on its own. That
+property, together with the model's explicit and inspectable parameters,
+is what makes it a plausible substrate for exploring --- and eventually,
+with patient-specific calibration, for helping to design --- sensorimotor
+rehabilitation strategies after spinal cord injury.
