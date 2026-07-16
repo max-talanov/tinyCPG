@@ -1,8 +1,9 @@
 \subsection{Summary of contributions}
-We extended a Rybak-style two-legged spinal central pattern generator (CPG)
-with four mechanisms absent from the canonical Hodgkin--Huxley lineage
-(Rybak 2006 $\to$ Shevtsova 2015 $\to$ Danner 2017 $\to$
-Zhang 2022)~\cite{rybak2006,shevtsova2015,danner2017,zhang2022}: (i)
+We extended a computational model of the spinal central pattern generator
+(sCPG) --- a two-legged half-centre network in the Hodgkin--Huxley lineage
+running from Rybak 2006 through Shevtsova 2015 and Danner 2017 to
+Zhang 2022~\cite{rybak2006,shevtsova2015,danner2017,zhang2022} --- with four
+mechanisms absent from that lineage: (i)
 spike-timing-dependent plasticity (STDP) that lets the network tune its own
 sensory-to-rhythm-generator synapses rather than have them hand-set; (ii) a
 closed loop from muscle-force feedback (Ia) into the reciprocal-inhibition
@@ -32,19 +33,20 @@ closed-loop network, the clinical dissociation between unassisted and
 epidurally-stimulated stepping after motor-complete SCI
 (\autoref{sec:results:epidural}).
 
-\subsection{Relation to Rybak-lineage spinal CPG models}
+\subsection{Relation to prior computational and experimental sCPG work}
 Zhang et al.\ (2022)~\cite{zhang2022} name two limitations of their own
-four-rhythm-generator model explicitly: it has no biomechanics or sensory
-feedback, and it has no motoneurons, treating rhythm-generator output as a
-direct stand-in for motor output. Every synaptic weight in their model,
-like its Rybak/Shevtsova/Danner predecessors, is hand-tuned. Our model
-addresses both limitations for a single hindlimb pair: the Ia force/length
-feedback loop supplies the missing sensory closed loop, and explicit
-motoneuron pools driving a saturating muscle model supply the missing motor
-periphery. On top of this we add a mechanism none of these models have ---
-activity-dependent plasticity on the afferent synapses --- so that the
-descending and cutaneous gains are discovered by the network rather than
-fixed by the experimenter.
+four-rhythm-generator computational sCPG model explicitly: it has no
+biomechanics or sensory feedback, and it has no motoneurons, treating
+rhythm-generator output as a direct stand-in for motor output. Every
+synaptic weight in their model, like its Rybak/Shevtsova/Danner
+predecessors, is hand-tuned. Our model addresses both limitations for a
+single hindlimb pair: the Ia force/length feedback loop supplies the
+missing sensory closed loop, and explicit motoneuron pools driving a
+saturating muscle model supply the missing motor periphery. On top of this
+we add a mechanism none of these models have --- activity-dependent
+plasticity on the afferent synapses --- so that the descending and
+cutaneous gains are discovered by the network rather than fixed by the
+experimenter.
 
 The trade-off is architectural detail. Zhang et al.\ resolve genetically
 identified commissural and long-propriospinal interneuron classes (V0V,
@@ -59,6 +61,26 @@ demonstrates architectural realism at the cost of a closed loop; ours
 demonstrates a closed, self-organising loop at the cost of architectural
 detail. A natural synthesis --- hand-curated interlimb architecture wrapped
 in a plastic, closed sensorimotor loop --- is a direct extension of both.
+
+Our loading manipulation and its epidural-stimulation analogue are drawn
+directly from a second, experimental lineage: the rat and human
+spinal-cord-injury work of Courtine, Lavrov, Edgerton, Gerasimenko and
+colleagues showing that epidural stimulation of the lumbosacral spinal
+cord can recover stepping across a graded series of load-bearing
+conditions, from fully weight-supported walking to hindlimb
+suspension~\cite{lavrov2008,edgerton2008,courtine2009,harkema2011}. That
+literature establishes the phenomenon --- rhythmic electrical stimulation
+of the cord restores stepping when descending drive is lost, in a
+load-dependent manner --- largely from kinematic and electromyographic
+readouts. Our model does not simulate the stimulation itself, but it
+offers a mechanistic, spiking-network account of one candidate route to
+the same phenomenon: a closed sensorimotor loop in which a rhythmic
+afferent volley, held constant across loading, substitutes for the
+load-gated sensory drive that unassisted stepping loses
+(\autoref{sec:results:epidural}). In that sense the model is positioned to
+connect the computational sCPG lineage above with this experimental
+SCI-rehabilitation lineage, and we return to that connection in the
+Clinical implications below.
 
 \subsection{Why an intermediate learning rate and an intermediate load are
 both optimal}
@@ -81,112 +103,111 @@ loading axis, then, \emph{some} plastic drive organised correctly is better
 than none, but a large, poorly-organised drive can be worse than either
 extreme.
 
-\subsection{Clinical implications for spinal cord injury rehabilitation}
-Beyond recapitulating locomotor rhythmicity, the model offers a mechanistic
-account of how sensorimotor interaction and activity-dependent plasticity
-could support functional recovery after SCI, and several of its
-quantitative findings map directly onto clinical observations.
+\subsection{Clinical implications}
+The present computational approach yields several insights for the
+clinical rehabilitation of individuals with SCI. Apart from recapitulating
+locomotor behaviour, the proposed computational framework provides a
+mechanistic account of how sensorimotor interactions and activity-dependent
+plasticity might enable functional recovery. First, sensory inputs are
+critical for facilitating locomotor rehabilitation, not as a replacement
+for lost supraspinal descending input, but as a catalyst for plastic
+adaptation in the spinal cord sensorimotor networks.
 
-\paragraph{Sensory input as a catalyst for plasticity, not a replacement for
-descending drive.} In our model the brainstem input is held fixed and weak
-throughout; every gain in gait quality comes from tuning the
-\emph{afferent} synapses. Weight-bearing locomotion drives strong,
-consistent potentiation of the cutaneous projection across the loaded
-modes and toe stepping ($\mathrm{CUT}\to\mathrm{RG\text{-}E}\approx$
-55--65\,pA at the fast and intermediate learning rates), whereas full
-unloading suppresses that potentiation almost entirely ($\approx4$\,pA at
-the slowest rates) and yields a markedly less organised
-gait (\autoref{sec:results:weights}, \autoref{sec:results:comparison}).
-Load- and activity-appropriate sensory input is therefore not a substitute
-for the lost supraspinal drive in this model; it is what the spinal network
-uses to reorganise itself. This parallels the clinical observation that
-task-specific gait training, robot-assisted locomotion, and body-weight-supported
-treadmill training improve walking performance by engaging residual
-plasticity in spinal circuitry rather than by regenerating damaged
-descending pathways\todo{cite task-specific / robot-assisted / BWSTT gait
-training literature}.
+Our simulation results show that, when appropriately controlled through
+load and/or activity, such sensorimotor input drives spinal adaptation and
+subsequently restores coordinated locomotor outputs
+(\autoref{sec:results:weights}).
 
-\paragraph{A mechanistic hypothesis for epidural stimulation.} The paired
-loading contrast (\autoref{sec:results:epidural}) gives this a direct
-reading in terms of assisted stepping. When cutaneous input is gated by
-loading along with everything else (the unassisted case), alternation
-collapses under full unloading (corr$(F_E,F_F)=-0.41$, with the cycle
-period becoming irregular); when the same rhythmic cutaneous drive is held
-on regardless of load --- the model's analogue of epidural spinal cord
-stimulation (ESCS), which delivers a rhythmic afferent volley independent
-of limb contact --- alternation is preserved across the entire loading
-range ($-0.94$ at full weight-bearing to $-0.97$ at full unloading). This
-double dissociation offers a candidate mechanism for the clinical benefit
-of ESCS in motor-complete SCI~\cite{harkema2011,courtine2009,edgerton2008,
-lavrov2008}: rather than (or in addition to) simply raising spinal
-excitability, rhythmic epidural stimulation may act by restoring the
-timed sensory volley that the spinal CPG needs to organise alternating
-output, in effect substituting for the loading-dependent afferent signal
-that unassisted stepping has lost. If this mechanism holds, neuromodulation
-protocols that pair electrical stimulation with functionally patterned
-sensory input --- rather than tonic or unpatterned stimulation alone ---
-would be expected to engage the spinal locomotor circuitry more
-effectively.
+Weight-bearing conditions fostered increasing potentiation of cutaneous
+input and stabilisation of locomotor output, whereas reduced support
+reduced sensory amplification and led to a more disorganised gait
+(\autoref{sec:results:comparison}). These findings parallel recent
+clinical observations which demonstrate that various forms of repetitive
+task-specific locomotor rehabilitation, ranging from task-specific gait
+training to robot-assisted locomotion and body-weight-support treadmill
+walking, enhance walking performance by targeting residual plasticity in
+the spinal circuitry and not by regeneration of damaged descending
+pathways\todo{cite task-specific / robot-assisted / BWSTT gait training
+literature}. The model provides a biologically plausible hypothesis for
+the benefits of epidural stimulation in SCI. Reduced proprioceptive and
+exteroceptive inputs from unloaded conditions resulted in poor locomotor
+performance.
 
-\paragraph{An intermediate degree of plasticity, not the maximum, supports
-the best gait.} The learning-rate sweep (\autoref{sec:results:comparison})
-shows that the most robust, cleanly-alternating gait is produced by an
-intermediate learning rate ($\lambda\approx10^{-3}$--$10^{-4}$); both
-slower and --- more surprisingly --- the very fastest learning rate we
-tested give a noisier or less-converged result. If a similar
-weakest-at-the-extremes relationship holds between plasticity and recovery
-in vivo, it offers a heuristic for titrating rehabilitation intensity or
-the dose of pharmacological and electrical neuromodulation therapies aimed
-at spinal adaptation: the goal would be to find the degree of induced
-plasticity that lets spinal circuits reorganise without destabilising them
-through excessive rewiring, and that optimum would plausibly need to be
-set individually, given how much a single parameter's value shifted the
-outcome in our sweep.
+The rhythmic input was, however, continuously driven by externally
+delivered rhythmic cutaneous input, and these effects resulted in restored
+alternating activity between flexors and extensors
+(\autoref{sec:results:epidural}), a phenomenon observed in experiments in
+animal models as well as in patients undergoing epidural stimulation of
+the spinal cord~\cite{lavrov2008,edgerton2008,courtine2009,harkema2011}.
 
-\paragraph{An in-silico platform for designing interventions.} Because
-every manipulation in this model --- loading level, learning rate,
-stimulation pattern, which synapses are plastic --- is an explicit,
-inspectable parameter, the same framework could be used prospectively:
-running simulated variants of robot-assisted training at different
-assistance levels, ESCS at different sites, frequencies, or timings
-relative to the gait cycle, and combinations of the two, to narrow the
-candidate space before a clinical trial or a specific patient protocol is
-committed to. Coupled with patient-specific data this points toward a
-``virtual twin'' use case --- simulating, and eventually helping to select
-among, candidate rehabilitation strategies for an individual before they
-are applied.
+From this perspective, ESCS could function not just by increasing spinal
+excitability, but by restoring or amplifying sensory signals necessary for
+engaging the central pattern generators of the spinal cord to control
+locomotion. Therefore, neuromodulation in SCI might be more efficient if it
+is part of an integrated approach which includes not only electrical
+stimulation, but also functionally relevant sensory stimuli. An additional
+clinically relevant observation from our work is that the effectiveness of
+recovery depends on the degree of plasticity.
+
+Simulations reveal that intermediate levels of plasticity can produce more
+robust, functional gait than very low or very high values ---
+a range in which functional rehabilitation appears optimal, not maximised
+(\autoref{sec:results:comparison}). The optimal levels of learning rate
+would thus correspond to those that enable spinal cord motor networks to
+adapt while avoiding extreme rewiring, and provide a useful heuristic guide
+for determining appropriate intensities for rehabilitation and for
+managing the effects of pharmacological or electrical neuromodulation
+therapies on spinal adaptation. The optimal range of plasticity should be
+dynamically adapted to each patient's neurophysiological state and
+clinical characteristics.
+
+Furthermore, the present computational framework might serve as a useful
+tool for designing, optimising, and validating interventions before their
+clinical application.
+
+It is feasible to investigate, via simulation studies, various clinical
+rehabilitation interventions (e.g., robot-assisted walking at various
+assistance levels and weight-supported environments, ESCS at different
+locations and frequencies, combination therapies) to identify the most
+effective, non-invasive treatments. Finally, integrating this framework
+with individual patient-specific data might pave the way for the
+development of virtual-twin approaches that could predict, simulate, and
+optimise patient outcomes after specific rehabilitation therapies in a
+highly personalised fashion.
 
 \subsection{Limitations}
-The model trades biological detail for a tractable, fully closed
-sensorimotor loop, and several simplifications bound how far its
-quantitative predictions should be read.
+In addition to the positive implications outlined above, it is important
+to note some limitations of the proposed model. To simplify the biological
+complexity of the spinal locomotor system, a level of abstraction was used
+in defining sensorimotor pathways, interneurons and motor outputs. The
+model does not include an adaptive supraspinal control mechanism (the
+brainstem drive is a fixed tonic input), detailed muscle-tendon
+biomechanics beyond the saturating force/activation model used here,
+fatigue, or other aspects of longer-term structural plasticity.
+
+It also omits features of SCI such as chronic damage to the dorsal and
+ventral roots, glial scarring, or the diversity of human SCI.
+
+It should also be highlighted that the model was not calibrated on any
+experimental data collected from actual individuals with SCI. Hence the
+values of the STDP parameters can only be viewed as computational
+representations of plasticity rather than direct measures of spinal
+learning capacity. Consequently, the present model should be interpreted
+as hypothesis-generating rather than predictive in nature, and further
+studies incorporating more detailed muscle dynamics, more realistic
+sensory transduction, supraspinal inputs, and patient-specific data will
+be required to establish greater biological realism.
+
+These conceptual limitations are compounded by several specific modelling
+choices worth stating explicitly:
 
 \begin{enumerate}
-  \item \textbf{Abstracted sensorimotor pathways.} Interneuron populations,
-        proprioceptive transduction, and motor output are represented at a
-        level of abstraction chosen for tractability, not anatomical
-        completeness: we resolve two hand-set commissural projections
-        rather than the genetically identified V0/V1/V2a/V3 interneuron
-        classes, and we model one hindlimb pair rather than
-        fore--hindlimb coordination~\cite{zhang2022}.
-  \item \textbf{No supraspinal control, fatigue, or longer-term structural
-        plasticity.} The brainstem drive is a fixed tonic input, not an
-        adaptive descending controller; muscle fatigue and slower forms of
-        structural plasticity beyond STDP are not modelled.
-  \item \textbf{No SCI pathology.} The model represents reduced
-        \emph{sensory drive}, not the injury itself: chronic dorsal- or
-        ventral-root damage, glial scarring, and the substantial
-        heterogeneity of human SCI presentations are not represented.
-  \item \textbf{Not calibrated to patient or animal data.} No experimental
-        recordings from an SCI preparation were used to fit any parameter,
-        including the STDP rate and weight ceilings. The model should
-        therefore be read as hypothesis-generating --- a candidate
-        mechanism and a set of qualitative and quantitative predictions to
-        be tested --- rather than as a validated predictive tool.
-        Establishing greater biological realism will require incorporating
-        more detailed muscle dynamics, more realistic sensory transduction,
-        an explicit supraspinal controller, and eventually patient-specific
-        data.
+  \item \textbf{Interneuron and interlimb detail.} We resolve two hand-set
+        commissural projections rather than the genetically identified
+        V0/V1/V2a/V3 interneuron classes, and we model one hindlimb pair
+        rather than fore--hindlimb coordination~\cite{zhang2022}; we
+        likewise do not reproduce gait-transition phenomena
+        (walk $\to$ trot $\to$ gallop $\to$ bound).
   \item \textbf{Izhikevich, not Hodgkin--Huxley.} We trade biophysical
         detail for simulation efficiency; persistent-sodium
         (\textit{I}$_\text{NaP}$)-like bursting is approximated by the
@@ -201,7 +222,7 @@ quantitative predictions should be read.
 \end{enumerate}
 
 \subsection{Concluding remark}
-A Rybak-style spinal half-centre oscillator, closed in the loop with
+A computational sCPG half-centre oscillator, closed in the loop with
 motoneurons, muscle proxies, and load-dependent sensory feedback, tunes its
 own descending gain through spike-timing-dependent plasticity to a stable
 locomotor attractor --- one that is largely independent of how the network
