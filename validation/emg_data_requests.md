@@ -18,14 +18,14 @@ text for you to review, personalize, and send yourself.
 
 ---
 
-## 1. Grégoire Courtine (3 papers)
+## 1. Grégoire Courtine (4 papers)
 **To:** gregoire.courtine@epfl.ch
-**Cc:** silvestro.micera@epfl.ch, nikolaus.wenger@charite.de
+**Cc:** silvestro.micera@epfl.ch, nikolaus.wenger@charite.de, m.bonizzato@polymtl.ca
 **Subject:** Data request — bilateral hindlimb EMG from your spinal rat locomotion studies
 
 Dear Prof. Courtine,
 
-I am writing regarding three of your published studies on spinal cord
+I am writing regarding four of your published studies on spinal cord
 injury (SCI) and neuromodulation in rats:
 
 - (2014), *Closed-loop neuromodulation of spinal sensorimotor circuits
@@ -36,6 +36,9 @@ injury (SCI) and neuromodulation in rats:
   Neuron.
 - (2009), *Transformation of nonfunctional spinal circuits into functional
   states after the loss of brain input*, Nature Neuroscience.
+- Bonizzato et al. (2021), *Multi-pronged neuromodulation intervention
+  engages the residual motor circuitry to facilitate walking in a rat
+  model of spinal cord injury*, Nature Communications.
 
 We are developing a closed-loop computational model (NEST simulator) of
 the two-legged rat spinal central pattern generator, in which cutaneous
@@ -47,13 +50,18 @@ partial/toe-stepping support, and fully unloaded/air-stepping) that your
 group has characterised experimentally.
 
 We would like to validate the model's muscle-activity predictions
-quantitatively, and are therefore asking whether bilateral hindlimb
-flexor/extensor EMG recordings from any of the above studies — raw or
-processed, ideally spanning more than one loading condition — might be
-available to us for this purpose. We noted the data-availability statement
-in the 2014 paper indicating that data can be made available under a
-material transfer agreement, and would be glad to follow whatever process
-you require.
+quantitatively, and are therefore asking whether hindlimb flexor/extensor
+EMG recordings from any of the above studies — raw or processed, ideally
+spanning more than one loading condition — might be available to us for
+this purpose. We noted the data-availability statement in the 2014 paper
+indicating that data can be made available under a material transfer
+agreement, and would be glad to follow whatever process you require. We
+also specifically noticed that the 2021 paper records tibialis anterior
+and medial gastrocnemius EMG (flexor/extensor pair) across several
+neuromodulation conditions per animal; its published Source Data file
+contains the derived per-rat behavioural metrics but not, as far as we can
+tell, the underlying raw EMG traces — it is primarily this kind of
+trace-level data that would be most useful to us, if available.
 
 Thank you very much for considering this request, and please let us know
 if any further information about our project would be helpful.
@@ -89,9 +97,15 @@ coordinated stepping.
 We would like to validate the model's predicted muscle-activity patterns
 against real recordings, and are therefore asking whether bilateral
 hindlimb EMG data (flexor/extensor pairs) from either study might be
-available to us, even in a de-identified or partial form. We saw that the
-iScience paper notes additional information is available from the lead
-contact upon request, and would be very grateful if that could extend to
+available to us, even in a de-identified or partial form. Relatedly, we
+also noted Dr. Bonizzato's 2021 Nature Communications paper with
+Prof. Courtine (*Multi-pronged neuromodulation intervention...*), which
+recorded tibialis anterior and medial gastrocnemius EMG across several
+neuromodulation conditions per rat; if the raw traces from that study are
+more readily accessible to you than through Prof. Courtine's group, we
+would be equally grateful for those. We saw that the iScience paper notes
+additional information is available from the lead contact upon request,
+and would be very grateful if that could extend to
 the underlying EMG traces.
 
 Thank you for considering this, and please don't hesitate to ask if
@@ -296,12 +310,12 @@ Best regards,
 
 ## Papers excluded from the request list (for reference)
 
-| Paper | Year | Reason |
+| Paper | Year | Reason (verified by directly inspecting the dataset/paper, 2026-07-21) |
 |---|---|---|
 | EMG patterns of rat ankle extensors and flexors during treadmill locomotion and swimming | 1991 | Outside the 20-year window; sheet notes "too old to obtain data" |
-| Nanogenerator Neuromodulation... | — | Dataset available but single-leg only |
-| EMUsort Rat Datasets (Dandi) | — | Dataset available but uninjured (intact) rats |
-| Multi-pronged neuromodulation... (Nat Commun 2021) | — | Dataset available but single-leg only |
+| Nanogenerator Neuromodulation... (Adv. Sci. 2025) | — | Checked PMC full text directly: **rats are not spinal-injured** (acute exposed-cord stimulation in intact animals); only one unnamed, unspecified hindlimb muscle recorded (no flexor/extensor pair); the two compared conditions are stimulation-hardware types (custom nanogenerator vs. commercial stimulator), not loading or injury. Not usable for any of our metrics. |
+| EMUsort Rat Datasets (Dandi) | — | Checked DANDI metadata directly: 16-channel recording is from **forelimb triceps brachii** in an intact (uninjured) rat, a single muscle with no antagonist pair, only 3 sessions all at the same treadmill speed/incline. Wrong limb, wrong muscle count, no speed variation — not usable. |
+| Multi-pronged neuromodulation... (Nat Commun 2021, Bonizzato et al.) | — | The GitHub repo listed in the sheet (`M1-MLR`) contains only **cortical + midbrain neural** multi-unit data, no EMG at all. However, checking the paper itself: it *does* record tibialis anterior (flexor) + medial gastrocnemius (extensor) EMG, unilaterally, in real contusion-SCI rats, across multiple loading/neuromodulation conditions — a good match for our needs. Its Nature-hosted Source Data file (`MOESM5_ESM.xlsx`, downloaded and inspected) contains only **derived per-rat summary statistics** (step-height modulation, decoding accuracy, lesion size) for each figure, not raw EMG traces. **Added to the Courtine and Martinez/Bonizzato email drafts above** as a targeted request for the underlying trace-level data. |
 | AnMod_Neuro (GitHub homework repo) | — | Not a primary dataset; no EMG data |
 | Spinal control of locomotion before/after SCI (Danner lab) | — | Dataset available (kinematics) but no EMG |
 | Dataset of measured kinematics... (Zenodo) | — | Kinematics/synergies only, no EMG |
