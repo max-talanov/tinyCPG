@@ -4,7 +4,7 @@
 
 \subsection{Model overview}\label{sec:methods:overview}
 The two-leg spinal CPG presented here extends a canonical computational
-model of the spinal CPG (sCPG)~\cite{rybak2006,shevtsova2015} with four
+sCPG model~\cite{rybak2006,shevtsova2015} with four
 mechanisms not present in the Zhang 2022 reference model~\cite{zhang2022}:
 (i) STDP-driven self-organisation of descending and cutaneous afferent
 synapses onto the rhythm generator;
@@ -32,34 +32,59 @@ available at \href{https://github.com/max-talanov/tinyCPG}{github.com/max-talano
   \label{fig:schematic}
 \end{figure}
 
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=0.8\textwidth]{fig_architecture_implemented.png}
-  \caption{\textbf{As-implemented architecture (one leg; contralateral is
-    the mirror image).} Drawn directly from the verified projection list
-    (\autoref{tab:delays}), colour-coded by function: orange = excitatory
-    neurons, light/dark orange = static/plastic excitatory projections,
-    light blue = inhibitory neurons and projections, red = muscle,
-    grey = inputs/afferents (rate-coded muscle$\to$Ia transduction dashed).
-    This is the functional instantiation of the schematic in
-    Fig.~\ref{fig:schematic}: the descending drive (BS, CUT), the
-    reciprocal-inhibition core with the 6:1 InF$\to$RG-E / InE$\to$RG-F
-    asymmetry, the Ia proprioceptive interneuron pathway and closed loop,
-    the plastic Ia$\to$RG projection (sensory arm), and the motor output
-    to the muscle proxies.}
-  \label{fig:architecture}
-\end{figure}
-
 \subsection{Single-neuron model}\label{sec:methods:neuron}
-All spiking neurons are modelled as Izhikevich quadratic-integrate-fire
-units~\cite{izhikevich2003}, implemented in NEST as \verb|izhikevich|.
-Excitatory extensor RG-E neurons use the regular-spiking set
-($a=0.02, b=0.2, c=-65, d=8$). Flexor RG-F neurons use the
-intrinsically-bursting set ($a=0.02, b=0.2, c=-55, d=4$), approximating
-the persistent-sodium-driven bursting (INaP) used in Hodgkin--Huxley
-spinal CPG models~\cite{rybak2006}. Inhibitory interneurons (InE, InF,
-Ia-INT) use a fast-spiking set ($d=2$). Synaptic delays are drawn from a
-rat \texttt{length\_velocity} preset (Table~\ref{tab:delays}) with
+The network is implemented at two complementary levels of biophysical
+detail, using the same architecture, the same plastic projections and the
+same experimental protocol in both cases.
+
+\paragraph{Reduced (Izhikevich) implementation.}
+In the NEST implementation, all spiking neurons are modelled as Izhikevich
+quadratic-integrate-fire units~\cite{izhikevich2003}. Each neuron obeys
+\begin{align}
+  \frac{dv}{dt} &= 0.04v^2 + 5v + 140 - u + I, \\
+  \frac{du}{dt} &= a\,(bv - u),
+\end{align}
+with the after-spike reset $v \leftarrow c$, $u \leftarrow u + d$ applied
+whenever $v \geq 30$\,mV. Excitatory extensor RG-E neurons use the
+regular-spiking set ($a=0.02, b=0.2, c=-65, d=8$). Flexor RG-F neurons use
+the intrinsically-bursting set ($a=0.02, b=0.2, c=-55, d=4$), which
+approximates persistent-sodium-driven ($I_\text{NaP}$) bursting
+phenomenologically rather than deriving it from channel kinetics.
+Inhibitory interneurons (InE, InF, Ia-INT) use a fast-spiking set
+($d=2$). This formulation reproduces the spiking and bursting regimes
+required by the rhythm generator at a small fraction of the computational
+cost of a conductance-based model, which is what makes the large
+mode\,$\times$\,learning-rate parameter sweeps reported here tractable.
+
+\paragraph{Conductance-based (Hodgkin--Huxley) implementation.}
+Because the reduced model represents bursting phenomenologically, we also
+implemented the same circuit with conductance-based neurons in
+NEURON~\cite{hines1997}, following the Hodgkin--Huxley
+formalism~\cite{hodgkinHuxley1952}. Membrane potential evolves as
+\begin{equation}
+  C_m \frac{dV}{dt} = -\!\sum_i g_i\, m_i^{p}h_i^{q}\,(V - E_i) - I_\text{leak} + I_\text{syn},
+  \label{eq:hh}
+\end{equation}
+where each active conductance $g_i$ is gated by activation ($m_i$) and
+inactivation ($h_i$) variables obeying first-order kinetics
+$\dot{x} = (x_\infty(V) - x)/\tau_x(V)$. Rhythm-generator neurons include
+fast sodium, delayed-rectifier potassium and leak conductances together
+with an explicit persistent sodium current ($I_\text{NaP}$), so that
+bursting arises from channel kinetics rather than from a reset rule.
+Motoneurons and interneurons are multi-compartment cells with somatic and
+dendritic sections. This implementation resolves the sub-threshold and
+channel-level dynamics that the Izhikevich formulation abstracts away, at
+substantially higher computational cost; it therefore serves as a
+biophysical cross-check on the reduced model rather than as the vehicle
+for the full parameter sweep.%
+\todo{The NEURON/HH results are not yet included in Results. Until they
+are, this subsection describes an implementation the paper does not yet
+report on, and the Limitations no longer flag the absence of a
+conductance-based model --- add the HH results (or re-scope this
+paragraph) before circulating.}
+
+Synaptic delays in both implementations are drawn from a rat
+\texttt{length\_velocity} preset (Table~\ref{tab:delays}) with
 $\sigma=0.2$\,ms Gaussian jitter.
 
 \subsection{Network architecture}\label{sec:methods:network}
@@ -98,7 +123,7 @@ level~\cite{mccreaRybak2008}.
 \paragraph{Connectivity specification.}
 The full per-connection weight and delay distributions of every
 projection were obtained by querying NEST directly after network
-construction (\texttt{-{}-dump-connectivity}). Table~\ref{tab:delays}
+construction. Table~\ref{tab:delays}
 lists all projections grouped by the functional blocks of the
 architecture (Fig.~\ref{fig:schematic}): descending/supraspinal drive,
 the sensory afferent$\to$RG projections, the rhythm-generator reciprocal
@@ -145,7 +170,7 @@ Figure~\ref{fig:connectivity} shows the weight and delay distributions.
 \subsection{Brainstem drive}\label{sec:methods:bs}
 Reticulospinal input is modelled as a tonic Poisson process at
 $BS_{\text{regular}}=60$\,Hz with $\sigma=0.25$\,Hz noise, identical for
-both legs (\texttt{-{}-enforce-tonic-bs}). The 60\,Hz value sits in the
+both legs. The 60\,Hz value sits in the
 middle of the rat reticulospinal range
 (20--80\,Hz)~\cite{drew1986,brocard2010}. In contrast to~\cite{zhang2022},
 who vary tonic drive $\alpha$ to vary gait speed, we hold BS tonic and
@@ -192,8 +217,7 @@ We refer to these as \emph{slow}, \emph{intermediate}, and
 \emph{baseline} STDP, respectively. With a 120\,s run the slow rate does
 not fully converge (time constant $\approx 250$\,s), which lets us probe
 the regime of weak, still-developing descending weights. The parameter
-is exposed via the \verb|--stdp-lambda| CLI flag and recorded to the
-HDF5 output as \verb|stdp_lambda|.
+is recorded to the simulation output for every run.
 
 \subsection{Sensory feedback and Ia rate coding}\label{sec:methods:ia}
 Ia afferent firing rate $r_{\text{Ia}}$ is updated every 100\,ms as a
@@ -211,10 +235,10 @@ introduced in this work.
 
 \paragraph{Graded sensory ablation (Courtine/Lavrov paradigm).}
 To emulate the partial-weight-bearing and limb-unloaded preparations
-used in rat spinal cord injury (SCI) rehabilitation
+used in rat SCI rehabilitation
 experiments~\cite{lavrov2008,courtine2009,edgerton2008}, we expose a
-multiplicative Ia-feedback gain $G_{\text{Ia}} \in [0, 1]$ via the
-\verb|--ia-feedback-gain| CLI flag, applied after Eq.~\ref{eq:ia}:
+multiplicative Ia-feedback gain $G_{\text{Ia}} \in [0, 1]$, applied
+after Eq.~\ref{eq:ia}:
 $\tilde{r}_{\text{Ia}} = G_{\text{Ia}}\cdot r_{\text{Ia}}$. The three
 operating regimes used in Section~\ref{sec:results:epidural} are:
 $G_{\text{Ia}}=1.0$ (\emph{baseline}, full weight-bearing);
@@ -270,7 +294,7 @@ $0.30$--$0.40$\,N. Nothing in the model dynamics depends on this
 choice of units; we use a.u.\ throughout for transparency.
 
 \subsection{Paced gait protocol}\label{sec:methods:paced}
-Each step period (\verb|--step-period-ms|, default 1000\,ms) is divided
+Each step period (default 1000\,ms) is divided
 into two 500\,ms half-cycles. During the stance half of leg L, the L
 cutaneous generator fires at $CUT_{\text{on}}=100$\,Hz, and three
 sequential Ia-E sub-groups fire at 60, 80, and 100\,Hz over consecutive

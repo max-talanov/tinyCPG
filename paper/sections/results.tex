@@ -7,8 +7,8 @@
 %   fig9_epidural_contrast   = epidural-stim vs natural loading contrast
 
 Before the individual results we fix the terms used throughout. The model is a
-two-legged spinal central pattern generator (CPG): a spiking network that,
-driven only by a weak constant brainstem input and rhythmic sensory feedback,
+two-legged spinal CPG: a spiking network that,
+driven only by a weak tonic brainstem input and rhythmic sensory feedback,
 produces the alternating extensor/flexor muscle activity of walking. Each leg
 contains two mutually-inhibiting neuron pools --- an \emph{extensor} and a
 \emph{flexor} rhythm generator (RG-E and RG-F) --- that drive motor neurons and
@@ -16,8 +16,8 @@ simple muscle models. A good walking rhythm is one in which extensor and flexor
 are active in strict alternation (``counter-phase''); we measure this by the
 Pearson correlation between the two muscle forces, which is $-1$ for perfect
 alternation and $0$ for none. Three synapses in the model are \emph{plastic} ---
-their strengths change as the network runs, through spike-timing-dependent
-plasticity (STDP). The Results ask how this self-tuning builds the gait, and how
+their strengths change as the network runs, through STDP. The Results ask
+how this self-tuning builds the gait, and how
 well the learned gait survives when sensory feedback is progressively removed,
 as it is in spinal-cord-injury rehabilitation.
 
@@ -91,8 +91,8 @@ their low set-point in every condition.
 % =============================================================
 \subsection{Rehabilitation progress: force develops as the weight converges}\label{sec:results:force}
 
-Does this self-tuned wiring actually produce good walking, and how does the gait
-build up over a session? Figures~\ref{fig:force_l2}--\ref{fig:force_l6} show the
+We next examine whether this self-tuned wiring produces good walking, and how
+the gait builds up over a session. Figures~\ref{fig:force_l2}--\ref{fig:force_l6} show the
 extensor and flexor muscle forces in three short windows --- the beginning,
 middle and end of each $120$\,s run --- so that reading a figure left-to-right
 traces how the gait develops as the synapse strengthens (one figure per learning
@@ -243,7 +243,7 @@ speed.} Among the weight-bearing modes the four numbers are almost flat across
 speed once learning has converged, showing that the sensory-paced core carries
 the gait across the whole rat locomotor range.
 
-\paragraph{Why counter-phase \emph{recovers} from toe to air stepping at the
+\paragraph{Counter-phase \emph{recovers} from toe to air stepping at the
 slow learning rates.}
 A counterintuitive feature of Figure~\ref{fig:mode_lambda_trend} is that at
 the under-converged rates ($\lambda=10^{-5},10^{-6}$) both correlations do not
@@ -264,7 +264,7 @@ heel$\to$toe drive and reciprocal inhibition alone. The paced core therefore
 sets a lower bound on counter-phase that the mid-loading, mid-learning regime
 can actually fall below.
 
-\paragraph{Why the RG correlation stays stronger than the force correlation.}
+\paragraph{The RG correlation stays stronger than the force correlation.}
 Across the whole matrix corr(RG-E,RG-F) is consistently more negative than
 corr$(F_E,F_F)$ --- most visibly under air stepping ($\approx-0.8$ versus
 $\approx-0.5$). The rhythm generators keep alternating there because their

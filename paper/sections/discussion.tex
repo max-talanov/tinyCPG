@@ -1,10 +1,10 @@
 \subsection{Summary of contributions}
-We extended a computational model of the spinal central pattern generator
-(sCPG) --- a two-legged half-centre network in the Hodgkin--Huxley lineage
+We extended a computational sCPG model --- a two-legged half-centre
+network in the Hodgkin--Huxley lineage
 running from Rybak 2006 through Shevtsova 2015 and Danner 2017 to
 Zhang 2022~\cite{rybak2006,shevtsova2015,danner2017,zhang2022} --- with four
 mechanisms absent from that lineage: (i)
-spike-timing-dependent plasticity (STDP) that lets the network tune its own
+STDP that lets the network tune its own
 sensory-to-rhythm-generator synapses rather than have them hand-set; (ii) a
 closed loop from muscle-force feedback (Ia) into the reciprocal-inhibition
 core; (iii) motoneuron pools driving explicit muscle proxies with force and
@@ -13,7 +13,7 @@ heel-to-toe pressure transfer during stance. Using this model we asked how a
 spinal CPG's own synaptic weights should be organised to produce a stable
 walking rhythm, and how that self-tuned rhythm degrades as sensory feedback
 is progressively withdrawn --- the central manipulation in rodent and human
-studies of spinal-cord-injury (SCI) rehabilitation.
+studies of SCI rehabilitation.
 
 Three findings anchor the paper. First, the three plastic synapses --- the
 cutaneous CUT$\to$RG-E projection and the homonymous proprioceptive
@@ -82,8 +82,8 @@ connect the computational sCPG lineage above with this experimental
 SCI-rehabilitation lineage, and we return to that connection in the
 Clinical implications below.
 
-\subsection{Why an intermediate learning rate and an intermediate load are
-both optimal}
+\subsection{A shared mechanism underlies the learning-rate and loading
+optima}
 Two of our findings share the same underlying mechanism, which is worth
 making explicit before turning to its clinical reading. Learning only
 improves the gait once it has had time to organise the cutaneous weight
@@ -161,6 +161,41 @@ therapies on spinal adaptation. The optimal range of plasticity should be
 dynamically adapted to each patient's neurophysiological state and
 clinical characteristics.
 
+\paragraph{Interpreting the learning-rate axis as plasticity capacity.}
+One natural reading of the $\lambda$ axis is developmental. The capacity
+for activity-dependent synaptic change is not fixed across the lifespan:
+it is greatest during early postnatal critical periods and declines with
+maturity, and correspondingly, neonatal and juvenile rodents recover
+locomotor function after spinal injury considerably better than adults.
+It is therefore tempting to read our fastest learning rates as
+``younger'' and our slowest as ``older'' animals.\todo{cite developmental
+critical-period / age-related decline in spinal plasticity and
+age-dependent locomotor recovery after SCI} We suggest this analogy
+should be treated as a qualitative ordering rather than a calibration:
+$\lambda$ is a phenomenological STDP rate constant, it was not fitted to
+any measurement of plasticity in animals of a given age, and age is only
+one of several determinants of plasticity capacity --- time since injury,
+prior activity history, and pharmacological or electrical neuromodulation
+all modulate the same underlying quantity. Read this way, the $\lambda$
+axis is better described as spanning \emph{plasticity capacity}, of which
+age is one contributor.
+
+With that caveat, the interpretation yields a concrete and testable
+prediction. Because gait quality in our sweep peaks at intermediate
+$\lambda$ rather than increasing monotonically
+(\autoref{sec:results:comparison}), the model predicts that maximal
+plasticity capacity is not automatically optimal for functional outcome
+--- that a system rewiring too readily can be as poorly coordinated as one
+that barely rewires at all. This resonates with the clinical picture in
+which excessive or misdirected plasticity after SCI manifests as
+maladaptive outcomes such as spasticity, aberrant sprouting and
+neuropathic pain rather than improved locomotion.\todo{cite maladaptive
+plasticity after SCI} The prediction is directly testable by running the
+same rehabilitation protocol across age groups and asking whether
+intermediate-age animals show the best coordination recovery, which would
+be a stronger validation of the learning-rate axis than any of the
+comparisons we are currently able to make.
+
 Furthermore, the present computational framework might serve as a useful
 tool for designing, optimising, and validating interventions before their
 clinical application.
@@ -181,7 +216,7 @@ to note some limitations of the proposed model. To simplify the biological
 complexity of the spinal locomotor system, a level of abstraction was used
 in defining sensorimotor pathways, interneurons and motor outputs. The
 model does not include an adaptive supraspinal control mechanism (the
-brainstem drive is a fixed tonic input), detailed muscle-tendon
+brainstem drive is a tonic input), detailed muscle-tendon
 biomechanics beyond the saturating force/activation model used here,
 fatigue, or other aspects of longer-term structural plasticity.
 
@@ -208,12 +243,6 @@ choices worth stating explicitly:
         rather than fore--hindlimb coordination~\cite{zhang2022}; we
         likewise do not reproduce gait-transition phenomena
         (walk $\to$ trot $\to$ gallop $\to$ bound).
-  \item \textbf{Izhikevich, not Hodgkin--Huxley.} We trade biophysical
-        detail for simulation efficiency; persistent-sodium
-        (\textit{I}$_\text{NaP}$)-like bursting is approximated by the
-        intrinsic-bursting Izhikevich parameter set rather than derived
-        from channel kinetics, so the model is not appropriate for
-        questions specific to \textit{I}$_\text{NaP}$ pharmacology.
   \item \textbf{No stochastic replication.} Results are deterministic,
         fixed-seed point estimates; the ten-point initial-weight sweep
         (\autoref{sec:results:weights}) substitutes for repeated stochastic
