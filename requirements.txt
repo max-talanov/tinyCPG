@@ -1,12 +1,42 @@
 # tinyCPG dependencies
 #
-# NEST is the spiking simulator. It is NOT pip-installable on most platforms —
-# install via conda or build from source: https://nest-simulator.readthedocs.io/
-# Tested on NEST 3.9.0. MN5 modulefile typically provides this.
+# ---------------------------------------------------------------------------
+# NOT pip-installable — install separately
+# ---------------------------------------------------------------------------
+# NEST is the spiking simulator used by the model (cpg_2legs_fast.py).
+# Install via conda or build from source:
+#   https://nest-simulator.readthedocs.io/
+# Tested on NEST 3.9.0. The MN5 modulefile typically provides this.
 #
-# nest >= 3.9
+#   nest >= 3.9
 #
-# The pip-installable runtime + plotting dependencies:
+# NEURON is needed only for the conductance-based (Hodgkin–Huxley)
+# cross-check implementation, which lives in a separate repository
+# (memCPG/CPG_STDP/py) and is not run from this repo:
+#
+#   neuron        # pip install neuron
+#   mpi4py        # optional, for parallel NEURON runs
+#
+# ---------------------------------------------------------------------------
+# Core runtime — model simulation + HDF5 output
+# ---------------------------------------------------------------------------
 numpy>=1.24
 h5py>=3.8
+
+# ---------------------------------------------------------------------------
+# Figure generation (scripts/*.py -> paper/figures/)
+# ---------------------------------------------------------------------------
 matplotlib>=3.6
+
+# ---------------------------------------------------------------------------
+# Optional: slide-deck export (scripts/build_deck.py only).
+# Not needed to run the model or to regenerate any paper figure.
+# ---------------------------------------------------------------------------
+python-pptx>=0.6.21
+Pillow>=9.0
+
+# ---------------------------------------------------------------------------
+# Note: 2_stdp_izhi_brian2_memcpg.py is a standalone Google Colab export
+# (an early Brian2 prototype, not part of the current pipeline). It carries
+# its own inline `!pip install brian2` and is intentionally not covered here.
+# ---------------------------------------------------------------------------
