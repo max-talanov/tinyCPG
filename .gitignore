@@ -210,3 +210,11 @@ __marimo__/
 # plots/paper/ is scratch output from the figure scripts; do not commit it.
 plots/paper/**/*.png
 plots/paper/**/*.csv
+
+# Build artifacts — the Overleaf upload bundle is regenerated from paper/
+# on demand (see paper/README.md), so it should never be committed.
+*.zip
+*.rar
+*.7z
+*.tar.gz
+tinyCPG_overleaf.zip
