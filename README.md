@@ -75,9 +75,10 @@ in the companion repository
 
 ## Status
 
-The manuscript is a work in progress: Methods, Results and Discussion are
-drafted; Abstract and Introduction are not yet written. Figures are generated
-from the committed scripts and are reproducible from the data in `results/`.
+The manuscript is a work in progress: Introduction, Methods, Results and
+Discussion are drafted; the Abstract is not yet written. Figures are
+generated from the committed scripts and are reproducible from the data in
+`results/`.
 
 ## License
 
