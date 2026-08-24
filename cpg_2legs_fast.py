@@ -322,6 +322,12 @@ FORCE_MAX = 25.0
 # the activation envelope passes through to force cleanly.
 FORCE_SAT_K = 1.0
 
+# MOD_CUT_FORCE_TRIGGER: initial seed for the per-leg adaptive peak-force tracker
+# (fraction of FORCE_MAX), before any real burst has been observed. 0.4*FORCE_MAX=10
+# sits inside the empirically observed debug-mode force_e peak range (~11-17), so the
+# first real burst crosses the on-threshold and the tracker starts adapting immediately.
+CUT_FORCE_PEAK_SEED_FRAC = 0.4
+
 TAU_LENGTH_MS = 260.0
 L0 = 1.0
 L_MIN, L_MAX = 0.5, 2.0
@@ -517,6 +523,85 @@ def main():
                          "stretch signal; Grillner & Rossignol 1978; Pearson 1995). "
                          "Mirrors the stance Ia-E ramp to clock the flexor. 0 = off "
                          "(legacy intrinsic-only flexor); 80 is a typical on value.")
+    # ---- MOD_CUT_FORCE_TRIGGER: closed-loop stance detection ----
+    ap.add_argument("--cut-trigger", choices=["timer", "force"], default="timer",
+                    help="MOD_CUT_FORCE_TRIGGER: 'timer' (default) keeps the existing "
+                         "clock-scheduled stance/swing windows. 'force' replaces the "
+                         "clock with a per-leg Schmitt-trigger on that leg's own "
+                         "extensor force_e (paw-contact proxy): CUT turns ON when "
+                         "force_e crosses --cut-force-on-frac of the leg's running peak "
+                         "('foot touches down'), OFF when it falls below "
+                         "--cut-force-off-frac ('foot lifts off'). Requires --paced-gait "
+                         "(reuses its per-leg CUT/Ia-E-group/flexor-afferent wiring).")
+    ap.add_argument("--cut-force-on-frac", type=float, default=0.80,
+                    help="MOD_CUT_FORCE_TRIGGER: stance-ON threshold as a fraction of the "
+                         "leg's adaptive running peak force_e. Close to 1.0 = only near "
+                         "the very peak of the burst.")
+    ap.add_argument("--cut-force-off-frac", type=float, default=0.20,
+                    help="MOD_CUT_FORCE_TRIGGER: stance-OFF threshold as a fraction of "
+                         "the leg's adaptive running peak force_e. Must be < "
+                         "--cut-force-on-frac (hysteresis band prevents chatter).")
+    ap.add_argument("--leading-leg", choices=["L", "R"], default="R",
+                    help="MOD_CUT_FORCE_TRIGGER: which leg starts in stance at t=0 "
+                         "(bio motivation: gait initiation from one already-planted "
+                         "leg, not perfectly symmetric initial conditions). The other "
+                         "leg starts in swing and is held there for --lead-offset-ms.")
+    ap.add_argument("--lead-offset-ms", type=float, default=150.0,
+                    help="MOD_CUT_FORCE_TRIGGER: duration (ms) the non-leading leg's "
+                         "CUT is forced OFF at simulation start, regardless of its own "
+                         "force_e, to deterministically break L/R symmetry before the "
+                         "commissural circuit and force feedback take over.")
+    ap.add_argument("--cut-max-stance-ms", type=float, default=600.0,
+                    help="MOD_CUT_FORCE_TRIGGER: failsafe ceiling (ms) on stance "
+                         "duration -- forces CUT OFF even if force_e never decays back "
+                         "through --cut-force-off-frac. Without INaP-style adaptation, "
+                         "the CUT->RG-E->force_e loop is a stable positive-feedback "
+                         "plateau (force saturates, never decays on its own), so a pure "
+                         "force threshold can lock permanently in stance. This timeout "
+                         "is the endogenous-rhythm backstop (bio: hip-extension/limb-"
+                         "position limit triggers swing even under continued loading; "
+                         "Grillner & Rossignol 1978) -- matches the two-level "
+                         "sensory-gated + endogenous-timer phase-transition picture "
+                         "(Rybak/McCrea unit-burst-generator model).")
+    ap.add_argument("--cut-max-swing-ms", type=float, default=600.0,
+                    help="MOD_CUT_FORCE_TRIGGER: failsafe ceiling (ms) on swing "
+                         "duration -- forces CUT ON even if force_e never rises through "
+                         "--cut-force-on-frac (mirror of --cut-max-stance-ms; prevents a "
+                         "leg from locking permanently in swing).")
+    # ---- MOD_MUSCLE_FATIGUE: makes the stance->swing force transition genuinely
+    # force-driven instead of failsafe-timer-driven (see --cut-max-stance-ms help:
+    # confirmed by direct test that without it, force_e saturates and sits flat
+    # indefinitely -- RG-E has no INaP-style self-terminating burst mechanism the
+    # way RG-F does (RGF_C/RGF_D intrinsic bursting), so nothing makes force decay
+    # on its own during sustained stance). Opt-in and OFF by default so existing
+    # timer-based paced-gait runs (debug.sh, run.sh, run_*_stdp.sh) are unaffected.
+    ap.add_argument("--muscle-fatigue", action="store_true",
+                    help="MOD_MUSCLE_FATIGUE: add slow activity-dependent fatigue to "
+                         "the force proxy (both E and F) so force genuinely decays "
+                         "during sustained high activation and recovers at rest, "
+                         "instead of relying on --cut-max-stance-ms/--cut-max-swing-ms "
+                         "to force the transition. OFF by default (opt-in) -- only "
+                         "affects the force computation, not the neural circuit.")
+    ap.add_argument("--fatigue-tau-onset-ms", type=float, default=400.0,
+                    help="MOD_MUSCLE_FATIGUE: time constant (ms) for fatigue to build "
+                         "up under sustained full activation. Shorter = force decays "
+                         "faster during a long stance/swing bout.")
+    ap.add_argument("--fatigue-tau-recovery-ms", type=float, default=600.0,
+                    help="MOD_MUSCLE_FATIGUE: time constant (ms) for fatigue to clear "
+                         "once activation drops. Needs to be fast enough that a leg "
+                         "substantially recovers within one swing/stance bout, or "
+                         "fatigue creeps up cycle-over-cycle.")
+    ap.add_argument("--fatigue-max-frac", type=float, default=0.95,
+                    help="MOD_MUSCLE_FATIGUE: maximum fraction (0-1) by which force "
+                         "can be attenuated under sustained full activation. Must "
+                         "leave the fatigued force floor comfortably below "
+                         "--cut-force-off-frac x (this bout's peak), or the leg locks "
+                         "at a permanently-fatigued-but-still-'on' plateau instead of "
+                         "actually releasing -- confirmed by direct test at 0.85: R "
+                         "settled at a stable force_e~2.6 floor (from residual "
+                         "activation ~1.2) against an off-threshold of ~1.9 and never "
+                         "crossed it. 0.95 leaves a floor of ~0.9, safely below a "
+                         "typical off-threshold even for a modest bout peak.")
     # ---- ablation flags (paper Figure: necessity of each component) ----
     ap.add_argument("--ablate-ia-loop", action="store_true",
                     help="ABLATION: zero Ia→InE/InF closed-loop (W_IA2IN=0). Tests "
@@ -573,6 +658,28 @@ def main():
     BS_DRIVE_NORM_HZ = max(BS_RATE_BASE_HZ, 1e-9)
     ENFORCE_TONIC_BS = bool(args.enforce_tonic_bs)
     PACED_GAIT = bool(getattr(args, "paced_gait", False))
+    # MOD_CUT_FORCE_TRIGGER: closed-loop force-threshold stance detection, replacing
+    # the paced-gait clock. Reuses paced-gait's per-leg CUT/Ia-E-group/flexor-afferent
+    # wiring, so it can only run on top of --paced-gait.
+    CUT_TRIGGER = str(getattr(args, "cut_trigger", "timer"))
+    if CUT_TRIGGER == "force" and not PACED_GAIT:
+        raise ValueError("--cut-trigger force requires --paced-gait (it reuses its "
+                          "per-leg CUT/Ia-E/flexor-afferent wiring).")
+    CUT_FORCE_ON_FRAC = float(args.cut_force_on_frac)
+    CUT_FORCE_OFF_FRAC = float(args.cut_force_off_frac)
+    if not (0.0 < CUT_FORCE_OFF_FRAC < CUT_FORCE_ON_FRAC <= 1.0):
+        raise ValueError(f"--cut-force-off-frac ({CUT_FORCE_OFF_FRAC}) must be < "
+                          f"--cut-force-on-frac ({CUT_FORCE_ON_FRAC}), both in (0,1].")
+    LEADING_LEG = str(getattr(args, "leading_leg", "R"))
+    LEAD_OFFSET_MS = float(args.lead_offset_ms)
+    CUT_MAX_STANCE_MS = float(args.cut_max_stance_ms)
+    CUT_MAX_SWING_MS = float(args.cut_max_swing_ms)
+    MUSCLE_FATIGUE = bool(args.muscle_fatigue)
+    FATIGUE_TAU_ONSET_MS = float(args.fatigue_tau_onset_ms)
+    FATIGUE_TAU_RECOVERY_MS = float(args.fatigue_tau_recovery_ms)
+    FATIGUE_MAX_FRAC = float(args.fatigue_max_frac)
+    if not (0.0 <= FATIGUE_MAX_FRAC <= 1.0):
+        raise ValueError(f"--fatigue-max-frac ({FATIGUE_MAX_FRAC}) must be in [0,1].")
     # ---- sweep mode (Option C): run one (mu, CV) pair per Slurm array task ----
     def _parse_pairs(s: str):
         s = (s or "").strip()
@@ -1463,8 +1570,10 @@ def main():
                        rge=[], rgf=[],
                        ine=[], inf=[], iaint_e=[], iaint_f=[],  # MOD_NET_RECORD
                        act_e=[], act_f=[], force_e=[], force_f=[],
+                       fatigue_e=[], fatigue_f=[],
                        len_e=[], len_f=[], ia_e=[], ia_f=[]) for side in LEGS}
     state = {side: dict(act_e=0.0, act_f=0.0, force_e=0.0, force_f=0.0,
+                        fatigue_e=0.0, fatigue_f=0.0,
                         len_e=L0, len_f=L0,
                         last_muse=0, last_musf=0,
                         last_rge=0, last_rgf=0,
@@ -1573,8 +1682,25 @@ def main():
         S["act_e"] = clamp(S["act_e"], 0.0, ACT_MAX)
         S["act_f"] = clamp(S["act_f"], 0.0, ACT_MAX)
 
-        target_fe = FORCE_MAX * (1.0 - np.exp(-FORCE_SAT_K * S["act_e"]))
-        target_ff = FORCE_MAX * (1.0 - np.exp(-FORCE_SAT_K * S["act_f"]))
+        # MOD_MUSCLE_FATIGUE: slow activity-dependent fatigue so force can decay on
+        # its own during sustained stance/swing (RG-E has no INaP-style intrinsic
+        # burst termination the way RG-F does, so without this the force plateau
+        # never decays -- see --muscle-fatigue help). No-op (fatigue stays 0) unless
+        # --muscle-fatigue is set, so timer-based paced-gait runs are unaffected.
+        if MUSCLE_FATIGUE:
+            drive_e = S["act_e"] / max(1e-9, ACT_MAX)
+            drive_f = S["act_f"] / max(1e-9, ACT_MAX)
+            tau_on_s = FATIGUE_TAU_ONSET_MS / 1000.0
+            tau_rec_s = FATIGUE_TAU_RECOVERY_MS / 1000.0
+            S["fatigue_e"] += dt_s * (drive_e * (FATIGUE_MAX_FRAC - S["fatigue_e"]) / tau_on_s
+                                       - (1.0 - drive_e) * S["fatigue_e"] / tau_rec_s)
+            S["fatigue_f"] += dt_s * (drive_f * (FATIGUE_MAX_FRAC - S["fatigue_f"]) / tau_on_s
+                                       - (1.0 - drive_f) * S["fatigue_f"] / tau_rec_s)
+            S["fatigue_e"] = clamp(S["fatigue_e"], 0.0, FATIGUE_MAX_FRAC)
+            S["fatigue_f"] = clamp(S["fatigue_f"], 0.0, FATIGUE_MAX_FRAC)
+
+        target_fe = FORCE_MAX * (1.0 - S["fatigue_e"]) * (1.0 - np.exp(-FORCE_SAT_K * S["act_e"]))
+        target_ff = FORCE_MAX * (1.0 - S["fatigue_f"]) * (1.0 - np.exp(-FORCE_SAT_K * S["act_f"]))
         tau_rise_s = TAU_FORCE_RISE_MS / 1000.0
         tau_decay_s = TAU_FORCE_DECAY_MS / 1000.0
 
@@ -1616,6 +1742,8 @@ def main():
         P["act_f"].append(S["act_f"])
         P["force_e"].append(S["force_e"]);
         P["force_f"].append(S["force_f"])
+        P["fatigue_e"].append(S["fatigue_e"]);
+        P["fatigue_f"].append(S["fatigue_f"])
         P["len_e"].append(S["len_e"]);
         P["len_f"].append(S["len_f"])
         P["ia_e"].append(ia_e);
@@ -1698,7 +1826,160 @@ def main():
             log_weights(t_ms, done_steps)
             book_accum += (time.perf_counter() - t_book0)
 
-    if PACED_GAIT:
+    if PACED_GAIT and CUT_TRIGGER == "force":
+        # MOD_CUT_FORCE_TRIGGER: continuous loop, no external clock. Each leg's own
+        # CUT (paw-contact) state is a Schmitt trigger on its own force_e: ON once
+        # force_e crosses --cut-force-on-frac of that leg's adaptive running peak
+        # ("foot touches down"), OFF once it falls below --cut-force-off-frac
+        # ("foot lifts off"). Only --leading-leg starts in stance at t=0; the other
+        # leg starts in swing and is held there for --lead-offset-ms to deterministically
+        # break L/R symmetry (bio motivation: gait initiation from one planted leg,
+        # not identical initial conditions) before the commissural circuit + force
+        # feedback take over autonomously.
+        # MOD_CUT_FORCE_TRIGGER: --lead-offset-ms is also a *symmetric priming
+        # window* (both legs' CUT ON) so both sides' plastic CUT->RG-E synapse gets
+        # co-activation training before the leading/lagging split. Without this,
+        # only the leading leg's CUT ever fires early on (CUT is now a *consequence*
+        # of stance, not an external announcement of it), so at low initial STDP
+        # weight (production sweeps start as low as mean=0-3.5) the lagging leg's
+        # CUT->RG-E synapse never gets its first potentiation and that leg struggles
+        # to ever mount a real stance -- confirmed by direct test (production N,
+        # BS=60Hz, sweep-pairs 3.5:0.30, no priming): leading leg reached
+        # corr(Force-E,Force-F) -0.92, lagging leg only -0.20 (mostly stuck
+        # flexor-dominant). With symmetric priming both legs train equally; the
+        # leading/lagging split still happens because only the lagging leg is cut
+        # back to swing the instant priming ends.
+        lag_side = "L" if LEADING_LEG == "R" else "R"
+        cut_state = {side: True for side in LEGS}
+        peak_e_est = {side: FORCE_MAX * CUT_FORCE_PEAK_SEED_FRAC for side in LEGS}
+        stance_onset_ms = {side: 0.0 for side in LEGS}
+        phase_onset_ms = {side: 0.0 for side in LEGS}
+
+        def cut_force_apply(side, is_on, t_now):
+            nest.SetStatus(leg[side]["cut_pg"],
+                           {"rate": CUT_FEEDBACK_GAIN * CUT_RATE_ON_HZ if is_on else CUT_RATE_OFF_HZ})
+            if is_on:
+                # Stance: Ia-E heel->mid->toe sub-group sequenced by elapsed time
+                # since this leg's own stance onset (self-timed, not clock-scheduled).
+                if leg[side]["ia_ext_pg_f"] is not None:
+                    nest.SetStatus(leg[side]["ia_ext_pg_f"], {"rate": 0.0})
+                elapsed = max(0.0, t_now - stance_onset_ms[side])
+                g_idx = min(N_IA_GROUPS_PACED - 1, int(elapsed // max(1e-9, SUB_STANCE_MS)))
+                for gi, g in enumerate(leg[side]["ia_ext_pg_e"]):
+                    nest.SetStatus(g, {"rate": IA_EXT_HZ[gi] if gi == g_idx else 0.0})
+            else:
+                for g in leg[side]["ia_ext_pg_e"]:
+                    nest.SetStatus(g, {"rate": 0.0})
+                if leg[side]["ia_ext_pg_f"] is not None:
+                    nest.SetStatus(leg[side]["ia_ext_pg_f"], {"rate": IA_EXT_F_HZ})
+
+        def cut_force_gate(side, t_now):
+            # Reads force_e computed by THIS chunk's update_leg() call, which itself
+            # reflects spikes generated under the CUT/Ia rates set at the *previous*
+            # gate tick -- the same one-tick sensor delay already used for Ia (natural
+            # consequence of simulate-then-update-then-set-next-rate ordering).
+            fe = float(state[side]["force_e"])
+            # Per-bout running max, not a time-decaying one: grows monotonically
+            # through the current stance bout, then holds exactly at that value
+            # through the following swing (used as the ON reference), and is reset
+            # fresh at the next stance onset. A time-decaying peak would chase a
+            # slowly-fatiguing force down and the relative OFF threshold would then
+            # never actually be crossed (confirmed by direct test: with fatigue
+            # active, force and a decaying peak converged together and the leg
+            # locked at a permanently reduced plateau instead of releasing).
+            peak_e_est[side] = max(fe, peak_e_est[side])
+            on_thr = CUT_FORCE_ON_FRAC * peak_e_est[side]
+            off_thr = CUT_FORCE_OFF_FRAC * peak_e_est[side]
+            was_on = cut_state[side]
+            elapsed_phase = t_now - phase_onset_ms[side]
+            priming = t_now < LEAD_OFFSET_MS
+            # First gate tick after the priming window has elapsed (rate_every
+            # granularity, so check against the previous tick's time too).
+            just_ended_priming = (not priming) and (t_now - float(args.rate_update_ms) < LEAD_OFFSET_MS)
+
+            if priming:
+                is_on = True
+            else:
+                is_on = was_on
+                if not was_on and fe >= on_thr:
+                    is_on = True
+                elif was_on and fe <= off_thr:
+                    is_on = False
+
+                # Failsafe timeout: without adaptation/fatigue, CUT->RG-E->force_e is
+                # a stable positive-feedback plateau that a pure force threshold can
+                # never escape (force saturates near its ceiling and just sits
+                # there). This bounds each phase so the rhythm can't lock
+                # permanently in stance or swing -- the endogenous-timer backstop
+                # for when peripheral gating alone stalls (see --cut-max-stance-ms /
+                # --cut-max-swing-ms help).
+                if was_on and is_on and elapsed_phase >= CUT_MAX_STANCE_MS:
+                    is_on = False
+                elif not was_on and not is_on and elapsed_phase >= CUT_MAX_SWING_MS:
+                    is_on = True
+
+                # Priming just ended: hand the lagging leg to swing immediately so
+                # the leading/lagging phase offset actually takes hold, rather than
+                # letting residual priming-driven force keep it "on" a while longer
+                # under the normal hysteresis.
+                if side == lag_side and just_ended_priming:
+                    is_on = False
+
+            if is_on != was_on:
+                phase_onset_ms[side] = t_now
+                if is_on:
+                    stance_onset_ms[side] = t_now
+                    # Fresh bout: forget the previous bout's peak (which may already
+                    # be fatigue-depressed) and re-discover this bout's own peak from
+                    # the seed, so its OFF threshold isn't biased by history.
+                    peak_e_est[side] = FORCE_MAX * CUT_FORCE_PEAK_SEED_FRAC
+
+            cut_state[side] = is_on
+            cut_force_apply(side, is_on, t_now)
+
+        for side in LEGS:
+            cut_force_apply(side, cut_state[side], 0.0)
+
+        n_chunks = int(SIM_MS // CHUNK_MS)
+        tail_ms = q_ms(SIM_MS - n_chunks * CHUNK_MS)
+        n_chunks_total = n_chunks + (1 if tail_ms > 1e-9 else 0)
+
+        for ci in range(n_chunks_total):
+            cur_chunk_ms = q_ms(CHUNK_MS if ci < n_chunks else tail_ms)
+            if cur_chunk_ms <= 0.0:
+                continue
+
+            t_sim0 = time.perf_counter()
+            nest.Simulate(cur_chunk_ms)
+            sim_accum += (time.perf_counter() - t_sim0)
+
+            t_ms += cur_chunk_ms
+            done_steps += 1
+
+            t_book0 = time.perf_counter()
+            do_rate_update = (done_steps % rate_every == 0)
+            for side in LEGS:
+                update_leg(side, t_ms, cur_chunk_ms, 1.0 if cut_state[side] else 0.0, do_rate_update)
+            if ENFORCE_TONIC_BS:
+                l_be = float(logs["L"]["bs_e"][-1]); r_be = float(logs["R"]["bs_e"][-1])
+                l_bf = float(logs["L"]["bs_f"][-1]); r_bf = float(logs["R"]["bs_f"][-1])
+                if abs(l_be - r_be) > 1e-9 or abs(l_bf - r_bf) > 1e-9:
+                    raise RuntimeError(
+                        f"Tonic BS violated across legs at t_ms={t_ms}: L=({l_be},{l_bf}), R=({r_be},{r_bf})")
+            log_weights(t_ms, done_steps)
+            if do_rate_update:
+                for side in LEGS:
+                    cut_force_gate(side, t_ms)
+            book_accum += (time.perf_counter() - t_book0)
+
+            if rank == 0 and (
+                    (done_steps % int(args.print_every) == 0) or (done_steps == total_steps)):
+                print(f"[ForceCUT] chunk {done_steps}/{total_steps} | t={t_ms:.1f} ms | "
+                      f"L={'stance' if cut_state['L'] else 'swing'} "
+                      f"R={'stance' if cut_state['R'] else 'swing'} "
+                      f"peak_e=({peak_e_est['L']:.1f},{peak_e_est['R']:.1f})")
+
+    elif PACED_GAIT:
         # MOD_PACED_GAIT: explicit trot-pattern gait cycle.
         # Each half-cycle = HALF_MS (500 ms). L and R legs alternate 180°.
         # Stance leg: CUT ON + sequential Ia-E heel→toe activation.
@@ -1842,6 +2123,19 @@ def main():
             h5.attrs["half_ms"] = float(HALF_MS)
             h5.attrs["n_ia_groups"] = int(N_IA_GROUPS_PACED)
             h5.attrs["ia_ext_f_hz"] = float(IA_EXT_F_HZ)
+        h5.attrs["cut_trigger"] = str(CUT_TRIGGER)
+        if CUT_TRIGGER == "force":
+            h5.attrs["cut_force_on_frac"] = float(CUT_FORCE_ON_FRAC)
+            h5.attrs["cut_force_off_frac"] = float(CUT_FORCE_OFF_FRAC)
+            h5.attrs["leading_leg"] = str(LEADING_LEG)
+            h5.attrs["lead_offset_ms"] = float(LEAD_OFFSET_MS)
+            h5.attrs["cut_max_stance_ms"] = float(CUT_MAX_STANCE_MS)
+            h5.attrs["cut_max_swing_ms"] = float(CUT_MAX_SWING_MS)
+        h5.attrs["muscle_fatigue"] = bool(MUSCLE_FATIGUE)
+        if MUSCLE_FATIGUE:
+            h5.attrs["fatigue_tau_onset_ms"] = float(FATIGUE_TAU_ONSET_MS)
+            h5.attrs["fatigue_tau_recovery_ms"] = float(FATIGUE_TAU_RECOVERY_MS)
+            h5.attrs["fatigue_max_frac"] = float(FATIGUE_MAX_FRAC)
         h5.attrs["ablate_ia_loop"] = bool(args.ablate_ia_loop)
         h5.attrs["ablate_asym"] = bool(args.ablate_asym)
         h5.attrs["ablate_comm"] = bool(args.ablate_comm)

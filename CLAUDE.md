@@ -46,6 +46,8 @@ sbatch run.sh
 | `run_ablation_graded.sh` | Phase B: 3 Ia gains × 3 λ, 120 s. |
 | `run_frozen.sh` | Frozen-weight control: STDP off, air stepping, (mean,CV) sweep. |
 | `debug.sh` | Local single-config run with `--debug-small`. |
+| `debug_force.sh` | Local single-config run with `--debug-small --cut-trigger force` (closed-loop, force-triggered CUT — see below). |
+| `run_cutforce_sweep.sh` | EXPLORATORY MN5 sweep (9 tasks): `--cut-trigger force` × `--muscle-fatigue`, fatigue-onset-τ × failsafe-cap grid, at production scale. Run before any confirmatory force-trigger production campaign — see "Force-triggered CUT" below. |
 | `CLAUDE.md` | This file. |
 
 ## Frozen-weight control (`run_frozen.sh`)
@@ -70,6 +72,84 @@ mean=63 (heterogeneity). Plot with `scripts/legacy/cpg_frozen_figure.py`. No `--
 - **Known debug-mode limitation for F**: FF force limited to ~7 a.u. at BS=20 Hz; production (BS=60 Hz,
   N=100) expected to reach >12 a.u.
 - Without `--paced-gait`: cleanly alternates in debug mode; corr(RGE,RGF) ~−0.71 to −0.73.
+
+### Force-triggered CUT (`--cut-trigger force`)
+
+Replaces the paced-gait *clock* with a closed-loop stance detector: CUT (cutaneous/
+paw-contact) firing is gated directly on each leg's own `force_e`, not on a fixed
+timer — "foot touches down" (CUT ON) when `force_e` rises through
+`--cut-force-on-frac` (default 0.80) of that leg's current-bout running peak, "foot
+lifts off" (CUT OFF) when it falls through `--cut-force-off-frac` (default 0.20). The
+peak is **not** time-decayed — it resets to a seed value at each new stance onset and
+then holds monotonically (grows through stance, frozen through the following swing).
+A time-decaying peak was tried first and rejected: with `--muscle-fatigue` on, a
+slowly-fatiguing force and a slowly-decaying peak converge together and the *relative*
+OFF threshold never actually gets crossed — the leg locks at a permanently-reduced-but-
+still-"on" plateau instead of releasing.
+
+**Symmetry-breaking**: real gait doesn't start from identical L/R initial conditions —
+one leg is already planted. `--leading-leg` (default `R`) seeds that leg into stance at
+t=0. `--lead-offset-ms` (default 150 ms) is also a *symmetric priming window*: **both**
+legs' CUT is ON for this duration (not just the leader's) so both sides' plastic
+CUT→RG-E synapse gets co-activation training before the split — at low initial STDP
+weight (production sweeps start as low as mean=0–3.5) the lagging leg's synapse
+otherwise never gets its first potentiation and that leg struggles to ever mount a real
+stance (confirmed by direct test: without priming, leading leg reached corr(Force-E,
+Force-F) −0.92, lagging leg only −0.20). At the end of the window the lagging leg is
+cut back to swing immediately; too long a window desyncs this into leg synchronisation
+instead (confirmed at 400 ms: corr(Force-E_L, Force-E_R) flipped to **+0.41**, legs
+moving together — a real failure mode, not just a weaker one).
+
+**Failsafe timeout (required, not optional)**: RG-E has no INaP-style self-terminating
+burst mechanism — only RG-F got the intrinsically-bursting Izhikevich treatment
+(`RGF_C`/`RGF_D`). So `CUT → RG-E → force_e → CUT` is a pure positive-feedback loop:
+force saturates near its ceiling and **just sits there** — confirmed by direct test
+(production N, BS=60Hz, cap disabled): R stayed in stance with force_e flat at ~17.5
+for 4+ continuous seconds, L stayed in swing at ~0 the whole time. `--cut-max-stance-ms`
+/ `--cut-max-swing-ms` (both default 600 ms) cap each phase and force the transition
+regardless of force — the endogenous-timer backstop for when peripheral gating alone
+stalls (bio: hip-extension/limb-position limit triggers swing even under continued
+loading, Grillner & Rossignol 1978; matches the two-level sensory-gated +
+endogenous-timer picture, Rybak/McCrea unit-burst-generator model). **Do not remove
+this timeout.**
+
+**Debug-scale validated** (`debug_force.sh`, debug-small, BS=20 Hz, 10 s): both legs
+alternate stance/swing continuously for the full run (7-8 bouts/leg, no lock-in),
+corr(Force-E,Force-F) **−0.967 (L) / −0.967 (R)**, corr(RGE,RGF) **−0.83 (L) / −0.88
+(R)**, corr(Force-E_L, Force-E_R) **−0.80**, Force-E peaks ~17.5 a.u. with clean
+near-0 troughs.
+
+**Production scale is NOT yet at the same bar.** At full N, BS=60Hz, step_period=520ms,
+sweep-pairs 3.5:0.30 (the established operating point for `run_speed_stdp.sh` etc.),
+the debug-tuned defaults only reach corr(Force-E,Force-F) ≈ **−0.65 (L) / −0.77 to
+−0.85 (R)** over 8-20s, and bout-duration analysis showed transitions landing almost
+exactly at the `--cut-max-stance-ms` value every cycle — i.e. the failsafe was doing
+essentially *all* the work, not genuine force-threshold crossings (this is true at
+debug scale too, on closer inspection — the "validated" debug numbers above are real
+and clean, but likely cap-dominated rather than proof the pure threshold mechanism
+alone is what's producing them). `--muscle-fatigue` (below) was added to make the OFF
+transition genuinely force-driven, but its time constant interacts with the cap in
+ways that need a proper sweep, not more manual guessing — see `run_cutforce_sweep.sh`.
+**Do not submit a long/full production campaign with this mode until that sweep has
+identified a configuration that holds up.**
+
+### Muscle fatigue (`--muscle-fatigue`)
+
+Opt-in (OFF by default — existing timer-based paced-gait runs are unaffected). Adds a
+slow activity-dependent attenuation to the force proxy (both E and F): fatigue builds
+toward `--fatigue-max-frac` (default 0.95) with time constant `--fatigue-tau-onset-ms`
+(default 400 ms) while activation is high, and clears with `--fatigue-tau-recovery-ms`
+(default 600 ms) while activation is low. This is what lets `force_e` actually decay
+during a sustained stance bout instead of sitting flat at its ceiling forever (see
+"Failsafe timeout" above) — the closest local analogue to the INaP-driven burst
+termination the project's Izhikevich neurons don't have.
+
+**`--fatigue-max-frac` must leave the fatigued force floor comfortably below the OFF
+threshold**, or the leg locks at a reduced-but-still-"on" plateau instead of actually
+releasing — confirmed at 0.85: force settled at a stable floor (~2.6, from residual
+activation even at full fatigue) against an off-threshold of ~1.9 and never crossed it.
+0.95 leaves a floor of ~0.9, safely below a typical off-threshold — this is why the
+default was raised from the first value tried.
 
 ### Sensory-driven mode (`--freeze-bs-rg --stdp-ia-rg`, WMAX_IA=10)
 
@@ -147,6 +227,8 @@ Cross-leg: L↔R commissural inhibition on RG-F (strong) and RG-E (weak).
 | `MOD_DEBUG_SMALL` | Small-N + low-BS local debug mode; N_INF=40 (doubled). |
 | `MOD_IA_LOOP` | Ia → InE/InF closed-loop sensory drive into CPG core (W_IA2IN=6). |
 | `MOD_PACED_GAIT` | Explicit 1-s trot cycle: L/R 180° offset, sequential Ia-E heel→toe during stance. |
+| `MOD_CUT_FORCE_TRIGGER` | `--cut-trigger force`: replaces the paced-gait clock with a per-leg Schmitt trigger on `force_e` (CUT ON/OFF at `--cut-force-on-frac`/`--cut-force-off-frac` of a per-bout running peak — "foot touches"/"foot lifts"). `--leading-leg`/`--lead-offset-ms` break initial L/R symmetry (the offset window is also a symmetric CUT→RG-E STDP priming window). `--cut-max-stance-ms`/`--cut-max-swing-ms` are a required failsafe timeout (RG-E has no self-terminating burst mechanism and locks permanently without it — see "Force-triggered CUT" above). Requires `--paced-gait`. Production-scale tuning not yet confirmed — see `run_cutforce_sweep.sh`. |
+| `MOD_MUSCLE_FATIGUE` | `--muscle-fatigue`: opt-in (OFF by default) slow activity-dependent force attenuation (`--fatigue-tau-onset-ms`/`--fatigue-tau-recovery-ms`/`--fatigue-max-frac`), so `force_e` can decay on its own during sustained activation instead of relying entirely on the `--cut-trigger force` failsafe cap. Only affects the force proxy, not the neural circuit. |
 | `MOD_FREEZE_BS` | `--freeze-bs-rg`: BS→RG-E/RG-F static (no STDP), held at weak lognormal init (W_INIT_BS). BS becomes fixed tonic drive. |
 | `MOD_IA_RG_STDP` | `--stdp-ia-rg`: plastic homonymous Ia→RG (Ia-E→RG-E, Ia-F→RG-F, Wmax=WMAX_IA=10, density P_IA2RG_STDP=0.5). Muscle afferents become the learning drive to the RGs. **WMAX_IA=10 validated as sweet spot** (see below); `--wmax-ia`/`--p-ia2rg` to sweep. |
 | `--ia-feedback-gain` | Multiplicative gain on closed-loop Ia rate. 1.0 baseline / 0.5 toe stepping / 0.1 air stepping (Courtine/Lavrov SCI paradigm). |
