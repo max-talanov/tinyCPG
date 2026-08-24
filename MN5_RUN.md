@@ -3,6 +3,17 @@
 What to upload to MN5, what to submit, and what to bring back for local plotting.
 Plotting is done **locally** (after `scp`-ing results back), not on MN5.
 
+> **NOTE — force-triggered CUT sweep (post 2026-08-24), EXPLORATORY not
+> confirmatory.** `--cut-trigger force` (closed-loop stance detection: CUT fires
+> off each leg's own extensor `force_e` crossing an adaptive threshold, instead of
+> the paced-gait clock) is validated at debug scale only (`debug_force.sh`,
+> corr(Force-E,Force-F) ≈ −0.95/−0.97). At production scale (full N, BS=60Hz) the
+> debug-tuned defaults do not transfer cleanly — see `CLAUDE.md` "Force-triggered
+> CUT" section for the full diagnosis. `run_cutforce_sweep.sh` is a 9-task array
+> sweep to find a production-quality configuration (fatigue-onset-τ × failsafe-cap
+> grid) — run this **before** any longer confirmatory campaign with this mode, not
+> as a final result to plot into the paper.
+
 > **NOTE — 5×5 matrix + logistic gate (post 2026-07-07).** Two changes require a
 > re-run of the sensory arms: (i) the activation gate is now a smooth logistic
 > (`MOD_LOGISTIC_GATE`, replaces the hard clamp — bio-plausibility) so all figures
@@ -147,3 +158,51 @@ python3 scripts/cpg_epidural_contrast.py --stim-dir $INDIR --natural-dir $INDIR 
 # Per-run gait/force/weights for any single file (debug tool, writes to results/)
 python3 scripts/cpg_plot_from_hdf5.py --in $INDIR/cpg_sensory_stdp_13_5cms_lam1em3_*.h5 --save-prefix sensory_med
 ```
+
+## 5. Force-triggered CUT sweep (exploratory — run separately from §1-4)
+
+Only two files needed; the model is standalone.
+
+**Option A — git (cleanest, if MN5 has a clone):**
+```bash
+# on MN5, in the repo clone
+git pull origin main
+```
+
+**Option B — rsync the minimal set:**
+```bash
+# from this repo root, on your laptop
+rsync -av \
+  cpg_2legs_fast.py \
+  run_cutforce_sweep.sh \
+  <user>@mn5:/path/to/tinyCPG/
+```
+
+**Submit:**
+```bash
+# on MN5
+chmod +x run_cutforce_sweep.sh   # already +x in git; harmless if already set
+sbatch run_cutforce_sweep.sh     # 9-task array, 60s/task, 64 cpus/task, partition acc
+squeue -u <user>                 # check progress
+```
+Logs: `Nest_cutforce_<jobid>_<task>.slurmout/.slurmerr`. Output:
+`results/cpg_cutforce_fat<ONSET>_cap<CAP>_idx00_*.h5` (9 files, one per
+fatigue-onset-τ × failsafe-cap combination — see the script header for the grid).
+
+**Bring back:**
+```bash
+# from your laptop
+mkdir -p results/$(date +%F)
+rsync -av '<user>@mn5:/path/to/tinyCPG/results/cpg_cutforce_*.h5' results/$(date +%F)/
+```
+
+**Evaluate** (no dedicated plot script yet — this is a first-pass filter, not a
+paper figure): for each of the 9 files, load `leg_L/force_e`, `leg_L/force_f`,
+`leg_R/force_e`, `leg_R/force_f` and check corr(Force-E,Force-F) per leg (want
+< −0.85, matching the debug-scale bar) and corr(Force-E_L, Force-E_R) (want
+strongly negative — near-zero or positive means legs desynchronised/synchronised,
+both failure modes seen locally during tuning). Also check whether stance-bout
+durations still land exactly on the `--cut-max-stance-ms` value for that task
+(cap-dominated, not yet genuinely force-driven) or show real variability below
+it. Pick the best combination, then re-run just that config at 120s to confirm
+before treating it as a result.
