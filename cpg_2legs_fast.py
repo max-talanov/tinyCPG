@@ -1570,7 +1570,7 @@ def main():
                        rge=[], rgf=[],
                        ine=[], inf=[], iaint_e=[], iaint_f=[],  # MOD_NET_RECORD
                        act_e=[], act_f=[], force_e=[], force_f=[],
-                       fatigue_e=[], fatigue_f=[],
+                       fatigue_e=[], fatigue_f=[], cut_on=[],
                        len_e=[], len_f=[], ia_e=[], ia_f=[]) for side in LEGS}
     state = {side: dict(act_e=0.0, act_f=0.0, force_e=0.0, force_f=0.0,
                         fatigue_e=0.0, fatigue_f=0.0,
@@ -1959,7 +1959,15 @@ def main():
             t_book0 = time.perf_counter()
             do_rate_update = (done_steps % rate_every == 0)
             for side in LEGS:
-                update_leg(side, t_ms, cur_chunk_ms, 1.0 if cut_state[side] else 0.0, do_rate_update)
+                is_on_now = 1.0 if cut_state[side] else 0.0
+                update_leg(side, t_ms, cur_chunk_ms, is_on_now, do_rate_update)
+                # Ground-truth CUT on/off per chunk -- avoids reconstructing bout
+                # boundaries from a force threshold after the fact (which is
+                # threshold-sensitive and was confirmed to give inconsistent
+                # cap-vs-genuine-crossing verdicts on the same file depending on
+                # the reconstruction threshold chosen). Exact bout durations from
+                # this array can be compared to cut_max_stance/swing_ms exactly.
+                logs[side]["cut_on"].append(is_on_now)
             if ENFORCE_TONIC_BS:
                 l_be = float(logs["L"]["bs_e"][-1]); r_be = float(logs["R"]["bs_e"][-1])
                 l_bf = float(logs["L"]["bs_f"][-1]); r_bf = float(logs["R"]["bs_f"][-1])

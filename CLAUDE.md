@@ -39,6 +39,7 @@ sbatch run.sh
 | `scripts/` | Current figure/analysis scripts (feed `paper/figures/`), `cpg_param_table.py`, `cpg_plot_from_hdf5.py`, `build_deck.py`. |
 | `scripts/legacy/` | Superseded figure scripts, kept for reference only — not used by the current paper. |
 | `scripts/cpg_plot_from_hdf5.py` | Reads HDF5, makes per-leg PNGs. |
+| `scripts/cpg_cutforce_diagnostics.py` | Pass/fail check for `--cut-trigger force` sweep outputs: corr(Force-E,Force-F) plus `frac_at_cap` (is the failsafe timer doing the work, or genuine force-threshold crossings?). Run before trusting any correlation number from this mode. |
 | `run.sh` | MN5 SLURM array script (N=100, 10-point μ:CV sweep). |
 | `run_speed_stdp.sh` | Phase A: 3 speeds × 3 λ {1e-5,1e-4,1e-3}, 120 s. (descending/BS-plastic arm) |
 | `run_sensory_stdp.sh` | Sensory-learning arm: same 3×3 matrix but `--freeze-bs-rg --stdp-ia-rg --wmax-ia 10`. Pair with `run_speed_stdp.sh` for descending-vs-sensory contrast. Outputs `cpg_sensory_stdp_*`. |
@@ -47,7 +48,8 @@ sbatch run.sh
 | `run_frozen.sh` | Frozen-weight control: STDP off, air stepping, (mean,CV) sweep. |
 | `debug.sh` | Local single-config run with `--debug-small`. |
 | `debug_force.sh` | Local single-config run with `--debug-small --cut-trigger force` (closed-loop, force-triggered CUT — see below). |
-| `run_cutforce_sweep.sh` | EXPLORATORY MN5 sweep (9 tasks): `--cut-trigger force` × `--muscle-fatigue`, fatigue-onset-τ × failsafe-cap grid, at production scale. Run before any confirmatory force-trigger production campaign — see "Force-triggered CUT" below. |
+| `run_cutforce_sweep.sh` | EXPLORATORY MN5 sweep round 1 (9 tasks): fatigue-onset-τ {200,400,600} × cap {500,800,1100}. Superseded by round 2 — its apparent "best" result turned out 100% cap-dominated on re-diagnosis, see "Force-triggered CUT" below. |
+| `run_cutforce_sweep2.sh` | EXPLORATORY MN5 sweep round 2 (9 tasks): fatigue-onset-τ {400,600,800} × tighter, bio-plausible cap {300,450,600}. Run `scripts/cpg_cutforce_diagnostics.py` on the outputs before trusting any correlation number. |
 | `CLAUDE.md` | This file. |
 
 ## Frozen-weight control (`run_frozen.sh`)
@@ -127,11 +129,44 @@ exactly at the `--cut-max-stance-ms` value every cycle — i.e. the failsafe was
 essentially *all* the work, not genuine force-threshold crossings (this is true at
 debug scale too, on closer inspection — the "validated" debug numbers above are real
 and clean, but likely cap-dominated rather than proof the pure threshold mechanism
-alone is what's producing them). `--muscle-fatigue` (below) was added to make the OFF
-transition genuinely force-driven, but its time constant interacts with the cap in
-ways that need a proper sweep, not more manual guessing — see `run_cutforce_sweep.sh`.
-**Do not submit a long/full production campaign with this mode until that sweep has
-identified a configuration that holds up.**
+alone is what's producing them).
+
+**Correlation target recalibrated.** −0.85+ (the timer-based debug bar) is the wrong
+target for this mode — that number is an artifact of the clock imposing a literal
+square wave. A genuinely emergent, force-triggered gait should look more like
+**−0.7 to −0.8**, with real cycle-to-cycle variability, once STDP has saturated. The
+number that actually matters is **frac_at_cap** (below), not the correlation.
+
+**`--muscle-fatigue` round 1** (`run_cutforce_sweep.sh`, results/2026-08-25, 9 tasks:
+fatigue-onset-τ {200,400,600} × cap {500,800,1100}) found slower fatigue → better
+force amplitude and correlation, apparently plateauing around τ=600/cap=800
+(corr(Force-E,Force-F) ≈ −0.57 L / −0.69 R). **Re-diagnosed with exact ground-truth
+`cut_on` logging (added after round 1 — see MOD_CUT_FORCE_TRIGGER) and that "best"
+result turned out to be 100% cap-dominated on both legs** — stance duration exactly
+800.0ms, zero variance, every single bout. Round 1's files predate the `cut_on`
+array and can only be re-checked by reconstructing bouts from a force threshold,
+which is unreliable (confirmed: reconstruction gave different at-cap verdicts on the
+*same* file depending on the threshold chosen — see `scripts/cpg_cutforce_diagnostics.py`
+docstring). **Trust `cut_on`-based ("exact") diagnostics only; treat any
+pre-2026-08-27 result as unverified.**
+
+**`--muscle-fatigue` round 2** (`run_cutforce_sweep2.sh`) inverts the round-1 fix
+direction. Round 1's implied fix (bigger cap) is in tension with bio-plausibility
+anyway — cap=800ms already exceeds the paper's own locomotor-cycle constraint
+(400-700ms for a *full* stride, Bellardita & Kiehn 2015) for a single half-cycle.
+Round 2 instead holds fatigue-onset-τ in the range that gave good amplitude/quality
+(400-800ms) but *tightens* the cap toward bio-plausible half-cycle durations
+(300-600ms), to test directly whether genuine crossings emerge under a realistic
+time budget. A local spot-check at τ=600/cap=450 was still 100% cap-dominated on
+both legs (durations landing at 500ms — cap plus one `--rate-update-ms` tick — every
+single bout), so this may not resolve cleanly within the tested range; that's a
+legitimate outcome to find, not a failure of the sweep.
+
+**Required workflow from now on**: run `scripts/cpg_cutforce_diagnostics.py` on every
+sweep output before trusting any correlation number. `frac_at_cap` near 1.0 on either
+leg means the result is a disguised clock, regardless of how clean the correlation
+looks. **Do not submit a long/full production campaign with this mode until a
+configuration is found where frac_at_cap is low on both legs.**
 
 ### Muscle fatigue (`--muscle-fatigue`)
 
@@ -227,7 +262,7 @@ Cross-leg: L↔R commissural inhibition on RG-F (strong) and RG-E (weak).
 | `MOD_DEBUG_SMALL` | Small-N + low-BS local debug mode; N_INF=40 (doubled). |
 | `MOD_IA_LOOP` | Ia → InE/InF closed-loop sensory drive into CPG core (W_IA2IN=6). |
 | `MOD_PACED_GAIT` | Explicit 1-s trot cycle: L/R 180° offset, sequential Ia-E heel→toe during stance. |
-| `MOD_CUT_FORCE_TRIGGER` | `--cut-trigger force`: replaces the paced-gait clock with a per-leg Schmitt trigger on `force_e` (CUT ON/OFF at `--cut-force-on-frac`/`--cut-force-off-frac` of a per-bout running peak — "foot touches"/"foot lifts"). `--leading-leg`/`--lead-offset-ms` break initial L/R symmetry (the offset window is also a symmetric CUT→RG-E STDP priming window). `--cut-max-stance-ms`/`--cut-max-swing-ms` are a required failsafe timeout (RG-E has no self-terminating burst mechanism and locks permanently without it — see "Force-triggered CUT" above). Requires `--paced-gait`. Production-scale tuning not yet confirmed — see `run_cutforce_sweep.sh`. |
+| `MOD_CUT_FORCE_TRIGGER` | `--cut-trigger force`: replaces the paced-gait clock with a per-leg Schmitt trigger on `force_e` (CUT ON/OFF at `--cut-force-on-frac`/`--cut-force-off-frac` of a per-bout running peak — "foot touches"/"foot lifts"). `--leading-leg`/`--lead-offset-ms` break initial L/R symmetry (the offset window is also a symmetric CUT→RG-E STDP priming window). `--cut-max-stance-ms`/`--cut-max-swing-ms` are a required failsafe timeout (RG-E has no self-terminating burst mechanism and locks permanently without it — see "Force-triggered CUT" above). Logs a per-leg ground-truth `cut_on` (0/1) array to the output HDF5 so `scripts/cpg_cutforce_diagnostics.py` can measure exact bout durations instead of reconstructing them from force. Requires `--paced-gait`. Production-scale tuning not yet confirmed — see "Force-triggered CUT" above and `run_cutforce_sweep2.sh`. |
 | `MOD_MUSCLE_FATIGUE` | `--muscle-fatigue`: opt-in (OFF by default) slow activity-dependent force attenuation (`--fatigue-tau-onset-ms`/`--fatigue-tau-recovery-ms`/`--fatigue-max-frac`), so `force_e` can decay on its own during sustained activation instead of relying entirely on the `--cut-trigger force` failsafe cap. Only affects the force proxy, not the neural circuit. |
 | `MOD_FREEZE_BS` | `--freeze-bs-rg`: BS→RG-E/RG-F static (no STDP), held at weak lognormal init (W_INIT_BS). BS becomes fixed tonic drive. |
 | `MOD_IA_RG_STDP` | `--stdp-ia-rg`: plastic homonymous Ia→RG (Ia-E→RG-E, Ia-F→RG-F, Wmax=WMAX_IA=10, density P_IA2RG_STDP=0.5). Muscle afferents become the learning drive to the RGs. **WMAX_IA=10 validated as sweet spot** (see below); `--wmax-ia`/`--p-ia2rg` to sweep. |
