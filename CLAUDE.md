@@ -49,7 +49,8 @@ sbatch run.sh
 | `debug.sh` | Local single-config run with `--debug-small`. |
 | `debug_force.sh` | Local single-config run with `--debug-small --cut-trigger force` (closed-loop, force-triggered CUT — see below). |
 | `run_cutforce_sweep.sh` | EXPLORATORY MN5 sweep round 1 (9 tasks): fatigue-onset-τ {200,400,600} × cap {500,800,1100}. Superseded by round 2 — its apparent "best" result turned out 100% cap-dominated on re-diagnosis, see "Force-triggered CUT" below. |
-| `run_cutforce_sweep2.sh` | EXPLORATORY MN5 sweep round 2 (9 tasks): fatigue-onset-τ {400,600,800} × tighter, bio-plausible cap {300,450,600}. Run `scripts/cpg_cutforce_diagnostics.py` on the outputs before trusting any correlation number. |
+| `run_cutforce_sweep2.sh` | EXPLORATORY MN5 sweep round 2 (9 tasks): fatigue-onset-τ {400,600,800} × tighter, bio-plausible cap {300,450,600}. Superseded — 100% cap-dominated on all 9 configs, see "Force-triggered CUT" below. |
+| `run_cutforce_sweep3.sh` | EXPLORATORY MN5 sweep round 3 (9 tasks): fast fatigue-onset-τ {100,150,250} × looser `--cut-force-off-frac` {0.30,0.40,0.50}, cap fixed at 450ms. Run `scripts/cpg_cutforce_diagnostics.py` on the outputs before trusting any correlation number. |
 | `CLAUDE.md` | This file. |
 
 ## Frozen-weight control (`run_frozen.sh`)
@@ -157,10 +158,25 @@ anyway — cap=800ms already exceeds the paper's own locomotor-cycle constraint
 Round 2 instead holds fatigue-onset-τ in the range that gave good amplitude/quality
 (400-800ms) but *tightens* the cap toward bio-plausible half-cycle durations
 (300-600ms), to test directly whether genuine crossings emerge under a realistic
-time budget. A local spot-check at τ=600/cap=450 was still 100% cap-dominated on
-both legs (durations landing at 500ms — cap plus one `--rate-update-ms` tick — every
-single bout), so this may not resolve cleanly within the tested range; that's a
-legitimate outcome to find, not a failure of the sweep.
+time budget. **Result: 100% cap-dominated on both legs, at every one of the 9
+tested combinations** (durations exactly equal to the cap, zero variance,
+confirmed with exact `cut_on` ground truth — results/2026-08-27). A fatigue/force
+overlay at the best-correlation config (τ=800/cap=600) explains why: `fatigue_e`
+only reaches **~0.62 of its 0.95 ceiling** by the time the cap fires — force is
+still ~70-80% of peak, nowhere near the 0.20 (`--cut-force-off-frac`) crossing
+target. Neither axis tried in rounds 1-2 (fatigue speed, cap duration) alone
+gets there — ruling out "hold τ in the good range, shrink the cap" as a fix.
+
+**Round 3** (`run_cutforce_sweep3.sh`) tests the two remaining untried levers
+together, cap held **fixed** at 450ms so any drop in `frac_at_cap` is
+unambiguously attributable to them: fatigue-onset-τ pushed much faster (100,
+150, 250ms — below round 1-2's 200-800ms floor) × `--cut-force-off-frac` loosened
+(0.30, 0.40, 0.50 — vs 0.20 throughout rounds 1-2, so the crossing target no
+longer requires near-complete decay). A 4s local smoke-test at τ=150/off=0.40
+did escape cap-domination (`frac_at_cap`=0.00 both legs) but showed legs
+synchronising (corr(Force-E_L,Force-E_R) = +0.88, the same failure mode seen at
+`--lead-offset-ms 400`) — too short a run to judge properly, but a concrete
+thing to watch for in the full 60s sweep.
 
 **Required workflow from now on**: run `scripts/cpg_cutforce_diagnostics.py` on every
 sweep output before trusting any correlation number. `frac_at_cap` near 1.0 on either

@@ -3,20 +3,22 @@
 What to upload to MN5, what to submit, and what to bring back for local plotting.
 Plotting is done **locally** (after `scp`-ing results back), not on MN5.
 
-> **NOTE — force-triggered CUT sweep round 2 (post 2026-08-27), EXPLORATORY not
+> **NOTE — force-triggered CUT sweep round 3 (post 2026-08-27), EXPLORATORY not
 > confirmatory.** `--cut-trigger force` (closed-loop stance detection: CUT fires
 > off each leg's own extensor `force_e` crossing an adaptive threshold, instead of
-> the paced-gait clock) is validated at debug scale only. Round 1
-> (`run_cutforce_sweep.sh`, superseded) found an apparent best config
-> (fatigue-onset-τ=600ms, cap=800ms) that looked good on correlation alone —
-> **re-diagnosis with exact ground-truth `cut_on` logging showed it was 100%
-> failsafe-cap-dominated on both legs**, not genuine force-threshold crossings.
-> Round 2 (`run_cutforce_sweep2.sh`) tightens the cap toward bio-plausible
-> half-cycle durations while holding fatigue-τ in the range that gave good
-> amplitude. **Always run `scripts/cpg_cutforce_diagnostics.py` on the outputs
-> before trusting any correlation number** — `frac_at_cap` near 1.0 on either leg
-> means the result is a disguised clock. See `CLAUDE.md` "Force-triggered CUT" for
-> the full diagnosis. Not a final result to plot into the paper yet.
+> the paced-gait clock) is validated at debug scale only. Rounds 1
+> (`run_cutforce_sweep.sh`) and 2 (`run_cutforce_sweep2.sh`), both superseded,
+> swept fatigue-onset-τ against the failsafe cap and came back **100%
+> failsafe-cap-dominated on every tested config, on both legs, with exact
+> ground-truth `cut_on` logging** — not genuine force-threshold crossings. A
+> fatigue/force overlay explains why: fatigue never builds up enough within any
+> tested cap duration to bring force down to the OFF-crossing target. Round 3
+> (`run_cutforce_sweep3.sh`) instead pairs much faster fatigue-onset-τ with a
+> loosened `--cut-force-off-frac`, cap held fixed. **Always run
+> `scripts/cpg_cutforce_diagnostics.py` on the outputs before trusting any
+> correlation number** — `frac_at_cap` near 1.0 on either leg means the result is
+> a disguised clock. See `CLAUDE.md` "Force-triggered CUT" for the full
+> diagnosis. Not a final result to plot into the paper yet.
 
 > **NOTE — 5×5 matrix + logistic gate (post 2026-07-07).** Two changes require a
 > re-run of the sensory arms: (i) the activation gate is now a smooth logistic
@@ -163,12 +165,13 @@ python3 scripts/cpg_epidural_contrast.py --stim-dir $INDIR --natural-dir $INDIR 
 python3 scripts/cpg_plot_from_hdf5.py --in $INDIR/cpg_sensory_stdp_13_5cms_lam1em3_*.h5 --save-prefix sensory_med
 ```
 
-## 5. Force-triggered CUT sweep round 2 (exploratory — run separately from §1-4)
+## 5. Force-triggered CUT sweep round 3 (exploratory — run separately from §1-4)
 
-Round 1 (`run_cutforce_sweep.sh`) is superseded — its apparent best result was
-100% failsafe-cap-dominated on re-diagnosis (see the NOTE above and `CLAUDE.md`
-"Force-triggered CUT"). Use `run_cutforce_sweep2.sh` going forward. Only two
-files needed; the model is standalone.
+Rounds 1 and 2 (`run_cutforce_sweep.sh`, `run_cutforce_sweep2.sh`) are
+superseded — both came back 100% failsafe-cap-dominated on every tested config
+(see the NOTE above and `CLAUDE.md` "Force-triggered CUT"). Use
+`run_cutforce_sweep3.sh` going forward. Only two files needed; the model is
+standalone.
 
 **Option A — git (cleanest, if MN5 has a clone):**
 ```bash
@@ -181,7 +184,7 @@ git pull origin main
 # from this repo root, on your laptop
 rsync -av \
   cpg_2legs_fast.py \
-  run_cutforce_sweep2.sh \
+  run_cutforce_sweep3.sh \
   scripts/cpg_cutforce_diagnostics.py \
   <user>@mn5:/path/to/tinyCPG/
 ```
@@ -189,34 +192,35 @@ rsync -av \
 **Submit:**
 ```bash
 # on MN5
-chmod +x run_cutforce_sweep2.sh   # already +x in git; harmless if already set
-sbatch run_cutforce_sweep2.sh     # 9-task array, 60s/task, 64 cpus/task, partition acc
+chmod +x run_cutforce_sweep3.sh   # already +x in git; harmless if already set
+sbatch run_cutforce_sweep3.sh     # 9-task array, 60s/task, 64 cpus/task, partition acc
 squeue -u <user>                  # check progress
 ```
-Logs: `Nest_cutforce2_<jobid>_<task>.slurmout/.slurmerr`. Output:
-`results/cpg_cutforce2_fat<ONSET>_cap<CAP>_idx00_*.h5` (9 files, one per
-fatigue-onset-τ × failsafe-cap combination — see the script header for the grid).
+Logs: `Nest_cutforce3_<jobid>_<task>.slurmout/.slurmerr`. Output:
+`results/cpg_cutforce3_fat<ONSET>_off<OFFFRAC>_idx00_*.h5` (9 files, one per
+fatigue-onset-τ × `--cut-force-off-frac` combination, cap fixed at 450ms — see
+the script header for the grid).
 
 **Bring back:**
 ```bash
 # from your laptop
 mkdir -p results/$(date +%F)
-rsync -av '<user>@mn5:/path/to/tinyCPG/results/cpg_cutforce2_*.h5' results/$(date +%F)/
+rsync -av '<user>@mn5:/path/to/tinyCPG/results/cpg_cutforce3_*.h5' results/$(date +%F)/
 ```
 
 **Evaluate — run the diagnostic script first, before looking at correlation:**
 ```bash
-python3 scripts/cpg_cutforce_diagnostics.py results/$(date +%F)/cpg_cutforce2_*.h5
+python3 scripts/cpg_cutforce_diagnostics.py results/$(date +%F)/cpg_cutforce3_*.h5
 ```
 This reports corr(Force-E,Force-F) per leg, corr(Force-E_L,Force-E_R), and —
 the number that actually matters — `frac_at_cap` per leg, computed from the
-exact ground-truth `cut_on` array now logged by the model (not reconstructed
-from a force threshold, which round 1's post-hoc diagnosis showed is
-unreliable). A configuration only counts as a real candidate if `frac_at_cap`
-is low (genuine force-threshold crossings) on **both** legs; only then does
-the correlation number mean anything. Target corr(Force-E,Force-F) is **−0.7
-to −0.8** (recalibrated from the timer-based −0.85+ debug bar — see
-`CLAUDE.md`), and corr(Force-E_L,Force-E_R) should be strongly negative (near
-zero or positive means desynchronised/synchronised legs, both failure modes
-seen during tuning). Pick the best combination, then re-run just that config
-at 120s to confirm before treating it as a result.
+exact ground-truth `cut_on` array. A configuration only counts as a real
+candidate if `frac_at_cap` is low (genuine force-threshold crossings) on
+**both** legs; only then does the correlation number mean anything. Target
+corr(Force-E,Force-F) is **−0.7 to −0.8** (recalibrated from the timer-based
+−0.85+ debug bar — see `CLAUDE.md`), and corr(Force-E_L,Force-E_R) should be
+strongly negative (near zero or positive means desynchronised/synchronised
+legs — a local 4s smoke-test at fat150/off040 already showed +0.88, legs
+synchronising, so watch for this specifically). Pick the best combination,
+then re-run just that config at 120s to confirm before treating it as a
+result.
