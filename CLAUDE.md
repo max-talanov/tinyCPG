@@ -50,7 +50,8 @@ sbatch run.sh
 | `debug_force.sh` | Local single-config run with `--debug-small --cut-trigger force` (closed-loop, force-triggered CUT — see below). |
 | `run_cutforce_sweep.sh` | EXPLORATORY MN5 sweep round 1 (9 tasks): fatigue-onset-τ {200,400,600} × cap {500,800,1100}. Superseded by round 2 — its apparent "best" result turned out 100% cap-dominated on re-diagnosis, see "Force-triggered CUT" below. |
 | `run_cutforce_sweep2.sh` | EXPLORATORY MN5 sweep round 2 (9 tasks): fatigue-onset-τ {400,600,800} × tighter, bio-plausible cap {300,450,600}. Superseded — 100% cap-dominated on all 9 configs, see "Force-triggered CUT" below. |
-| `run_cutforce_sweep3.sh` | EXPLORATORY MN5 sweep round 3 (9 tasks): fast fatigue-onset-τ {100,150,250} × looser `--cut-force-off-frac` {0.30,0.40,0.50}, cap fixed at 450ms. Run `scripts/cpg_cutforce_diagnostics.py` on the outputs before trusting any correlation number. |
+| `run_cutforce_sweep3.sh` | EXPLORATORY MN5 sweep round 3 (9 tasks): fast fatigue-onset-τ {100,150,250} × looser `--cut-force-off-frac` {0.30,0.40,0.50}, cap fixed at 450ms. First round to escape cap-domination (frac_at_cap ~0 across the whole grid) — see "Force-triggered CUT" below. |
+| `run_cutforce_sweep4.sh` | EXPLORATORY MN5 sweep round 4 (9 tasks): narrows around round 3's working region — fatigue-onset-τ {250,300,350} × `--cut-force-off-frac` {0.25,0.30,0.35}, cap still fixed at 450ms. Run `scripts/cpg_cutforce_diagnostics.py` on the outputs before trusting any correlation number. |
 | `CLAUDE.md` | This file. |
 
 ## Frozen-weight control (`run_frozen.sh`)
@@ -177,6 +178,26 @@ did escape cap-domination (`frac_at_cap`=0.00 both legs) but showed legs
 synchronising (corr(Force-E_L,Force-E_R) = +0.88, the same failure mode seen at
 `--lead-offset-ms 400`) — too short a run to judge properly, but a concrete
 thing to watch for in the full 60s sweep.
+
+**Round 3 result (results/2026-08-30): first round to escape cap-domination.**
+`frac_at_cap` ≈ 0 on both legs across **all 9 configs**, with genuine bout-duration
+variability (std up to ±52ms, vs. the flat zero of rounds 1-2) — confirmed with
+exact `cut_on` ground truth. Quality still varies sharply within the grid: τ=100-150ms
+gives short (~100ms), weak bouts and **legs synchronise in 5 of 6 of those configs**
+(corr(Force-E_L,Force-E_R) up to +0.47 — the failure mode flagged above, now
+confirmed for real, not just in a short smoke-test). τ=250ms (this round's ceiling)
+gives the best results and stays anti-phase: best config τ=250/off=0.30 —
+corr(Force-E,Force-F) −0.61(L)/−0.66(R), corr(Force-E_L,Force-E_R) −0.67, bout
+duration 341±52/343±49ms. Still short of the −0.7/−0.8 recalibrated target, and
+quality was still climbing with τ at the top of the tested range — round 3 ran out
+of grid before finding a ceiling, not because τ=250 is optimal.
+
+**Round 4** (`run_cutforce_sweep4.sh`) narrows into the region that actually
+worked: fatigue-onset-τ {250, 300, 350} × `--cut-force-off-frac` {0.25, 0.30, 0.35},
+cap still fixed at 450ms (round 3's value, the one that actually escaped
+cap-domination — not re-testing the cap axis). Extends past round 3's τ=250
+ceiling while staying well below round 1-2's τ=400+ floor where cap-domination
+returned.
 
 **Required workflow from now on**: run `scripts/cpg_cutforce_diagnostics.py` on every
 sweep output before trusting any correlation number. `frac_at_cap` near 1.0 on either

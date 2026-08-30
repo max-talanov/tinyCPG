@@ -3,22 +3,24 @@
 What to upload to MN5, what to submit, and what to bring back for local plotting.
 Plotting is done **locally** (after `scp`-ing results back), not on MN5.
 
-> **NOTE — force-triggered CUT sweep round 3 (post 2026-08-27), EXPLORATORY not
+> **NOTE — force-triggered CUT sweep round 4 (post 2026-08-30), EXPLORATORY not
 > confirmatory.** `--cut-trigger force` (closed-loop stance detection: CUT fires
 > off each leg's own extensor `force_e` crossing an adaptive threshold, instead of
 > the paced-gait clock) is validated at debug scale only. Rounds 1
 > (`run_cutforce_sweep.sh`) and 2 (`run_cutforce_sweep2.sh`), both superseded,
-> swept fatigue-onset-τ against the failsafe cap and came back **100%
-> failsafe-cap-dominated on every tested config, on both legs, with exact
-> ground-truth `cut_on` logging** — not genuine force-threshold crossings. A
-> fatigue/force overlay explains why: fatigue never builds up enough within any
-> tested cap duration to bring force down to the OFF-crossing target. Round 3
-> (`run_cutforce_sweep3.sh`) instead pairs much faster fatigue-onset-τ with a
-> loosened `--cut-force-off-frac`, cap held fixed. **Always run
-> `scripts/cpg_cutforce_diagnostics.py` on the outputs before trusting any
-> correlation number** — `frac_at_cap` near 1.0 on either leg means the result is
-> a disguised clock. See `CLAUDE.md` "Force-triggered CUT" for the full
-> diagnosis. Not a final result to plot into the paper yet.
+> came back 100% failsafe-cap-dominated on every tested config. **Round 3**
+> (`run_cutforce_sweep3.sh`) paired much faster fatigue-onset-τ with a loosened
+> `--cut-force-off-frac` and **finally escaped cap-domination on all 9 configs**
+> (`frac_at_cap` ~0, exact ground truth) — but quality varied sharply: τ=100-150ms
+> gave weak, short bouts and legs synchronising in 5/6 configs (a known failure
+> mode); τ=250ms (the round's ceiling) gave the best result, corr(Force-E,Force-F)
+> ≈ −0.61(L)/−0.66(R), still short of the −0.7/−0.8 target and still improving
+> when the grid ran out. Round 4 (`run_cutforce_sweep4.sh`) narrows around that
+> working region (τ {250,300,350} × off-frac {0.25,0.30,0.35}, cap still fixed).
+> **Always run `scripts/cpg_cutforce_diagnostics.py` on the outputs before
+> trusting any correlation number**, and check corr(Force-E_L,Force-E_R) for the
+> leg-synchronisation failure mode. See `CLAUDE.md` "Force-triggered CUT" for the
+> full diagnosis. Not a final result to plot into the paper yet.
 
 > **NOTE — 5×5 matrix + logistic gate (post 2026-07-07).** Two changes require a
 > re-run of the sensory arms: (i) the activation gate is now a smooth logistic
@@ -165,12 +167,12 @@ python3 scripts/cpg_epidural_contrast.py --stim-dir $INDIR --natural-dir $INDIR 
 python3 scripts/cpg_plot_from_hdf5.py --in $INDIR/cpg_sensory_stdp_13_5cms_lam1em3_*.h5 --save-prefix sensory_med
 ```
 
-## 5. Force-triggered CUT sweep round 3 (exploratory — run separately from §1-4)
+## 5. Force-triggered CUT sweep round 4 (exploratory — run separately from §1-4)
 
-Rounds 1 and 2 (`run_cutforce_sweep.sh`, `run_cutforce_sweep2.sh`) are
-superseded — both came back 100% failsafe-cap-dominated on every tested config
-(see the NOTE above and `CLAUDE.md` "Force-triggered CUT"). Use
-`run_cutforce_sweep3.sh` going forward. Only two files needed; the model is
+Rounds 1 and 2 are superseded (100% cap-dominated). Round 3
+(`run_cutforce_sweep3.sh`) escaped cap-domination but didn't reach the quality
+target — see the NOTE above and `CLAUDE.md` "Force-triggered CUT". Use
+`run_cutforce_sweep4.sh` going forward. Only two files needed; the model is
 standalone.
 
 **Option A — git (cleanest, if MN5 has a clone):**
@@ -184,7 +186,7 @@ git pull origin main
 # from this repo root, on your laptop
 rsync -av \
   cpg_2legs_fast.py \
-  run_cutforce_sweep3.sh \
+  run_cutforce_sweep4.sh \
   scripts/cpg_cutforce_diagnostics.py \
   <user>@mn5:/path/to/tinyCPG/
 ```
@@ -192,12 +194,12 @@ rsync -av \
 **Submit:**
 ```bash
 # on MN5
-chmod +x run_cutforce_sweep3.sh   # already +x in git; harmless if already set
-sbatch run_cutforce_sweep3.sh     # 9-task array, 60s/task, 64 cpus/task, partition acc
+chmod +x run_cutforce_sweep4.sh   # already +x in git; harmless if already set
+sbatch run_cutforce_sweep4.sh     # 9-task array, 60s/task, 64 cpus/task, partition acc
 squeue -u <user>                  # check progress
 ```
-Logs: `Nest_cutforce3_<jobid>_<task>.slurmout/.slurmerr`. Output:
-`results/cpg_cutforce3_fat<ONSET>_off<OFFFRAC>_idx00_*.h5` (9 files, one per
+Logs: `Nest_cutforce4_<jobid>_<task>.slurmout/.slurmerr`. Output:
+`results/cpg_cutforce4_fat<ONSET>_off<OFFFRAC>_idx00_*.h5` (9 files, one per
 fatigue-onset-τ × `--cut-force-off-frac` combination, cap fixed at 450ms — see
 the script header for the grid).
 
@@ -205,12 +207,12 @@ the script header for the grid).
 ```bash
 # from your laptop
 mkdir -p results/$(date +%F)
-rsync -av '<user>@mn5:/path/to/tinyCPG/results/cpg_cutforce3_*.h5' results/$(date +%F)/
+rsync -av '<user>@mn5:/path/to/tinyCPG/results/cpg_cutforce4_*.h5' results/$(date +%F)/
 ```
 
 **Evaluate — run the diagnostic script first, before looking at correlation:**
 ```bash
-python3 scripts/cpg_cutforce_diagnostics.py results/$(date +%F)/cpg_cutforce3_*.h5
+python3 scripts/cpg_cutforce_diagnostics.py results/$(date +%F)/cpg_cutforce4_*.h5
 ```
 This reports corr(Force-E,Force-F) per leg, corr(Force-E_L,Force-E_R), and —
 the number that actually matters — `frac_at_cap` per leg, computed from the
@@ -220,7 +222,7 @@ candidate if `frac_at_cap` is low (genuine force-threshold crossings) on
 corr(Force-E,Force-F) is **−0.7 to −0.8** (recalibrated from the timer-based
 −0.85+ debug bar — see `CLAUDE.md`), and corr(Force-E_L,Force-E_R) should be
 strongly negative (near zero or positive means desynchronised/synchronised
-legs — a local 4s smoke-test at fat150/off040 already showed +0.88, legs
-synchronising, so watch for this specifically). Pick the best combination,
-then re-run just that config at 120s to confirm before treating it as a
-result.
+legs — round 3 showed legs synchronising at τ=100-150ms in 5/6 configs, so
+watch for this specifically, especially at this round's lower τ end). Pick the
+best combination, then re-run just that config at 120s to confirm before
+treating it as a result.
