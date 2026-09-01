@@ -3,24 +3,26 @@
 What to upload to MN5, what to submit, and what to bring back for local plotting.
 Plotting is done **locally** (after `scp`-ing results back), not on MN5.
 
-> **NOTE — force-triggered CUT sweep round 4 (post 2026-08-30), EXPLORATORY not
-> confirmatory.** `--cut-trigger force` (closed-loop stance detection: CUT fires
-> off each leg's own extensor `force_e` crossing an adaptive threshold, instead of
-> the paced-gait clock) is validated at debug scale only. Rounds 1
-> (`run_cutforce_sweep.sh`) and 2 (`run_cutforce_sweep2.sh`), both superseded,
-> came back 100% failsafe-cap-dominated on every tested config. **Round 3**
-> (`run_cutforce_sweep3.sh`) paired much faster fatigue-onset-τ with a loosened
-> `--cut-force-off-frac` and **finally escaped cap-domination on all 9 configs**
-> (`frac_at_cap` ~0, exact ground truth) — but quality varied sharply: τ=100-150ms
-> gave weak, short bouts and legs synchronising in 5/6 configs (a known failure
-> mode); τ=250ms (the round's ceiling) gave the best result, corr(Force-E,Force-F)
-> ≈ −0.61(L)/−0.66(R), still short of the −0.7/−0.8 target and still improving
-> when the grid ran out. Round 4 (`run_cutforce_sweep4.sh`) narrows around that
-> working region (τ {250,300,350} × off-frac {0.25,0.30,0.35}, cap still fixed).
-> **Always run `scripts/cpg_cutforce_diagnostics.py` on the outputs before
-> trusting any correlation number**, and check corr(Force-E_L,Force-E_R) for the
-> leg-synchronisation failure mode. See `CLAUDE.md` "Force-triggered CUT" for the
-> full diagnosis. Not a final result to plot into the paper yet.
+> **NOTE — force-triggered CUT sweep round 5 (post 2026-08-31), CONFIRMATION
+> REFINEMENT not a new exploration.** `--cut-trigger force` (closed-loop stance
+> detection: CUT fires off each leg's own extensor `force_e` crossing an adaptive
+> threshold, instead of the paced-gait clock) is validated at debug scale only.
+> Rounds 1-2 came back 100% failsafe-cap-dominated on every config. Round 3 escaped
+> cap-domination but didn't reach the quality target. **Round 4** (τ {250,300,350} ×
+> off-frac {0.25,0.30,0.35}) found the mechanism is brittle — 6/9 configs
+> **reverted** to cap-domination, including the numerically best-looking
+> correlation in the whole grid (τ=350/off=0.35, 97-100% cap-dominated — a
+> disguised clock, the same trap round 1 fell into). Off-frac must loosen
+> *together* with τ. **Best genuine result so far: τ=250/off=0.35** —
+> corr(Force-E,Force-F) −0.59(L)/−0.65(R), corr(Force-E_L,Force-E_R) **−0.72**
+> (inside the −0.7/−0.8 target), `frac_at_cap`=0.00 both legs. Round 5
+> (`run_cutforce_sweep5.sh`) tightly brackets that point (τ {240,250,260} ×
+> off-frac {0.35,0.375,0.40}) to confirm it isn't a lucky single grid cell before
+> moving to Phase 3 (seed/init robustness). **Always run
+> `scripts/cpg_cutforce_diagnostics.py` on the outputs before trusting any
+> correlation number**, and check corr(Force-E_L,Force-E_R) for leg
+> synchronisation. See `CLAUDE.md` "Force-triggered CUT" for the full diagnosis.
+> Not a final result to plot into the paper yet.
 
 > **NOTE — 5×5 matrix + logistic gate (post 2026-07-07).** Two changes require a
 > re-run of the sensory arms: (i) the activation gate is now a smooth logistic
@@ -167,13 +169,14 @@ python3 scripts/cpg_epidural_contrast.py --stim-dir $INDIR --natural-dir $INDIR 
 python3 scripts/cpg_plot_from_hdf5.py --in $INDIR/cpg_sensory_stdp_13_5cms_lam1em3_*.h5 --save-prefix sensory_med
 ```
 
-## 5. Force-triggered CUT sweep round 4 (exploratory — run separately from §1-4)
+## 5. Force-triggered CUT sweep round 5 (confirmation refinement — run separately from §1-4)
 
-Rounds 1 and 2 are superseded (100% cap-dominated). Round 3
-(`run_cutforce_sweep3.sh`) escaped cap-domination but didn't reach the quality
-target — see the NOTE above and `CLAUDE.md` "Force-triggered CUT". Use
-`run_cutforce_sweep4.sh` going forward. Only two files needed; the model is
-standalone.
+Rounds 1-2 superseded (100% cap-dominated). Round 3 escaped cap-domination but
+missed the quality target. Round 4 found the mechanism brittle — most configs
+reverted to cap-domination, including the best-looking correlation in the grid
+(a disguised clock) — with one genuine standout, τ=250/off=0.35. See the NOTE
+above and `CLAUDE.md` "Force-triggered CUT". Use `run_cutforce_sweep5.sh` going
+forward. Only two files needed; the model is standalone.
 
 **Option A — git (cleanest, if MN5 has a clone):**
 ```bash
@@ -186,7 +189,7 @@ git pull origin main
 # from this repo root, on your laptop
 rsync -av \
   cpg_2legs_fast.py \
-  run_cutforce_sweep4.sh \
+  run_cutforce_sweep5.sh \
   scripts/cpg_cutforce_diagnostics.py \
   <user>@mn5:/path/to/tinyCPG/
 ```
@@ -194,12 +197,12 @@ rsync -av \
 **Submit:**
 ```bash
 # on MN5
-chmod +x run_cutforce_sweep4.sh   # already +x in git; harmless if already set
-sbatch run_cutforce_sweep4.sh     # 9-task array, 60s/task, 64 cpus/task, partition acc
+chmod +x run_cutforce_sweep5.sh   # already +x in git; harmless if already set
+sbatch run_cutforce_sweep5.sh     # 9-task array, 60s/task, 64 cpus/task, partition acc
 squeue -u <user>                  # check progress
 ```
-Logs: `Nest_cutforce4_<jobid>_<task>.slurmout/.slurmerr`. Output:
-`results/cpg_cutforce4_fat<ONSET>_off<OFFFRAC>_idx00_*.h5` (9 files, one per
+Logs: `Nest_cutforce5_<jobid>_<task>.slurmout/.slurmerr`. Output:
+`results/cpg_cutforce5_fat<ONSET>_off<OFFFRAC>_idx00_*.h5` (9 files, one per
 fatigue-onset-τ × `--cut-force-off-frac` combination, cap fixed at 450ms — see
 the script header for the grid).
 
@@ -207,22 +210,23 @@ the script header for the grid).
 ```bash
 # from your laptop
 mkdir -p results/$(date +%F)
-rsync -av '<user>@mn5:/path/to/tinyCPG/results/cpg_cutforce4_*.h5' results/$(date +%F)/
+rsync -av '<user>@mn5:/path/to/tinyCPG/results/cpg_cutforce5_*.h5' results/$(date +%F)/
 ```
 
 **Evaluate — run the diagnostic script first, before looking at correlation:**
 ```bash
-python3 scripts/cpg_cutforce_diagnostics.py results/$(date +%F)/cpg_cutforce4_*.h5
+python3 scripts/cpg_cutforce_diagnostics.py results/$(date +%F)/cpg_cutforce5_*.h5
 ```
 This reports corr(Force-E,Force-F) per leg, corr(Force-E_L,Force-E_R), and —
 the number that actually matters — `frac_at_cap` per leg, computed from the
 exact ground-truth `cut_on` array. A configuration only counts as a real
 candidate if `frac_at_cap` is low (genuine force-threshold crossings) on
 **both** legs; only then does the correlation number mean anything. Target
-corr(Force-E,Force-F) is **−0.7 to −0.8** (recalibrated from the timer-based
-−0.85+ debug bar — see `CLAUDE.md`), and corr(Force-E_L,Force-E_R) should be
-strongly negative (near zero or positive means desynchronised/synchronised
-legs — round 3 showed legs synchronising at τ=100-150ms in 5/6 configs, so
-watch for this specifically, especially at this round's lower τ end). Pick the
-best combination, then re-run just that config at 120s to confirm before
-treating it as a result.
+corr(Force-E,Force-F) is **−0.7 to −0.8**, and corr(Force-E_L,Force-E_R) should
+be strongly negative. Unlike rounds 1-4, this grid is small and centered on a
+known-good point, so the bar is different: look for **most or all 9 configs**
+staying genuine (not just the center), which would confirm τ=250/off=0.35 is a
+robust operating point rather than a lucky cell — round 4 showed quality can
+flip to cap-dominated with a change as small as 0.05-0.10 on off-frac, so don't
+assume the center holds without checking its neighbors. If it holds up, this
+config is what carries into Phase 3 (seed/init robustness sweep).

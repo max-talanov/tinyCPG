@@ -51,7 +51,8 @@ sbatch run.sh
 | `run_cutforce_sweep.sh` | EXPLORATORY MN5 sweep round 1 (9 tasks): fatigue-onset-τ {200,400,600} × cap {500,800,1100}. Superseded by round 2 — its apparent "best" result turned out 100% cap-dominated on re-diagnosis, see "Force-triggered CUT" below. |
 | `run_cutforce_sweep2.sh` | EXPLORATORY MN5 sweep round 2 (9 tasks): fatigue-onset-τ {400,600,800} × tighter, bio-plausible cap {300,450,600}. Superseded — 100% cap-dominated on all 9 configs, see "Force-triggered CUT" below. |
 | `run_cutforce_sweep3.sh` | EXPLORATORY MN5 sweep round 3 (9 tasks): fast fatigue-onset-τ {100,150,250} × looser `--cut-force-off-frac` {0.30,0.40,0.50}, cap fixed at 450ms. First round to escape cap-domination (frac_at_cap ~0 across the whole grid) — see "Force-triggered CUT" below. |
-| `run_cutforce_sweep4.sh` | EXPLORATORY MN5 sweep round 4 (9 tasks): narrows around round 3's working region — fatigue-onset-τ {250,300,350} × `--cut-force-off-frac` {0.25,0.30,0.35}, cap still fixed at 450ms. Run `scripts/cpg_cutforce_diagnostics.py` on the outputs before trusting any correlation number. |
+| `run_cutforce_sweep4.sh` | EXPLORATORY MN5 sweep round 4 (9 tasks): narrows around round 3's working region — fatigue-onset-τ {250,300,350} × `--cut-force-off-frac` {0.25,0.30,0.35}, cap still fixed at 450ms. 6/9 configs reverted to cap-domination (incl. the numerically best-looking correlation); best genuine result τ=250/off=0.35 — see "Force-triggered CUT" below. |
+| `run_cutforce_sweep5.sh` | CONFIRMATION refinement (9 tasks, not a new exploration): brackets round 4's τ=250/off=0.35 optimum — fatigue-onset-τ {240,250,260} × `--cut-force-off-frac` {0.35,0.375,0.40}, cap still fixed at 450ms. Checks the winning point isn't a lucky single grid cell. |
 | `CLAUDE.md` | This file. |
 
 ## Frozen-weight control (`run_frozen.sh`)
@@ -198,6 +199,30 @@ cap still fixed at 450ms (round 3's value, the one that actually escaped
 cap-domination — not re-testing the cap axis). Extends past round 3's τ=250
 ceiling while staying well below round 1-2's τ=400+ floor where cap-domination
 returned.
+
+**Round 4 result (results/2026-08-31): the mechanism is more brittle than round 3's
+trend implied.** 6 of the 9 configs **reverted to cap-domination** (frac_at_cap
+0.97-1.00), including the numerically best-looking correlation in the whole grid
+(τ=350/off=0.35: corr(Force-E,Force-F) −0.70(L)/−0.78(R) — but 97-100% cap-dominated,
+a disguised clock exactly like round 1's trap, visibly confirmed by a perfectly
+regular force waveform). Round 3's "higher τ → better" trend does **not** simply
+continue — off-frac has to loosen *together* with τ, not independently: at τ=250,
+off=0.30 and off=0.35 both stay genuine (frac_at_cap=0.00 both legs); at τ=300, only
+off=0.35 is even mostly genuine (0.26/0.17, not clean); at τ=350, nothing in this
+grid escapes the cap. **Best genuine result across all four rounds: τ=250/off=0.35**
+— corr(Force-E,Force-F) −0.59(L)/−0.65(R), corr(Force-E_L,Force-E_R) **−0.72** (inside
+the −0.7/−0.8 target), frac_at_cap=0.00 both legs, bout duration 292±45/292±56ms
+(genuine ~16-19% cycle-to-cycle variability, visibly irregular waveform unlike the
+τ=350 trap). τ=250/off=0.30 is the second genuine candidate, slightly weaker
+(corr(Force-E_L,Force-E_R) −0.69).
+
+**Round 5** (`run_cutforce_sweep5.sh`) is a small confirmation refinement, not a new
+exploration: brackets the τ=250/off=0.35 optimum tightly — fatigue-onset-τ
+{240, 250, 260} × `--cut-force-off-frac` {0.35, 0.375, 0.40} — to check the winning
+point isn't a lucky single grid cell (i.e. small perturbations either side stay
+genuine and don't collapse back into cap-domination the way τ=300/350 did just
+0.05-0.10 higher on off-frac). Same cap=450ms, same operating point, same 60s length
+as rounds 1-4.
 
 **Required workflow from now on**: run `scripts/cpg_cutforce_diagnostics.py` on every
 sweep output before trusting any correlation number. `frac_at_cap` near 1.0 on either
