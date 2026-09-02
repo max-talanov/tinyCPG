@@ -52,7 +52,7 @@ sbatch run.sh
 | `run_cutforce_sweep2.sh` | EXPLORATORY MN5 sweep round 2 (9 tasks): fatigue-onset-τ {400,600,800} × tighter, bio-plausible cap {300,450,600}. Superseded — 100% cap-dominated on all 9 configs, see "Force-triggered CUT" below. |
 | `run_cutforce_sweep3.sh` | EXPLORATORY MN5 sweep round 3 (9 tasks): fast fatigue-onset-τ {100,150,250} × looser `--cut-force-off-frac` {0.30,0.40,0.50}, cap fixed at 450ms. First round to escape cap-domination (frac_at_cap ~0 across the whole grid) — see "Force-triggered CUT" below. |
 | `run_cutforce_sweep4.sh` | EXPLORATORY MN5 sweep round 4 (9 tasks): narrows around round 3's working region — fatigue-onset-τ {250,300,350} × `--cut-force-off-frac` {0.25,0.30,0.35}, cap still fixed at 450ms. 6/9 configs reverted to cap-domination (incl. the numerically best-looking correlation); best genuine result τ=250/off=0.35 — see "Force-triggered CUT" below. |
-| `run_cutforce_sweep5.sh` | CONFIRMATION refinement (9 tasks, not a new exploration): brackets round 4's τ=250/off=0.35 optimum — fatigue-onset-τ {240,250,260} × `--cut-force-off-frac` {0.35,0.375,0.40}, cap still fixed at 450ms. Checks the winning point isn't a lucky single grid cell. |
+| `run_cutforce_sweep5.sh` | CONFIRMATION refinement (9 tasks, not a new exploration): brackets round 4's τ=250/off=0.35 optimum — fatigue-onset-τ {240,250,260} × `--cut-force-off-frac` {0.35,0.375,0.40}, cap still fixed at 450ms. **Confirmed: frac_at_cap=0.00 on all 9 configs** — best point τ=260/off=0.35, see "Force-triggered CUT" below. |
 | `CLAUDE.md` | This file. |
 
 ## Frozen-weight control (`run_frozen.sh`)
@@ -224,11 +224,23 @@ genuine and don't collapse back into cap-domination the way τ=300/350 did just
 0.05-0.10 higher on off-frac). Same cap=450ms, same operating point, same 60s length
 as rounds 1-4.
 
+**Round 5 result (results/2026-09-01): confirmed — the whole neighborhood is
+genuine, not just one lucky cell.** `frac_at_cap` = **0.00 on both legs, all 9
+configs**, exact ground truth. Correlation is stable and good across the whole
+grid: corr(Force-E,Force-F) −0.52 to −0.63 (L) / −0.60 to −0.67 (R), corr(Force-E_L,
+Force-E_R) **−0.65 to −0.73** (every config strongly anti-phase, no synchronisation
+anywhere in this grid). **Best point: τ=260/off=0.35** — corr(Force-E,Force-F)
+−0.63(L)/−0.67(R), corr(Force-E_L,Force-E_R) −0.71, bout duration 308±27/310±29ms
+(tightest, most consistent spread of any genuine result so far, ~9% relative
+variability). This closes out the "fix cap-dominance" step of the maturation plan:
+`--cut-trigger force --muscle-fatigue` with τ≈240-260ms, off-frac≈0.35-0.40, cap=450ms
+is a demonstrated, robust, genuinely closed-loop operating point — not confirmed
+across other STDP init points yet (Phase 3, next).
+
 **Required workflow from now on**: run `scripts/cpg_cutforce_diagnostics.py` on every
 sweep output before trusting any correlation number. `frac_at_cap` near 1.0 on either
 leg means the result is a disguised clock, regardless of how clean the correlation
-looks. **Do not submit a long/full production campaign with this mode until a
-configuration is found where frac_at_cap is low on both legs.**
+looks.
 
 ### Muscle fatigue (`--muscle-fatigue`)
 
