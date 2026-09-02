@@ -53,6 +53,7 @@ sbatch run.sh
 | `run_cutforce_sweep3.sh` | EXPLORATORY MN5 sweep round 3 (9 tasks): fast fatigue-onset-τ {100,150,250} × looser `--cut-force-off-frac` {0.30,0.40,0.50}, cap fixed at 450ms. First round to escape cap-domination (frac_at_cap ~0 across the whole grid) — see "Force-triggered CUT" below. |
 | `run_cutforce_sweep4.sh` | EXPLORATORY MN5 sweep round 4 (9 tasks): narrows around round 3's working region — fatigue-onset-τ {250,300,350} × `--cut-force-off-frac` {0.25,0.30,0.35}, cap still fixed at 450ms. 6/9 configs reverted to cap-domination (incl. the numerically best-looking correlation); best genuine result τ=250/off=0.35 — see "Force-triggered CUT" below. |
 | `run_cutforce_sweep5.sh` | CONFIRMATION refinement (9 tasks, not a new exploration): brackets round 4's τ=250/off=0.35 optimum — fatigue-onset-τ {240,250,260} × `--cut-force-off-frac` {0.35,0.375,0.40}, cap still fixed at 450ms. **Confirmed: frac_at_cap=0.00 on all 9 configs** — best point τ=260/off=0.35, see "Force-triggered CUT" below. |
+| `run_cutforce_sweep6.sh` | PHASE 3 — seed/init robustness (10 tasks, 120s each): holds round 5's winning config fixed (τ=260, off=0.35, cap=450ms), sweeps the same 10-point (μ,CV) STDP-init grid as `run.sh`/paper Algorithm 1. Tests whether the operating point found in rounds 1-5 holds away from μ=3.5. |
 | `CLAUDE.md` | This file. |
 
 ## Frozen-weight control (`run_frozen.sh`)
@@ -236,6 +237,16 @@ variability). This closes out the "fix cap-dominance" step of the maturation pla
 `--cut-trigger force --muscle-fatigue` with τ≈240-260ms, off-frac≈0.35-0.40, cap=450ms
 is a demonstrated, robust, genuinely closed-loop operating point — not confirmed
 across other STDP init points yet (Phase 3, next).
+
+**Phase 3 — seed/init robustness** (`run_cutforce_sweep6.sh`) holds the round-5
+winning config fixed (τ=260, off-frac=0.35, cap=450ms) and instead varies the STDP
+initial-weight distribution across the same 10-point (μ,CV) diagnostic grid the
+base timer-based model already uses for its own robustness claim (paper Algorithm 1
+/ `run.sh`) — reusing the project's established methodology rather than inventing a
+new one, so the two are directly comparable. Every round so far (1-5) tested only
+μ=3.5,CV=0.30; this asks whether the mechanism holds at μ=0 and μ=16 too, the real
+stress tests. 120s sim (matching Algorithm 1's own duration, not the 60s first-pass
+length used in rounds 1-5) since this is confirmatory, not exploratory.
 
 **Required workflow from now on**: run `scripts/cpg_cutforce_diagnostics.py` on every
 sweep output before trusting any correlation number. `frac_at_cap` near 1.0 on either
