@@ -212,7 +212,12 @@ submission used `--time=03:00:00` and every one of the 10 tasks was
 **cancelled by SLURM at the exact same point** (chunk 800/1200, 80s of the
 120s sim, 66.7%) — zero `.h5` files were ever produced (the script only
 writes the HDF5 at the very end). 180min for 66.7% extrapolates to ~270min
-(4.5h) for the full run. `--time` is now `06:00:00` (~33% margin). If you see
+(4.5h) for the full run *at that load level* — but MN5 load varies run to
+run, so a flat 33%-margin budget (06:00:00) is still only sized for the one
+load level actually observed. `--time` is now `12:00:00`, matching `run.sh`'s
+own precedent for its 120s/10-task runs on the same partition (which budgets
+12h despite reportedly finishing in ~2h — see paper Sec 3.9), a margin that's
+already proven itself against MN5's load variance in practice. If you see
 `results/<dated>/` fill up with `.slurmout`/`.slurmerr` pairs but no `.h5`
 files, check the `.slurmerr` for `CANCELLED ... DUE TO TIME LIMIT` before
 assuming something else broke.
