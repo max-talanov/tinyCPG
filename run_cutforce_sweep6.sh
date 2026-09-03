@@ -6,8 +6,20 @@
 #SBATCH --ntasks=1
 #SBATCH --array=0-9
 #SBATCH --cpus-per-task=64
-#SBATCH --time=03:00:00
+#SBATCH --time=06:00:00
 #SBATCH --partition=acc
+#
+# TIME BUDGET (calibrated from a real timeout, not guessed): the first
+# submission of this script used --time=03:00:00 and every one of the 10
+# tasks was CANCELLED DUE TO TIME LIMIT at the exact same point -- chunk
+# 800/1200, i.e. 80s of the 120s sim (66.7%), never reaching the final HDF5
+# write (results/2026-09-03: 10 slurmout/slurmerr pairs, zero .h5 files).
+# 180min for 66.7% of the run extrapolates linearly to ~270min (4.5h) for the
+# full 120s -- this mode's per-chunk bookkeeping (force-threshold gate +
+# muscle-fatigue update every rate-update tick) makes it measurably slower
+# per simulated second than the timer-based paced-gait path run.sh uses for
+# its own 120s/12h-budget runs. --time=06:00:00 gives ~33% margin over that
+# 4.5h estimate. Do not drop this back to 03:00:00.
 #
 # PHASE 3 -- seed/initial-weight ROBUSTNESS check for MOD_CUT_FORCE_TRIGGER.
 # Not a parameter search (that's done -- see rounds 1-5 below); this holds the

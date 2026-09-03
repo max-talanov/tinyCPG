@@ -206,9 +206,16 @@ squeue -u <user>                  # check progress
 Logs: `Nest_cutforce6_<jobid>_<task>.slurmout/.slurmerr`. Output:
 `results/cpg_cutforce6_robustness_idx0<N>_mu<MU>_cv<CV>_*.h5` (10 files, one per
 (μ,CV) point in the same grid `run.sh`/Algorithm 1 uses — see the script header).
-Runtime note: 120s at this mode's overhead ran ~72min for 60s in earlier rounds,
-so expect roughly double that per task — well within the 3h budget, but slower
-than the base timer-based model's own ~2h/120s.
+
+**Runtime — calibrated from a real timeout, not an estimate.** The first
+submission used `--time=03:00:00` and every one of the 10 tasks was
+**cancelled by SLURM at the exact same point** (chunk 800/1200, 80s of the
+120s sim, 66.7%) — zero `.h5` files were ever produced (the script only
+writes the HDF5 at the very end). 180min for 66.7% extrapolates to ~270min
+(4.5h) for the full run. `--time` is now `06:00:00` (~33% margin). If you see
+`results/<dated>/` fill up with `.slurmout`/`.slurmerr` pairs but no `.h5`
+files, check the `.slurmerr` for `CANCELLED ... DUE TO TIME LIMIT` before
+assuming something else broke.
 
 **Bring back:**
 ```bash
