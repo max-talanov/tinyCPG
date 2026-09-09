@@ -248,6 +248,18 @@ new one, so the two are directly comparable. Every round so far (1-5) tested onl
 stress tests. 120s sim (matching Algorithm 1's own duration, not the 60s first-pass
 length used in rounds 1-5) since this is confirmatory, not exploratory.
 
+**Round 6 — partial result, 8/10 in (results/2026-09-07), very good so far.**
+μ=0 through μ=9 (idx00-07) all confirmed genuine: `frac_at_cap` ≈ 0.00-0.01 on both
+legs at every point, corr(Force-E,Force-F) tightly clustered −0.63 to −0.69 regardless
+of initial weight, corr(Force-E_L,Force-E_R) −0.68 to −0.76 (tighter than round 5).
+Bout-duration variability *shrinks* as μ increases (±39-46ms at μ=0-1 down to
+±20-27ms at μ=5-9) — more initial synaptic drive needs less from the stochastic
+bootstrap. STDP weight trends confirm the same initialization-independence the base
+timer-based model already shows (paper §4.1): μ=0 (CUT→RG-E starts at 0 pA) and μ=9
+(starts ~10-11 pA) converge to the identical ~62 pA plateau. **μ=12 (idx08) and μ=16
+(idx09) — the two highest-weight stress tests — are still pending on MN5; do not
+treat Phase 3 as closed until those land.**
+
 **Required workflow from now on**: run `scripts/cpg_cutforce_diagnostics.py` on every
 sweep output before trusting any correlation number. `frac_at_cap` near 1.0 on either
 leg means the result is a disguised clock, regardless of how clean the correlation
