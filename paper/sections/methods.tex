@@ -305,6 +305,72 @@ mirror schedule (trot pattern). Reciprocal inhibition and the RGF
 intrinsic-bursting dynamics maintain the swing-leg flexor burst without
 external pacing.
 
+\subsection{Closed-loop, force-triggered stance detection}\label{sec:methods:forcetrigger}
+As an alternative to the externally clocked paced-gait protocol above, we
+implemented a closed-loop stance detector in which cutaneous drive is
+triggered by the model's own extensor force output rather than by a fixed
+timer. CUT fires when $F_E$ rises through a fraction $\theta_{\text{on}}$
+(default $0.80$) of that leg's running peak within the current bout (``foot
+touches down''), and stops when $F_E$ falls back through a lower fraction
+$\theta_{\text{off}}$ (``foot lifts off''). The running peak is not
+time-decayed: it resets to a seed value at each new stance onset and then
+holds monotonically through the following swing, since a decaying peak
+otherwise converges with a slowly-fatiguing force (below) and the relative
+threshold is never actually crossed. One leg (\texttt{--leading-leg}, default
+R) is seeded into stance at $t=0$ to break the otherwise-identical
+left/right initial conditions; for a short priming window (default
+$150$\,ms) both legs' CUT is held on together so that both sides' plastic
+CUT$\to$RG-E synapse receives its first co-activation credit before the
+split --- at low initial STDP weight the lagging leg's synapse otherwise
+never potentiates and that leg fails to mount a stance.
+
+\paragraph{Failsafe timeout and muscle fatigue.}
+RG-E has no self-terminating burst mechanism analogous to RG-F's intrinsic
+bursting (\autoref{sec:methods:neuron}), so
+CUT$\to$RG-E$\to F_E\to$CUT is a pure positive-feedback loop: without an
+additional mechanism, $F_E$ saturates near its ceiling and never crosses back
+through $\theta_{\text{off}}$, locking the leg in stance indefinitely
+(confirmed by direct simulation: force flat at ceiling for $>4$\,s of
+continuous stance with the timeout disabled). We add two complementary
+mechanisms. First, a failsafe timeout (\texttt{--cut-max-stance-ms} /
+\texttt{--cut-max-swing-ms}) forces the transition after a bounded duration
+regardless of force --- the endogenous-timer backstop of the two-level,
+sensory-gated-plus-endogenous-timer phase-transition picture of unit burst
+generation~\cite{mccreaRybak2008}, and the biological analogue of the
+hip-extension / limb-position limit that triggers swing even under continued
+loading~\cite{grillnerRossignol1978}. Second, an opt-in muscle-fatigue term
+lets $F_E$ (and, symmetrically, $F_F$) decay on its own during a sustained
+bout, the closest available analogue to the $I_{\text{NaP}}$-mediated burst
+termination the Izhikevich units do not have:
+\begin{equation}
+  \frac{d\phi}{dt} = \frac{a}{a_{\max}}\cdot\frac{\phi_{\max}-\phi}{\tau_{\text{on}}}
+  \;-\; \Bigl(1-\frac{a}{a_{\max}}\Bigr)\frac{\phi}{\tau_{\text{rec}}},
+  \qquad F_{\text{tgt}} \leftarrow (1-\phi)\,F_{\text{tgt}},
+  \label{eq:fatigue}
+\end{equation}
+with fatigue fraction $\phi\in[0,\phi_{\max}]$ applied multiplicatively to
+the force target of Eq.~(9), onset time constant $\tau_{\text{on}}$, recovery
+time constant $\tau_{\text{rec}}=600$\,ms, and ceiling $\phi_{\max}=0.95$.
+$\phi_{\max}$ must leave the fatigued force floor comfortably below the
+$\theta_{\text{off}}$ crossing target, or the leg locks at a
+reduced-but-still-``on'' plateau instead of releasing (confirmed at
+$\phi_{\max}=0.85$: force settled at a stable floor against an off-threshold
+it never crossed).
+
+\paragraph{Parameter search.}
+We explored $(\tau_{\text{on}}, \theta_{\text{off}})$ (the failsafe cap and
+$\theta_{\text{on}}=0.80$ held fixed) across six rounds of $3\times3$ SLURM
+array sweeps at production scale ($N$, $BS=60$\,Hz, the medium-walk anchor),
+using the exact ground-truth CUT on/off state logged per leg to compute the
+fraction of stance-swing transitions landing at the failsafe cap
+(\emph{frac\_at\_cap}) --- the diagnostic that distinguishes a genuinely
+force-driven transition from the timeout doing the work despite a
+plausible-looking correlation (\autoref{sec:results:forcetrigger}). The
+confirmed operating point was then held fixed and re-tested across the same
+ten-point $(\mu,\mathrm{CV})$ STDP initial-weight grid used for the paced
+protocol (\autoref{sec:methods:stdp}) to check that it is not an artefact of
+one initial condition.
+
 \subsection{Simulation setup}\label{sec:methods:sim}
 All simulations were performed with NEST~3.9~\cite{nest2002} using a
 kernel resolution of 0.2\,ms, simulation chunks of 100\,ms, and 64

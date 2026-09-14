@@ -240,8 +240,12 @@ complexity of the spinal locomotor system, a level of abstraction was used
 in defining sensorimotor pathways, interneurons and motor outputs. The
 model does not include an adaptive supraspinal control mechanism (the
 brainstem drive is a tonic input), detailed muscle-tendon
-biomechanics beyond the saturating force/activation model used here,
-fatigue, or other aspects of longer-term structural plasticity.
+biomechanics beyond the saturating force/activation model used here, or
+other aspects of longer-term structural plasticity. An optional
+activity-dependent fatigue term is available and is used in the closed-loop
+force-triggered extension (\autoref{sec:methods:forcetrigger},
+\autoref{sec:results:forcetrigger}), but is off by default and not active in
+the externally clocked paced-gait results reported above.
 
 It also omits features of SCI such as chronic damage to the dorsal and
 ventral roots, glial scarring, or the diversity of human SCI.

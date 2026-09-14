@@ -332,3 +332,82 @@ stimulation~\cite{courtine2009,harkema2011}.
     natural arms.}
   \label{fig:epidural}
 \end{figure}
+
+% =============================================================
+\subsection{Toward a clock-free stance/swing trigger}\label{sec:results:forcetrigger}
+
+All results above use the externally clocked paced-gait protocol
+(\autoref{sec:methods:paced}), in which cutaneous drive is switched on and
+off by a fixed timer regardless of the network's own force output. We
+additionally tested the closed-loop alternative described in
+\autoref{sec:methods:forcetrigger}, in which the stance/swing boundary is
+instead detected from the leg's own extensor force.
+
+\paragraph{A clean correlation number is not sufficient evidence of a
+genuine closed loop.}
+Our first two parameter-search rounds each produced an apparently good
+result --- corr$(F_E,F_F)$ down to $-0.70$/$-0.78$ --- that turned out, once
+diagnosed against the exact ground-truth CUT state, to be $\geq97\%$
+cap-dominated: every stance-swing transition landed at exactly the failsafe
+timeout, with zero across-bout variance, indistinguishable in the underlying
+mechanism from the externally clocked protocol it was meant to replace. This
+is a cautionary finding for closed-loop CPG models generally: a plausible
+summary statistic does not by itself demonstrate that a sensory-triggered
+mechanism is doing the triggering, and we recommend that any claimed
+closed-loop stance detector be checked against an equivalent
+\emph{frac\_at\_cap}-style diagnostic before its correlation is reported.
+
+\paragraph{A confirmed, non-cap-dominated operating point.}
+Pairing a faster fatigue onset ($\tau_{\text{on}}=260$\,ms) with a looser
+off-threshold ($\theta_{\text{off}}=0.35$, versus $0.20$ in the first two
+rounds) escapes cap-domination: frac\_at\_cap $\approx0$ on both legs, with
+genuine, visibly irregular cycle-to-cycle force variability
+(Figure~\ref{fig:cutforce_example}) rather than the perfectly repeating
+waveform of a cap-dominated run. Counter-phase strength at this point ---
+corr$(F_E,F_F)\approx-0.6$ to $-0.7$ per leg, corr of the two legs' extensor
+force $\approx-0.7$ --- is weaker than the paced protocol's near$-1$
+(\autoref{sec:results:force}), which we read as expected rather than as a
+shortfall: the paced clock imposes a literal square wave, whereas a
+genuinely emergent, force-triggered gait should retain some cycle-to-cycle
+variability once learning has converged.
+
+\paragraph{Robust to initial synaptic weight.}
+Holding this operating point fixed and instead sweeping the ten-point
+$(\mu,\mathrm{CV})$ STDP initial-weight grid of \autoref{sec:methods:stdp}
+(eight of ten points completed at the time of writing; the remaining two
+were still queued on the shared cluster) leaves the mechanism genuinely
+closed-loop throughout: frac\_at\_cap stays at $0$--$0.01$ on both legs from
+$\mu=0$ (CUT$\to$RG-E starts at $0$\,pA) to $\mu=9$, corr$(F_E,F_F)$ stays
+within a narrow $-0.63$ to $-0.69$ band, and the converged CUT$\to$RG-E
+weight lands within a $2.4$\,pA range ($60$--$62.5$\,pA) regardless of where
+it started (Figure~\ref{fig:cutforce_robustness}) --- the same
+initialisation-independence already shown for the paced protocol
+(\autoref{sec:results:weights}), now demonstrated for the closed-loop
+trigger as well.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.85\textwidth]{fig_cutforce_example.png}
+  \caption{\textbf{Closed-loop, force-triggered stance detection produces a
+    genuinely emergent gait.} Extensor (blue) and flexor (orange) force for
+    both legs at the confirmed operating point ($\tau_{\text{on}}=260$\,ms,
+    $\theta_{\text{off}}=0.35$, cap$=450$\,ms). Unlike the externally clocked
+    protocol, cycle-to-cycle amplitude and duration vary visibly;
+    \emph{frac\_at\_cap}$=0$ confirms every transition is a genuine
+    force-threshold crossing, not the failsafe timeout.}
+  \label{fig:cutforce_example}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.9\textwidth]{fig_cutforce_robustness.png}
+  \caption{\textbf{The closed-loop trigger is robust to STDP initial
+    weight.} Four metrics at the confirmed operating point, plotted against
+    the STDP initial-weight mean $\mu$ (eight of the planned ten
+    $(\mu,\mathrm{CV})$ points from \autoref{sec:methods:stdp}, remaining two
+    pending at time of writing): counter-phase strength per leg, left/right
+    anti-phase, fraction of transitions at the failsafe cap, and the
+    converged CUT$\to$RG-E weight. All four are flat across an 18-fold range
+    of initial weight.}
+  \label{fig:cutforce_robustness}
+\end{figure}
