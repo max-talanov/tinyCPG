@@ -40,6 +40,7 @@ sbatch run.sh
 | `scripts/legacy/` | Superseded figure scripts, kept for reference only — not used by the current paper. |
 | `scripts/cpg_plot_from_hdf5.py` | Reads HDF5, makes per-leg PNGs. |
 | `scripts/cpg_cutforce_diagnostics.py` | Pass/fail check for `--cut-trigger force` sweep outputs: corr(Force-E,Force-F) plus `frac_at_cap` (is the failsafe timer doing the work, or genuine force-threshold crossings?). Run before trusting any correlation number from this mode. |
+| `scripts/cpg_cutforce_article_figure.py` | Publication-style figures for the force-triggered CUT extension: `fig_cutforce_example.png` (example force traces) + `fig_cutforce_robustness.png` (Phase 3 metrics vs. STDP init μ). Drafted for the article, not yet referenced from any `.tex` file. |
 | `run.sh` | MN5 SLURM array script (N=100, 10-point μ:CV sweep). |
 | `run_speed_stdp.sh` | Phase A: 3 speeds × 3 λ {1e-5,1e-4,1e-3}, 120 s. (descending/BS-plastic arm) |
 | `run_sensory_stdp.sh` | Sensory-learning arm: same 3×3 matrix but `--freeze-bs-rg --stdp-ia-rg --wmax-ia 10`. Pair with `run_speed_stdp.sh` for descending-vs-sensory contrast. Outputs `cpg_sensory_stdp_*`. |
@@ -53,7 +54,7 @@ sbatch run.sh
 | `run_cutforce_sweep3.sh` | EXPLORATORY MN5 sweep round 3 (9 tasks): fast fatigue-onset-τ {100,150,250} × looser `--cut-force-off-frac` {0.30,0.40,0.50}, cap fixed at 450ms. First round to escape cap-domination (frac_at_cap ~0 across the whole grid) — see "Force-triggered CUT" below. |
 | `run_cutforce_sweep4.sh` | EXPLORATORY MN5 sweep round 4 (9 tasks): narrows around round 3's working region — fatigue-onset-τ {250,300,350} × `--cut-force-off-frac` {0.25,0.30,0.35}, cap still fixed at 450ms. 6/9 configs reverted to cap-domination (incl. the numerically best-looking correlation); best genuine result τ=250/off=0.35 — see "Force-triggered CUT" below. |
 | `run_cutforce_sweep5.sh` | CONFIRMATION refinement (9 tasks, not a new exploration): brackets round 4's τ=250/off=0.35 optimum — fatigue-onset-τ {240,250,260} × `--cut-force-off-frac` {0.35,0.375,0.40}, cap still fixed at 450ms. **Confirmed: frac_at_cap=0.00 on all 9 configs** — best point τ=260/off=0.35, see "Force-triggered CUT" below. |
-| `run_cutforce_sweep6.sh` | PHASE 3 — seed/init robustness (10 tasks, 120s each): holds round 5's winning config fixed (τ=260, off=0.35, cap=450ms), sweeps the same 10-point (μ,CV) STDP-init grid as `run.sh`/paper Algorithm 1. Tests whether the operating point found in rounds 1-5 holds away from μ=3.5. |
+| `run_cutforce_sweep6.sh` | PHASE 3 — seed/init robustness (10 tasks, 120s each): holds round 5's winning config fixed (τ=260, off=0.35, cap=450ms), sweeps the same 10-point (μ,CV) STDP-init grid as `run.sh`/paper Algorithm 1. **Provisionally closed at 8/10** — genuine and robust across μ=0-9; μ=12/16 still queued on MN5 (5+ days, priority contention), see "Force-triggered CUT" below. |
 | `CLAUDE.md` | This file. |
 
 ## Frozen-weight control (`run_frozen.sh`)
@@ -248,7 +249,16 @@ new one, so the two are directly comparable. Every round so far (1-5) tested onl
 stress tests. 120s sim (matching Algorithm 1's own duration, not the 60s first-pass
 length used in rounds 1-5) since this is confirmatory, not exploratory.
 
-**Round 6 — partial result, 8/10 in (results/2026-09-07), very good so far.**
+**Round 6 result — PROVISIONALLY CLOSED on 8/10 (results/2026-09-07).** μ=12
+(idx08) and μ=16 (idx09) have been stuck `PENDING (Priority)` in the MN5 queue for
+5+ days as of 2026-09-14 — normal fair-share contention on a busy shared partition,
+not a bug in the submission (cancelling and resubmitting would very likely reset
+queue-age priority and make it worse, not better — left running, not resubmitted).
+Given the flat, well-behaved trend already established across 8 points, Phase 3 is
+being written up now rather than left blocked indefinitely; μ=12/16 will be folded
+in retroactively if/when they land, and this section revised if they overturn
+anything below (not expected, but not guaranteed).
+
 μ=0 through μ=9 (idx00-07) all confirmed genuine: `frac_at_cap` ≈ 0.00-0.01 on both
 legs at every point, corr(Force-E,Force-F) tightly clustered −0.63 to −0.69 regardless
 of initial weight, corr(Force-E_L,Force-E_R) −0.68 to −0.76 (tighter than round 5).
@@ -256,9 +266,17 @@ Bout-duration variability *shrinks* as μ increases (±39-46ms at μ=0-1 down to
 ±20-27ms at μ=5-9) — more initial synaptic drive needs less from the stochastic
 bootstrap. STDP weight trends confirm the same initialization-independence the base
 timer-based model already shows (paper §4.1): μ=0 (CUT→RG-E starts at 0 pA) and μ=9
-(starts ~10-11 pA) converge to the identical ~62 pA plateau. **μ=12 (idx08) and μ=16
-(idx09) — the two highest-weight stress tests — are still pending on MN5; do not
-treat Phase 3 as closed until those land.**
+(starts ~10-11 pA) converge to the same ~60-62.5 pA plateau (non-monotonic in μ,
+range ±1.2 pA — noise-level scatter, not a trend). **Conclusion: the τ=260ms/
+off-frac=0.35/cap=450ms operating point found in rounds 1-5 is initialization-robust
+across the tested range (μ=0-9, an 18x span in initial weight) — this closes the
+"fix cap-dominance + confirm robustness" arc of the maturation plan (steps 1 and 3).**
+Figures: `scripts/cpg_cutforce_article_figure.py` generates
+`paper/figures/fig_cutforce_example.png` (example force traces, genuine
+cycle-to-cycle variability visible by eye) and `fig_cutforce_robustness.png` (all
+four metrics vs. μ) — drafted for the article but **not yet referenced from any
+`.tex` file**; inserting them into Results/a new subsection is a separate, deliberate
+step, not done as a side effect of generating the images.
 
 **Required workflow from now on**: run `scripts/cpg_cutforce_diagnostics.py` on every
 sweep output before trusting any correlation number. `frac_at_cap` near 1.0 on either
