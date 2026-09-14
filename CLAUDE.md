@@ -48,6 +48,7 @@ sbatch run.sh
 | `run_frozen.sh` | Frozen-weight control: STDP off, air stepping, (mean,CV) sweep. |
 | `debug.sh` | Local single-config run with `--debug-small`. |
 | `debug_force.sh` | Local single-config run with `--debug-small --cut-trigger force` (closed-loop, force-triggered CUT — see below). |
+| `debug_force_sensory.sh` | Local smoke test: force-triggered CUT (confirmed operating point) + sensory-learning arm (`--freeze-bs-rg --stdp-ia-rg`), baseline loading. First test of these two mechanisms combined — see "Making force-triggered CUT the paper's final mechanism" below. |
 | `run_cutforce_sweep.sh` | EXPLORATORY MN5 sweep round 1 (9 tasks): fatigue-onset-τ {200,400,600} × cap {500,800,1100}. Superseded by round 2 — its apparent "best" result turned out 100% cap-dominated on re-diagnosis, see "Force-triggered CUT" below. |
 | `run_cutforce_sweep2.sh` | EXPLORATORY MN5 sweep round 2 (9 tasks): fatigue-onset-τ {400,600,800} × tighter, bio-plausible cap {300,450,600}. Superseded — 100% cap-dominated on all 9 configs, see "Force-triggered CUT" below. |
 | `run_cutforce_sweep3.sh` | EXPLORATORY MN5 sweep round 3 (9 tasks): fast fatigue-onset-τ {100,150,250} × looser `--cut-force-off-frac` {0.30,0.40,0.50}, cap fixed at 450ms. First round to escape cap-domination (frac_at_cap ~0 across the whole grid) — see "Force-triggered CUT" below. |
@@ -264,6 +265,50 @@ treat Phase 3 as closed until those land.**
 sweep output before trusting any correlation number. `frac_at_cap` near 1.0 on either
 leg means the result is a disguised clock, regardless of how clean the correlation
 looks.
+
+### Making force-triggered CUT the paper's final mechanism (post Phase 3)
+
+Decision (2026-09-14): force-triggered CUT (not timer-based paced-gait) becomes the
+article's headline mechanism. This requires re-running the paper's real experimental
+arms under `--cut-trigger force`, not just reframing prose — rounds 1-6 only ever
+validated the mechanism at one operating point (baseline loading, descending/BS STDP,
+sweep-pairs 3.5:0.30 plus the Phase 3 (μ,CV) grid). Timer-based CUT is **not** being
+deleted — it stays in the paper as the documented development path / ablation
+baseline. See `~/.claude/plans/virtual-forging-owl.md` for the full rollout plan
+(branch-by-branch, one per experimental arm).
+
+**Arm 1 smoke-test result — sensory-learning arm (`--freeze-bs-rg --stdp-ia-rg`),
+baseline loading (`debug_force_sensory.sh`, results/debug_force_sensory.h5):**
+Force-trigger has never before coexisted with a *second* plastic pathway (Ia→RG).
+Per-leg E/F counter-phase is fine and stable across debug-scale run lengths
+(corr(Force-E,Force-F) −0.71 to −0.81 at 10-60s), and `frac_at_cap` trends toward
+genuine as the run gets longer (0.33→0.36 at 10s, down to 0.07→0.08 at 60s) — the
+weaker/frozen BS drive plus still-growing Ia→RG weight means force amplitude takes
+longer to mature than the descending-STDP arm did. **But corr(Force-E_L,Force-E_R)
+(the L/R anti-phase check) is unstable across durations at debug scale**: +0.41 (10s)
+→ −0.67 (25s) → **+0.89 (40s)** → −0.35 (60s) — oscillating between synchronized and
+anti-phase rather than converging. Per-leg metrics don't show this instability, only
+the inter-leg one. Given this project's own established debug/production mismatch
+(debug-scale results have previously been both falsely reassuring and falsely
+alarming — see "Production scale is NOT yet at the same bar" above), this ambiguous
+signal doesn't confidently predict production (N=100, BS=60Hz, 120s) behavior either
+way. **Needs a real MN5 run to resolve, not more debug-scale guessing.**
+
+**Arm smoke-test result — sensory-learning arm at air-stepping loading
+(`--ia-feedback-gain 0.1 --cut-feedback-gain 0.1`, results/debug_force_sensory_air.h5):
+structurally broken, not a tuning problem.** Both legs end the 40s run stuck in
+swing, `peak_e_est` frozen at the seed value (never grew past 10.0) — force_e simply
+never builds enough at this gain to cross `--cut-force-on-frac`. Bout "durations" are
+a degenerate 50±0ms (== `--rate-update-ms`, i.e. chattering every tick, not real
+bouts), corr(Force-E,Force-F) collapses to −0.12/−0.20 (no real counter-phase), legs
+end up spuriously correlated (+0.75). This is the risk flagged in the rollout plan:
+force-triggered CUT is *by construction* load-gated, so it cannot activate under the
+very unloading condition (`run_ablation_sensory.sh`/`run_ablation_graded.sh` gain=0.1,
+and the epidural-contrast figure's whole point) that the loading-gradient and
+epidural-rescue experiments are about. **Do not attempt to force-tune this — it needs
+a design decision** (e.g. keep timer-based CUT specifically for the graded-loading
+and epidural arms, with an explicit rationale, rather than trying to make force-mode
+work somewhere it structurally can't).
 
 ### Muscle fatigue (`--muscle-fatigue`)
 
