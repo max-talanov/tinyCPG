@@ -322,9 +322,42 @@ corr(Force-E_L,Force-E_R) −0.25 (anti-phase, not synchronized), `frac_at_cap`
 operating point was tuned on the old circuit; Phase 1 of the rollout plan is to
 re-confirm/re-tune it on the new one, not assume it transfers exactly).
 
-**Not yet re-tested on the new circuit**: the sensory arm (`--freeze-bs-rg`) and the
-unloading-rescue experiment that motivated this whole fix — that's the actual next
-step, now that the missing pathway exists.
+**Sensory arm re-tested at baseline loading, new circuit:** stable and improved — 60s
+debug, corr(Force-E,Force-F) −0.81(L)/−0.79(R), `frac_at_cap` 0.05-0.06,
+corr(Force-E_L,Force-E_R) properly anti-phase (though its exact value bounces between
+runs at debug scale, consistent with the already-noted L/R-metric instability at this
+scale — per-leg metrics are the stable/trustworthy ones here).
+
+**Unloading-rescue attempt — round 1: loading-dependent Ia→RG weight cap
+(`--wmax-ia-unloaded`, MOD_IA_RG_LOADING_GAIN).** Boosting `--ia-feedback-gain` alone
+(up to 8x) never rescued force under `--cut-feedback-gain 0.1` because the real
+bottleneck wasn't the input rate, it was the Ia→RG-E STDP weight ceiling (WMAX_IA=10,
+deliberately low so Ia stays a light boost when CUT is present at full strength —
+raising it there destroys counter-phase, already validated). Fix: `WMAX_IA` now
+linearly relaxes toward a new `--wmax-ia-unloaded` (default 60) as `--cut-feedback-gain`
+drops from 1→0, so Ia can only take over more excitatory drive when cutaneous input is
+genuinely reduced. Bio-plausible framing: post-SCI/deafferentation upregulation of
+spinal sensory gain (central sensitization), not an arbitrary knob. At full loading the
+effective cap is unchanged (=10, confirmed). Result at gain=0.1 (effective cap→55):
+Ia→RG-E weight grew from ~4.5 (fixed-cap case) to ~30 pA, force_e max rose from ~1.6 to
+~8 (vs. the normal ~17 ceiling) — real progress, not yet a clean rescue.
+
+**Unloading-rescue attempt — round 2: loading-dependent peak-force seed
+(`CUT_FORCE_PEAK_SEED_MIN_FRAC`).** With force now reaching ~8 but the Schmitt
+trigger's adaptive-peak tracker still seeded at a fixed 10 (calibrated for the normal
+~17 ceiling), the seed sat permanently *above* the achievable peak, so it never adapted
+and on/off thresholds were meaningless relative to the leg's actual force scale (bout
+durations were a degenerate 50±0ms — chattering every tick). Fix: the seed itself now
+scales down with loading too (`CUT_FORCE_PEAK_SEED_FRAC * (0.5 + 0.5*cut_feedback_gain)`
+— floor at half its full-loading value, not fully to zero, to avoid a pathologically
+noise-sensitive trigger). Result: bout durations became real again (257±166ms/
+295±159ms, still noisy) instead of degenerate chatter, `frac_at_cap` 0.23-0.33 (down
+from chattering, but not yet genuine), corr(Force-E,Force-F) still weak (−0.18 to
+−0.22) — **the mechanism now runs instead of degenerating, but hasn't converged to a
+clean rescue within 60s debug scale.** This needs its own proper tuning round (longer
+duration, on/off-frac retuning for the lower force ceiling, maybe a gain/cap-ratio
+sweep) — the same kind of multi-round search Phase 3 rounds 1-6 needed, not a
+one-shot fix. Not yet attempted.
 
 ### Sensory-driven mode (`--freeze-bs-rg`, now just freezing BS since Ia→RG is always on — WMAX_IA=10)
 

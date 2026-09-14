@@ -272,6 +272,22 @@ WMAX_BS = 30.0
 WMAX_IA = 10.0
 P_IA2RG_STDP = 0.5  # density of the new Ia->RG plastic projection (matches CUT/BS P_IN_STDP)
 
+# MOD_IA_RG_LOADING_GAIN: WMAX_IA above is validated for FULL loading (--cut-feedback-gain
+# 1.0), where Ia is meant to stay a light supplementary boost alongside a full-strength
+# CUT->RG-E. Under simulated unloading (air/toe stepping, --cut-feedback-gain low), CUT
+# can't provide its usual excitation (that's the definition of unloading), and Ia can't
+# substitute for it while capped at 10 -- confirmed by direct test: boosting
+# --ia-feedback-gain up to 8x at --cut-feedback-gain=0.1 left force_e maxing out ~1.6
+# (vs. the normal ~17 ceiling) because ia->rge_mean itself stays capped near WMAX_IA
+# regardless of gain (gain scales Ia's input RATE, not its weight ceiling). WMAX_IA_UNLOADED
+# raises that ceiling specifically as loading drops, so Ia can only take over more
+# excitatory drive when cutaneous input is genuinely reduced -- bio-plausible framing:
+# post-SCI/deafferentation upregulation of spinal sensory gain (central sensitization),
+# not an arbitrary knob, and it leaves the already-validated full-loading behaviour
+# (WMAX_IA=10 at cut_feedback_gain=1.0) exactly as before. NOT YET validated whether 60
+# is the right unloaded ceiling -- smoke-test before trusting it.
+WMAX_IA_UNLOADED = 60.0
+
 # MOD_COACT: static CUT → RGE pathway — immediate cutaneous drive present from t=0,
 # before STDP bootstraps. Weight and density chosen so that CUT alone (100 Hz × W=14
 # × ~35 conns) is still subthreshold, but CUT + BS (60 Hz × ~25) together are supra-
@@ -332,7 +348,19 @@ FORCE_SAT_K = 1.0
 # (fraction of FORCE_MAX), before any real burst has been observed. 0.4*FORCE_MAX=10
 # sits inside the empirically observed debug-mode force_e peak range (~11-17), so the
 # first real burst crosses the on-threshold and the tracker starts adapting immediately.
+# This assumes full loading. Under reduced --cut-feedback-gain the achievable force
+# ceiling drops well below this fixed seed (confirmed by direct test: at gain=0.1 with
+# the loading-dependent Ia->RG cap rescuing force to ~8, a seed of 10 stayed permanently
+# above the real peak, so peak_e_est never adapted and on/off thresholds were meaningless
+# relative to the leg's actual force scale) -- MOD_IA_RG_LOADING_GAIN's cap fix alone
+# isn't sufficient, the seed has to scale down with loading too, see
+# CUT_FORCE_PEAK_SEED_MIN_FRAC below.
 CUT_FORCE_PEAK_SEED_FRAC = 0.4
+# Floor on how far the seed scales down as --cut-feedback-gain drops to 0 (as a
+# fraction of CUT_FORCE_PEAK_SEED_FRAC) -- avoids a degenerate near-zero seed that
+# would make the Schmitt trigger pathologically sensitive to noise. NOT YET validated;
+# picked as a starting point, smoke-test before trusting it for any real sweep.
+CUT_FORCE_PEAK_SEED_MIN_FRAC = 0.5
 
 TAU_LENGTH_MS = 260.0
 L0 = 1.0
@@ -468,9 +496,20 @@ def main():
                          "an opt-in ablation. This flag is kept only so existing scripts that "
                          "pass it don't break; it no longer changes behaviour.")
     ap.add_argument("--wmax-ia", type=float, default=WMAX_IA,
-                    help="MOD_IA_RG_STDP: weight cap for the plastic Ia->RG projection. "
-                         "Lower values limit symmetric over-excitation of both half-centres "
-                         "(preserves counter-phase); higher lets the sensory loop carry more drive.")
+                    help="MOD_IA_RG_STDP: weight cap for the plastic Ia->RG projection AT FULL "
+                         "LOADING (--cut-feedback-gain 1.0). Lower values limit symmetric "
+                         "over-excitation of both half-centres (preserves counter-phase); "
+                         "higher lets the sensory loop carry more drive. See --wmax-ia-unloaded "
+                         "for how this scales up as loading drops.")
+    ap.add_argument("--wmax-ia-unloaded", type=float, default=WMAX_IA_UNLOADED,
+                    help="MOD_IA_RG_LOADING_GAIN: weight cap for the plastic Ia->RG projection "
+                         "at FULL unloading (--cut-feedback-gain 0.0) -- e.g. air-stepping, "
+                         "where cutaneous drive can't provide its usual excitation. The "
+                         "effective cap is linearly interpolated between --wmax-ia (at gain=1) "
+                         "and this value (at gain=0) by --cut-feedback-gain, so Ia can only "
+                         "take over more excitatory drive when cutaneous input is genuinely "
+                         "reduced. Bio-plausible framing: post-SCI/deafferentation upregulation "
+                         "of spinal sensory gain, not an arbitrary knob.")
     ap.add_argument("--p-ia2rg", type=float, default=P_IA2RG_STDP,
                     help="MOD_IA_RG_STDP: connection probability of the Ia->RG projection.")
     ap.add_argument("--static-weight-cv", type=float, default=0.5,
@@ -663,6 +702,14 @@ def main():
     # Loading-dependent cutaneous (paw-contact) gain. Scales CUT stance drive;
     # the external Ia-E pacing (stim analogue) is left at full amplitude.
     CUT_FEEDBACK_GAIN = float(args.cut_feedback_gain)
+    # MOD_IA_RG_LOADING_GAIN: Ia->RG-E/F weight cap relaxes as cutaneous loading drops,
+    # so Ia can only take over more excitatory drive when CUT genuinely can't provide it
+    # (see WMAX_IA_UNLOADED above). At full loading (gain=1) this equals --wmax-ia exactly,
+    # unchanged from the validated baseline.
+    _cut_gain_for_ia_cap = clamp(CUT_FEEDBACK_GAIN, 0.0, 1.0)
+    WMAX_IA_BASE = float(getattr(args, "wmax_ia", WMAX_IA))
+    WMAX_IA_UNLOADED_EFF = float(getattr(args, "wmax_ia_unloaded", WMAX_IA_UNLOADED))
+    EFFECTIVE_WMAX_IA = WMAX_IA_BASE + (WMAX_IA_UNLOADED_EFF - WMAX_IA_BASE) * (1.0 - _cut_gain_for_ia_cap)
     BS_RATE_BASE_HZ = float(args.bs_base_hz)
     BS_NOISE_STD_HZ = float(args.bs_noise_std_hz)
     BS_DRIVE_NORM_HZ = max(BS_RATE_BASE_HZ, 1e-9)
@@ -1010,13 +1057,14 @@ def main():
     )
 
     # MOD_IA_RG_STDP: initial weight for the plastic Ia->RG projection. Starts at the
-    # base lognormal init (like CUT) and potentiates up under STDP.
+    # base lognormal init (like CUT) and potentiates up under STDP. Clamped against the
+    # loading-adjusted EFFECTIVE_WMAX_IA (MOD_IA_RG_LOADING_GAIN), not the raw --wmax-ia.
     W_INIT_IA = make_stdp_init_weight_param(
         args.stdp_winit_dist,
         args.stdp_winit_mean,
         args.stdp_winit_std,
         args.stdp_winit_min,
-        min(float(args.stdp_winit_max), float(getattr(args, "wmax_ia", WMAX_IA))),
+        min(float(args.stdp_winit_max), EFFECTIVE_WMAX_IA),
     )
 
     # Robust rank/proc detection:
@@ -1240,10 +1288,12 @@ def main():
         copy(f"stdp_cut_rge_{side}", stdp_defaults, make_weight_recorder_safe())
         copy(f"stdp_bs_rge_{side}", stdp_bs_defaults, make_weight_recorder_safe())   # MOD_COACT: capped Wmax
         copy(f"stdp_bs_rgf_{side}", stdp_bs_defaults, make_weight_recorder_safe())   # MOD_COACT: capped Wmax
-        # MOD_IA_RG_STDP: plastic homonymous Ia->RG models (Wmax from --wmax-ia), always
-        # created -- the third standing plastic pathway alongside BS->RG and CUT->RG,
-        # matching the reference architecture's direct Ia->RG-E/F excitatory projection.
-        stdp_ia_defaults = {**stdp_defaults, "Wmax": float(getattr(args, "wmax_ia", WMAX_IA))}
+        # MOD_IA_RG_STDP: plastic homonymous Ia->RG models, always created -- the third
+        # standing plastic pathway alongside BS->RG and CUT->RG, matching the reference
+        # architecture's direct Ia->RG-E/F excitatory projection. Wmax is the
+        # loading-adjusted EFFECTIVE_WMAX_IA (MOD_IA_RG_LOADING_GAIN), not the raw
+        # --wmax-ia -- relaxes as --cut-feedback-gain drops.
+        stdp_ia_defaults = {**stdp_defaults, "Wmax": float(EFFECTIVE_WMAX_IA)}
         copy(f"stdp_ia_rge_{side}", stdp_ia_defaults, make_weight_recorder_safe())
         copy(f"stdp_ia_rgf_{side}", stdp_ia_defaults, make_weight_recorder_safe())
 
@@ -1863,7 +1913,13 @@ def main():
         # back to swing the instant priming ends.
         lag_side = "L" if LEADING_LEG == "R" else "R"
         cut_state = {side: True for side in LEGS}
-        peak_e_est = {side: FORCE_MAX * CUT_FORCE_PEAK_SEED_FRAC for side in LEGS}
+        # MOD_IA_RG_LOADING_GAIN: scale the peak-force seed down with loading too, not
+        # just the Ia->RG weight cap -- otherwise a fixed full-loading seed stays
+        # permanently above the achievable force ceiling under reduced
+        # --cut-feedback-gain and peak_e_est never adapts (confirmed by direct test).
+        _seed_loading_scale = CUT_FORCE_PEAK_SEED_MIN_FRAC + (1.0 - CUT_FORCE_PEAK_SEED_MIN_FRAC) * _cut_gain_for_ia_cap
+        peak_e_seed = FORCE_MAX * CUT_FORCE_PEAK_SEED_FRAC * _seed_loading_scale
+        peak_e_est = {side: peak_e_seed for side in LEGS}
         stance_onset_ms = {side: 0.0 for side in LEGS}
         phase_onset_ms = {side: 0.0 for side in LEGS}
 
@@ -1943,8 +1999,9 @@ def main():
                     stance_onset_ms[side] = t_now
                     # Fresh bout: forget the previous bout's peak (which may already
                     # be fatigue-depressed) and re-discover this bout's own peak from
-                    # the seed, so its OFF threshold isn't biased by history.
-                    peak_e_est[side] = FORCE_MAX * CUT_FORCE_PEAK_SEED_FRAC
+                    # the (loading-scaled) seed, so its OFF threshold isn't biased by
+                    # history.
+                    peak_e_est[side] = peak_e_seed
 
             cut_state[side] = is_on
             cut_force_apply(side, is_on, t_now)
@@ -2165,7 +2222,9 @@ def main():
         h5.attrs["stdp_lambda"] = float(LAMBDA)
         h5.attrs["freeze_bs_rg"] = bool(getattr(args, "freeze_bs_rg", False))   # MOD_FREEZE_BS
         h5.attrs["ia_rg_stdp_always_on"] = True                                 # MOD_IA_RG_STDP: Ia->RG-E/F now a standing plastic pathway, not opt-in
-        h5.attrs["wmax_ia"] = float(getattr(args, "wmax_ia", WMAX_IA))
+        h5.attrs["wmax_ia"] = float(WMAX_IA_BASE)
+        h5.attrs["wmax_ia_unloaded"] = float(WMAX_IA_UNLOADED_EFF)
+        h5.attrs["wmax_ia_effective"] = float(EFFECTIVE_WMAX_IA)               # MOD_IA_RG_LOADING_GAIN
         h5.attrs["p_ia2rg"] = float(getattr(args, "p_ia2rg", P_IA2RG_STDP))
         h5.attrs["static_weight_cv"] = float(getattr(args, "static_weight_cv", 0.0) or 0.0)
         h5.attrs["cut_static_w"] = float(getattr(args, "cut_static_w", 0.0))
