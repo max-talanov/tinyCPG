@@ -54,6 +54,7 @@ sbatch run.sh
 | `run_cutforce_sweep4.sh` | EXPLORATORY MN5 sweep round 4 (9 tasks): narrows around round 3's working region — fatigue-onset-τ {250,300,350} × `--cut-force-off-frac` {0.25,0.30,0.35}, cap still fixed at 450ms. 6/9 configs reverted to cap-domination (incl. the numerically best-looking correlation); best genuine result τ=250/off=0.35 — see "Force-triggered CUT" below. |
 | `run_cutforce_sweep5.sh` | CONFIRMATION refinement (9 tasks, not a new exploration): brackets round 4's τ=250/off=0.35 optimum — fatigue-onset-τ {240,250,260} × `--cut-force-off-frac` {0.35,0.375,0.40}, cap still fixed at 450ms. **Confirmed: frac_at_cap=0.00 on all 9 configs** — best point τ=260/off=0.35, see "Force-triggered CUT" below. |
 | `run_cutforce_sweep6.sh` | PHASE 3 — seed/init robustness (10 tasks, 120s each): holds round 5's winning config fixed (τ=260, off=0.35, cap=450ms), sweeps the same 10-point (μ,CV) STDP-init grid as `run.sh`/paper Algorithm 1. Tests whether the operating point found in rounds 1-5 holds away from μ=3.5. |
+| `run_cutforce_sensory_unload.sh` | EXPLORATORY, round 1 (9 tasks, 120s each): production-scale test of the unloading-rescue mechanism (Ia→RG-E/F now loading-dependent, see "Core architecture fix" below) — sensory arm (`--freeze-bs-rg`), 3×3 grid of `--cut-feedback-gain` (loading) × `--ia-feedback-gain` (compensation). Local debug-scale tuning plateaued at weak counter-phase across a wide search; suspected debug-scale population-size ceiling (N_IA_E/F=30 vs 100 production), not a broken mechanism — see "Force-triggered CUT" below. |
 | `CLAUDE.md` | This file. |
 
 ## Frozen-weight control (`run_frozen.sh`)
@@ -357,7 +358,35 @@ from chattering, but not yet genuine), corr(Force-E,Force-F) still weak (−0.18
 clean rescue within 60s debug scale.** This needs its own proper tuning round (longer
 duration, on/off-frac retuning for the lower force ceiling, maybe a gain/cap-ratio
 sweep) — the same kind of multi-round search Phase 3 rounds 1-6 needed, not a
-one-shot fix. Not yet attempted.
+one-shot fix.
+
+**Local tuning attempted, did not converge — moved to production-scale test
+(`run_cutforce_sensory_unload.sh`) instead of continuing to guess locally.**
+Systematically varied duration (60/120s), `--ia-feedback-gain` (1/2/4/6/8/12),
+`--cut-feedback-gain` (0.1/0.5, air/toe), and the on/off-frac hysteresis band
+(0.80/0.35 baseline, 0.85/0.25, 0.90/0.20, 0.80/0.20) at debug-small scale.
+Findings: (1) `frac_at_cap` goes low (0.00-0.04) at longer duration (120s) with the
+*original* on=0.80/off=0.35 thresholds — widening or narrowing the hysteresis band
+made it worse (0.29-0.94), so retuning that axis isn't the lever; (2) force ceiling
+converges to ~7-9 (about half the normal ~17) regardless of gain 4-12 or loading
+0.1-0.5 — a real plateau, not a transient; (3) `ia->rge` weight converges to ~29-30 pA
+regardless of gain, well below the relaxed cap (35-55 depending on loading) — so it's
+not cap-limited either, it's a genuine dynamical fixed point of the current STDP
+setup; (4) **corr(Force-E,Force-F) stayed weak (−0.13 to −0.26) across every
+combination tried**, including toe-stepping (a much milder condition than air —
+essentially the same weak result, −0.13/−0.15). A flat, unmoving result across such a
+wide parameter search, right after two structural fixes that were each individually
+necessary just to get the mechanism running at all, looks like a debug-scale ceiling,
+not a dead end: **`N_IA_E`/`N_IA_F` drops from 100 (production) to 30 at
+`--debug-small`** (cpg_2legs_fast.py:1116-1117) — 3.3x fewer Ia units at the same
+connection density feeding the new pathway, which may cap the aggregate Ia→RG-E
+current well below what production N could deliver, independent of weight/gain
+tuning. This is the same debug/production divergence pattern this project has hit
+repeatedly (see the original force-trigger debug-vs-production gap noted earlier in
+this section). `run_cutforce_sensory_unload.sh` tests this directly: production N,
+3×3 grid of loading (`--cut-feedback-gain` 1.0/0.5/0.1) × Ia compensation
+(`--ia-feedback-gain` 1.0/4.0/8.0), sensory arm (`--freeze-bs-rg`), 120s, otherwise
+the confirmed operating point unchanged. Not yet submitted.
 
 ### Sensory-driven mode (`--freeze-bs-rg`, now just freezing BS since Ia→RG is always on — WMAX_IA=10)
 
