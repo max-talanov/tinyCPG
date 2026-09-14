@@ -253,16 +253,22 @@ WMAX = 120.0
 # full STDP potentiation. CUT STDP keeps the full WMAX.
 WMAX_BS = 30.0
 
-# MOD_IA_RG_STDP: plastic homonymous Ia->RG projections (--stdp-ia-rg). The muscle
-# proprioceptive afferents become a learning drive to the rhythm generators once BS is
-# frozen weak (--freeze-bs-rg).
-# WMAX_IA TUNING (debug-small, 25 s, frozen BS): the homonymous Ia->RG loop is in-phase
-# positive feedback, so a *low* cap is essential — a light phased boost reinforces each
-# burst without filling the inter-burst trough, but a high cap saturates into quasi-tonic
-# co-excitation of BOTH half-centres and destroys counter-phase. WMAX_IA sweep on
-# corr(Force-E,Force-F): 10->-0.98, 20->-0.71, 30->-0.50, 60->-0.26, 120->+0.12.
-# WMAX_IA=10 BEATS the BS-plastic control (-0.98 vs -0.96) AND fixes the weak flexor
-# (Force-F peak 11->17). Override with --wmax-ia.
+# MOD_IA_RG_STDP: plastic homonymous Ia->RG-E/F projection (matches the reference
+# architecture's direct excitatory Ia->RG arrow, distinct from the Ia->InE/InF
+# reciprocal-inhibition loop). Always wired now -- a third standing plastic pathway
+# alongside BS->RG and CUT->RG, present in every mode (BS->RG->RG-E and BS->RG-F still
+# drop out under --freeze-bs-rg; Ia->RG and CUT->RG keep training either way).
+# WMAX_IA TUNING (debug-small, 25 s, frozen BS, --stdp-ia-rg): the homonymous Ia->RG loop
+# is in-phase positive feedback, so a *low* cap is essential — a light phased boost
+# reinforces each burst without filling the inter-burst trough, but a high cap saturates
+# into quasi-tonic co-excitation of BOTH half-centres and destroys counter-phase.
+# WMAX_IA sweep on corr(Force-E,Force-F): 10->-0.98, 20->-0.71, 30->-0.50, 60->-0.26,
+# 120->+0.12. WMAX_IA=10 BEATS the BS-plastic control (-0.98 vs -0.96) AND fixes the weak
+# flexor (Force-F peak 11->17). Override with --wmax-ia.
+# CAVEAT: this tuning was done with BS frozen weak. Now that Ia->RG is always wired
+# (including alongside a fully plastic, much stronger BS->RG in the descending arm),
+# WMAX_IA=10 as a universal default is NOT yet re-validated there -- smoke-test before
+# trusting it (see CLAUDE.md "core architecture fix" notes).
 WMAX_IA = 10.0
 P_IA2RG_STDP = 0.5  # density of the new Ia->RG plastic projection (matches CUT/BS P_IN_STDP)
 
@@ -451,12 +457,16 @@ def main():
     ap.add_argument("--freeze-bs-rg", action="store_true",
                     help="MOD_FREEZE_BS: connect BS->RG-E and BS->RG-F with STATIC synapses "
                          "(no STDP), held at the weak lognormal init (W_INIT_BS ~3.5 pA). BS "
-                         "becomes a fixed tonic drive; pair with --stdp-ia-rg to shift the "
-                         "learning onto the sensory pathway.")
+                         "becomes a fixed tonic drive; the sensory-learning arm. Ia->RG and "
+                         "CUT->RG stay plastic (both are always-on, see --stdp-ia-rg).")
     ap.add_argument("--stdp-ia-rg", action="store_true",
-                    help="MOD_IA_RG_STDP: add plastic homonymous Ia->RG projections "
-                         "(Ia-E->RG-E, Ia-F->RG-F) so the muscle proprioceptive afferents "
-                         "become a learning input to the rhythm generators (Wmax=WMAX_IA).")
+                    help="DEPRECATED / no-op: plastic homonymous Ia->RG (Ia-E->RG-E, "
+                         "Ia-F->RG-F, matching the reference architecture diagram's direct "
+                         "excitatory Ia->RG projection) is now always wired and always "
+                         "plastic (Wmax=WMAX_IA), alongside BS->RG and CUT->RG -- three "
+                         "simultaneously plastic pathways is the standing architecture, not "
+                         "an opt-in ablation. This flag is kept only so existing scripts that "
+                         "pass it don't break; it no longer changes behaviour.")
     ap.add_argument("--wmax-ia", type=float, default=WMAX_IA,
                     help="MOD_IA_RG_STDP: weight cap for the plastic Ia->RG projection. "
                          "Lower values limit symmetric over-excitation of both half-centres "
@@ -1230,11 +1240,12 @@ def main():
         copy(f"stdp_cut_rge_{side}", stdp_defaults, make_weight_recorder_safe())
         copy(f"stdp_bs_rge_{side}", stdp_bs_defaults, make_weight_recorder_safe())   # MOD_COACT: capped Wmax
         copy(f"stdp_bs_rgf_{side}", stdp_bs_defaults, make_weight_recorder_safe())   # MOD_COACT: capped Wmax
-        if getattr(args, "stdp_ia_rg", False):
-            # MOD_IA_RG_STDP: plastic homonymous Ia->RG models (Wmax from --wmax-ia)
-            stdp_ia_defaults = {**stdp_defaults, "Wmax": float(getattr(args, "wmax_ia", WMAX_IA))}
-            copy(f"stdp_ia_rge_{side}", stdp_ia_defaults, make_weight_recorder_safe())
-            copy(f"stdp_ia_rgf_{side}", stdp_ia_defaults, make_weight_recorder_safe())
+        # MOD_IA_RG_STDP: plastic homonymous Ia->RG models (Wmax from --wmax-ia), always
+        # created -- the third standing plastic pathway alongside BS->RG and CUT->RG,
+        # matching the reference architecture's direct Ia->RG-E/F excitatory projection.
+        stdp_ia_defaults = {**stdp_defaults, "Wmax": float(getattr(args, "wmax_ia", WMAX_IA))}
+        copy(f"stdp_ia_rge_{side}", stdp_ia_defaults, make_weight_recorder_safe())
+        copy(f"stdp_ia_rgf_{side}", stdp_ia_defaults, make_weight_recorder_safe())
 
     # ---- connect per leg ----
     for side in LEGS:
@@ -1307,15 +1318,18 @@ def main():
         nest.Connect(L["ia_in_f"], L["in_f"], conn_spec={"rule": "pairwise_bernoulli", "p": P_IA2IN},
                      syn_spec={"synapse_model": "static_synapse", "weight": W_IA2IN, "delay": delay["ia_path"]})
 
-        # MOD_IA_RG_STDP: plastic homonymous Ia->RG excitation. Ia-E (extensor stretch/
-        # force) potentiates onto RG-E, Ia-F onto RG-F — the muscle afferents become a
-        # learning drive to the rhythm generators (replacing the now-frozen BS plasticity).
-        if getattr(args, "stdp_ia_rg", False):
-            _p_ia2rg = float(getattr(args, "p_ia2rg", P_IA2RG_STDP))
-            nest.Connect(L["ia_in_e"], L["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": _p_ia2rg},
-                         syn_spec={"synapse_model": f"stdp_ia_rge_{side}", "weight": W_INIT_IA, "delay": delay["ia_path"]})
-            nest.Connect(L["ia_in_f"], L["rg_f"], conn_spec={"rule": "pairwise_bernoulli", "p": _p_ia2rg},
-                         syn_spec={"synapse_model": f"stdp_ia_rgf_{side}", "weight": W_INIT_IA, "delay": delay["ia_path"]})
+        # MOD_IA_RG_STDP: plastic homonymous Ia->RG excitation, always wired (matches the
+        # reference architecture diagram's direct Ia->RG-E/F projection, distinct from the
+        # Ia->InE/InF reciprocal-inhibition loop above). Ia-E (extensor stretch/force)
+        # potentiates onto RG-E, Ia-F onto RG-F — a third standing plastic pathway
+        # alongside BS->RG and CUT->RG (BS drops out under --freeze-bs-rg; Ia->RG and
+        # CUT->RG keep training either way). A fixed weight here couldn't represent
+        # training/rehabilitation, so this must stay plastic, not a static baseline.
+        _p_ia2rg = float(getattr(args, "p_ia2rg", P_IA2RG_STDP))
+        nest.Connect(L["ia_in_e"], L["rg_e"], conn_spec={"rule": "pairwise_bernoulli", "p": _p_ia2rg},
+                     syn_spec={"synapse_model": f"stdp_ia_rge_{side}", "weight": W_INIT_IA, "delay": delay["ia_path"]})
+        nest.Connect(L["ia_in_f"], L["rg_f"], conn_spec={"rule": "pairwise_bernoulli", "p": _p_ia2rg},
+                     syn_spec={"synapse_model": f"stdp_ia_rgf_{side}", "weight": W_INIT_IA, "delay": delay["ia_path"]})
 
         # MOD_PACED_GAIT: external sequential Ia-E groups → InE → inhibits RGF during stance.
         # Reinforces extensor phase while preserving F→E asymmetry (InF→RGE still 6× stronger).
@@ -1457,9 +1471,8 @@ def main():
         if L["ia_ext_pg_f"] is not None:
             projset.append(("flexAff->RG-F", L["ia_ext_pg_f"], L["rg_f"]))
             projset.append(("flexAff->InF",  L["ia_ext_pg_f"], L["in_f"]))
-        if getattr(args, "stdp_ia_rg", False):
-            projset.append(("Ia-E->RG-E", L["ia_in_e"], L["rg_e"]))
-            projset.append(("Ia-F->RG-F", L["ia_in_f"], L["rg_f"]))
+        projset.append(("Ia-E->RG-E", L["ia_in_e"], L["rg_e"]))
+        projset.append(("Ia-F->RG-F", L["ia_in_f"], L["rg_f"]))
         if rank == 0:
             with h5py.File(args.dump_connectivity, "w") as hc:
                 hc.attrs["species"] = str(getattr(args, "species", "rat"))
@@ -1509,13 +1522,12 @@ def main():
         print("[Stats] syn_models:", stats_syn_models)
     # ---- cache connection collections for faster weight sampling ----
     # NOTE: in MPI runs, each rank sees (and caches) its local connections.
-    # Plastic projections to track depend on the active flags: BS->RG drops out when
-    # frozen (--freeze-bs-rg), Ia->RG appears with --stdp-ia-rg. (MOD_FREEZE_BS / MOD_IA_RG_STDP)
-    plastic_keys = ["cut->rge"]
+    # Plastic projections to track: CUT->RG and Ia->RG are always plastic (three-pathway
+    # standing architecture); BS->RG drops out only when frozen (--freeze-bs-rg).
+    # (MOD_FREEZE_BS / MOD_IA_RG_STDP)
+    plastic_keys = ["cut->rge", "ia->rge", "ia->rgf"]
     if not getattr(args, "freeze_bs_rg", False):
         plastic_keys += ["bs->rge", "bs->rgf"]
-    if getattr(args, "stdp_ia_rg", False):
-        plastic_keys += ["ia->rge", "ia->rgf"]
 
     def _stdp_model(key, side):
         return {"cut->rge": f"stdp_cut_rge_{side}", "bs->rge": f"stdp_bs_rge_{side}",
@@ -2152,7 +2164,7 @@ def main():
         h5.attrs["cut_feedback_gain"] = float(CUT_FEEDBACK_GAIN)
         h5.attrs["stdp_lambda"] = float(LAMBDA)
         h5.attrs["freeze_bs_rg"] = bool(getattr(args, "freeze_bs_rg", False))   # MOD_FREEZE_BS
-        h5.attrs["stdp_ia_rg"] = bool(getattr(args, "stdp_ia_rg", False))       # MOD_IA_RG_STDP
+        h5.attrs["ia_rg_stdp_always_on"] = True                                 # MOD_IA_RG_STDP: Ia->RG-E/F now a standing plastic pathway, not opt-in
         h5.attrs["wmax_ia"] = float(getattr(args, "wmax_ia", WMAX_IA))
         h5.attrs["p_ia2rg"] = float(getattr(args, "p_ia2rg", P_IA2RG_STDP))
         h5.attrs["static_weight_cv"] = float(getattr(args, "static_weight_cv", 0.0) or 0.0)

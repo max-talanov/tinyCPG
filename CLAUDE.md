@@ -283,7 +283,50 @@ activation even at full fatigue) against an off-threshold of ~1.9 and never cros
 0.95 leaves a floor of ~0.9, safely below a typical off-threshold — this is why the
 default was raised from the first value tried.
 
-### Sensory-driven mode (`--freeze-bs-rg --stdp-ia-rg`, WMAX_IA=10)
+### Core architecture fix: Ia→RG-E/F now a standing plastic pathway (2026-09-14)
+
+While chasing why force-triggered CUT can't be rescued by more Ia drive under
+simulated unloading (see "Force-triggered CUT" above), a reference architecture
+diagram (`CPG_feedback_loops_mems.png`) surfaced a real gap: it shows a **direct
+excitatory Ia→RG-E/F projection**, separate from the existing `Ia→InE/InF`
+reciprocal-inhibition loop (MOD_IA_LOOP). The code already had this exact synapse
+(`stdp_ia_rge`/`stdp_ia_rgf`) but only wired it behind `--stdp-ia-rg`, i.e. only in
+the sensory-learning arm. Decision (explicit user call, given the choice between
+scoping this to force-trigger only vs. universal): **make it universal** — Ia→RG-E/F
+is now always wired and always plastic, in every mode, alongside BS→RG and CUT→RG
+(BS→RG still drops out under `--freeze-bs-rg`; Ia→RG and CUT→RG never do). A fixed
+weight here was considered and rejected — the paper's whole point is
+plasticity/rehabilitation, so a static baseline couldn't represent that; three
+simultaneously plastic pathways is the new standing model.
+
+**Consequence: every existing figure/sweep in the paper was generated on a circuit
+missing this pathway** and needs regenerating — this is now "regenerate the paper's
+evidence base," not a small patch. See `~/.claude/plans/virtual-forging-owl.md` for
+the full rollout.
+
+**Smoke test — base timer-based descending arm (`debug.sh`, unchanged flags, just
+the new circuit):** results improved, didn't regress. corr(Force-E,Force-F)
+−0.70(L)/−0.78(R), corr(RGE,RGF) −0.72 both legs, corr(Force-E_L,Force-E_R) **−0.98**.
+Notably, **the long-standing weak-flexor debug problem looks fixed for free**:
+Force-F peak was previously capped ~5-7 a.u. at BS=20 Hz (see "Known debug-mode
+limitation for F" above) — with the new pathway it reaches **17.2-17.3**, matching
+Force-E, without touching `--freeze-bs-rg`/`--stdp-ia-rg` at all. Converged weights
+sane: bs→rge/rgf ~18, cut→rge ~63 (consistent with prior baselines), ia→rge ~5.2,
+ia→rgf ~5.9-6.1 (well under WMAX_IA=10 cap).
+
+**Smoke test — force-triggered CUT at the confirmed operating point (τ=260/off=0.35/
+cap=450), descending arm, new circuit, 60s debug:** corr(Force-E,Force-F)
+**−0.81(L)/−0.84(R)** (better than the old-circuit confirmed values of −0.63/−0.67),
+corr(Force-E_L,Force-E_R) −0.25 (anti-phase, not synchronized), `frac_at_cap`
+0.06-0.07 (close to genuine, not the old circuit's clean 0.00 — expected, since this
+operating point was tuned on the old circuit; Phase 1 of the rollout plan is to
+re-confirm/re-tune it on the new one, not assume it transfers exactly).
+
+**Not yet re-tested on the new circuit**: the sensory arm (`--freeze-bs-rg`) and the
+unloading-rescue experiment that motivated this whole fix — that's the actual next
+step, now that the missing pathway exists.
+
+### Sensory-driven mode (`--freeze-bs-rg`, now just freezing BS since Ia→RG is always on — WMAX_IA=10)
 
 Learning shifted from descending (BS) to sensory (muscle-Ia) pathway: BS→RG frozen at
 weak init, plastic homonymous Ia→RG added. **Validated to outperform the BS-plastic
@@ -361,15 +404,15 @@ Cross-leg: L↔R commissural inhibition on RG-F (strong) and RG-E (weak).
 | `MOD_PACED_GAIT` | Explicit 1-s trot cycle: L/R 180° offset, sequential Ia-E heel→toe during stance. |
 | `MOD_CUT_FORCE_TRIGGER` | `--cut-trigger force`: replaces the paced-gait clock with a per-leg Schmitt trigger on `force_e` (CUT ON/OFF at `--cut-force-on-frac`/`--cut-force-off-frac` of a per-bout running peak — "foot touches"/"foot lifts"). `--leading-leg`/`--lead-offset-ms` break initial L/R symmetry (the offset window is also a symmetric CUT→RG-E STDP priming window). `--cut-max-stance-ms`/`--cut-max-swing-ms` are a required failsafe timeout (RG-E has no self-terminating burst mechanism and locks permanently without it — see "Force-triggered CUT" above). Logs a per-leg ground-truth `cut_on` (0/1) array to the output HDF5 so `scripts/cpg_cutforce_diagnostics.py` can measure exact bout durations instead of reconstructing them from force. Requires `--paced-gait`. Production-scale tuning not yet confirmed — see "Force-triggered CUT" above and `run_cutforce_sweep2.sh`. |
 | `MOD_MUSCLE_FATIGUE` | `--muscle-fatigue`: opt-in (OFF by default) slow activity-dependent force attenuation (`--fatigue-tau-onset-ms`/`--fatigue-tau-recovery-ms`/`--fatigue-max-frac`), so `force_e` can decay on its own during sustained activation instead of relying entirely on the `--cut-trigger force` failsafe cap. Only affects the force proxy, not the neural circuit. |
-| `MOD_FREEZE_BS` | `--freeze-bs-rg`: BS→RG-E/RG-F static (no STDP), held at weak lognormal init (W_INIT_BS). BS becomes fixed tonic drive. |
-| `MOD_IA_RG_STDP` | `--stdp-ia-rg`: plastic homonymous Ia→RG (Ia-E→RG-E, Ia-F→RG-F, Wmax=WMAX_IA=10, density P_IA2RG_STDP=0.5). Muscle afferents become the learning drive to the RGs. **WMAX_IA=10 validated as sweet spot** (see below); `--wmax-ia`/`--p-ia2rg` to sweep. |
+| `MOD_FREEZE_BS` | `--freeze-bs-rg`: BS→RG-E/RG-F static (no STDP), held at weak lognormal init (W_INIT_BS). BS becomes fixed tonic drive; Ia→RG and CUT→RG keep training regardless (see MOD_IA_RG_STDP). |
+| `MOD_IA_RG_STDP` | **Always wired, always plastic homonymous Ia→RG** (Ia-E→RG-E, Ia-F→RG-F, Wmax=WMAX_IA=10, density P_IA2RG_STDP=0.5) — matches the reference architecture diagram's direct excitatory Ia→RG projection (distinct from the Ia→InE/InF reciprocal-inhibition loop, MOD_IA_LOOP). A third standing plastic pathway alongside BS→RG and CUT→RG in every mode (2026-09-14 — previously gated behind `--stdp-ia-rg`, opt-in only for the sensory-learning arm; see "Core architecture fix" below for why). `--wmax-ia`/`--p-ia2rg` still override the cap/density. |
 | `--ia-feedback-gain` | Multiplicative gain on closed-loop Ia rate. 1.0 baseline / 0.5 toe stepping / 0.1 air stepping (Courtine/Lavrov SCI paradigm). |
 | `--cut-feedback-gain` | Multiplicative gain on cutaneous CUT stance drive (loading-dependent paw contact). Scaled with loading alongside `--ia-feedback-gain`; the external Ia-E heel→toe ramp (stim pacing) stays at full. |
 | `--ia-ext-f-hz` | MOD_FLEXOR_AFFERENT: rate (Hz) of the external flexor swing-afferent (hip/flexor-stretch signal; Grillner & Rossignol 1978). Drives RG-F directly + InF during swing, clocking the flexor symmetrically to the stance Ia-E ramp. 0 = off (intrinsic-only flexor); 80 = on. Un-gated by loading (joint-position, not load-based). |
 | `--stdp-lambda` | Override STDP LAMBDA (default 1e-3). Bio-plausible range 5e-4 to 5e-3 (Bi & Poo 1998; Morrison 2007). |
 | `--dump-connectivity` | Build the network, write per-connection WEIGHT + DELAY arrays for all 18 named projections to an HDF5, then exit (no sim — runs in seconds at production N). Feeds the connectivity-statistics figure (`scripts/cpg_connectivity_figure.py`) and CSV table. Static weights are delta-valued; plastic are lognormal-init; delays follow the rat `length_velocity` preset + 0.2 ms jitter. |
-| `--freeze-bs-rg` | MOD_FREEZE_BS: freeze BS→RG (static at weak init). Removes descending plasticity; pair with `--stdp-ia-rg`. Frozen runs drop `bs->rge`/`bs->rgf` from the tracked plastic-weight keys. |
-| `--stdp-ia-rg` | MOD_IA_RG_STDP: add plastic homonymous Ia→RG. Adds `ia->rge`/`ia->rgf` weight keys. Shifts learning from descending (BS) to sensory (Ia) pathway. Pair with `--freeze-bs-rg`. |
+| `--freeze-bs-rg` | MOD_FREEZE_BS: freeze BS→RG (static at weak init). Removes descending plasticity only; Ia→RG and CUT→RG keep training (always on, see MOD_IA_RG_STDP). Frozen runs drop `bs->rge`/`bs->rgf` from the tracked plastic-weight keys. |
+| `--stdp-ia-rg` | **DEPRECATED/no-op** (2026-09-14): plastic homonymous Ia→RG is now always wired (MOD_IA_RG_STDP). Flag kept only so old scripts passing it don't break. |
 | `--wmax-ia` | Weight cap for Ia→RG STDP (default 10). **Low cap is critical**: homonymous Ia→RG is in-phase positive feedback — light (≤10) reinforces bursts without filling troughs; high (≥60) saturates into tonic co-excitation that destroys counter-phase. |
 | `--p-ia2rg` | Connection probability of the Ia→RG projection (default 0.5). |
 | `--static-weight-cv` | **Bio-plausibility (default 0.5):** per-connection lognormal weight heterogeneity on all static synapses (mean/sign preserved). Biological weights are lognormal (Song 2005; Buzsáki & Mizuseki 2014). `0` = legacy delta weights (used by the frozen-weight control). |
