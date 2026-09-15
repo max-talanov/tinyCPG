@@ -659,13 +659,69 @@ real, open regression for the sensory arm, not a solved problem.
 genuine 0.25 --consolidate-prp-gain-forced 0.10`** — the only point in the
 tested region that is reproducibly better than doing nothing on
 corr(F-E_L,F-E_R) without a compensating cap-domination regression as bad as
-the rest of the box. This is a working recommendation, not a "confirmed
-default" promoted into the CLI's global defaults the way 0.20/0.15 was for
-the descending arm — it is still worse than no-consolidate on `frac_at_cap`
-in both seeds, and only two seeds and one (genuine, timing) point have been
-tested. `--consolidate` cannot yet be treated as arm-agnostic, and this
-gap should stay open (not silently assumed closed) before any sensory-arm
-sweep script turns `--consolidate` on by default.
+the rest of the box.
+
+**Methodological correction (2026-09-15) — the "regression" above was
+measuring the wrong window; the user's own read of it turned out to be
+right.** The user pointed out that a `frac_at_cap` regression under
+`--consolidate` is exactly what they'd expect, framed against the opposite
+problem this project has previously had: vanilla STDP recovering the walking
+pattern *too fast* to be a plausible stand-in for real rehabilitation timescales.
+That prompted checking directly, with `bouts_from_cut_on` windowed into
+0-20s/20-40s/40-60s, whether the whole-run `frac_at_cap` numbers above were
+reporting a genuine steady-state problem or an extended-but-resolving early
+transient. They were overwhelmingly the latter: e.g. sensory-arm 0.25/0.10
+shows `frac_at_cap` 0.73/0.23 in the first 20s but 0.00/0.00 for the rest of
+the run — statistically indistinguishable from the no-consolidate reference's
+own steady state (also 0.00/0.00 after its first 20s) — and this holds for
+essentially every genuine=0.25 point tested (0.10 through 0.20), not just the
+working recommendation. The whole-run average was reporting the length of a
+recovery period, not a persistent failure — which is the bio-plausible
+behavior `--consolidate` was introduced to get (a genuine settling-in period
+instead of instant convergence), not a bug.
+
+This has a real consequence beyond the sensory arm: **the whole-run
+`frac_at_cap`/corr(F-E_L,F-E_R) numbers used to score every bracket point in
+both this round and the round-2 descending-arm confirmation are contaminated
+by this same transient**, and restricting to steady-state
+(`--steady-from-ms 30000`, now supported directly by
+`scripts/cpg_cutforce_diagnostics.py`) changes some of those numbers
+substantially:
+
+| config (arm, gains) | whole-run corrLR | **steady-state (t≥30s) corrLR** |
+|---|---|---|
+| descending, 0.20/0.15, seed 12345 | −0.724 | **−0.839** |
+| descending, 0.20/0.15, seed 54321 | −0.688 | **−0.839** |
+| descending, 0.25/0.15, seed 12345 | +0.273 | +0.297 (still bad) |
+| descending, 0.25/0.15, seed 54321 | −0.656 | −0.720 (still good — genuinely bistable) |
+| sensory, 0.25/0.10, seed 12345 | −0.147 | **−0.286** (≈ no-consolidate's −0.285) |
+| sensory, 0.25/0.10, seed 54321 | −0.262 | **−0.280** (≈ no-consolidate's −0.720... note seed2's own no-consolidate baseline is a stronger −0.720, so 0.25/0.10 is *not* quite matching baseline at seed 2, unlike seed 1) |
+| sensory, 0.25/0.15, seed 12345 | −0.440 | −0.829 (excellent) |
+| sensory, 0.25/0.15, seed 54321 | +0.076 | +0.316 (still bad — genuinely bistable, not a transient artifact) |
+| sensory, 0.25/0.1125-0.1375 (both seeds, 6 runs) | −0.07 to +0.53 | +0.01 to +1.00 (positive in all 6 at steady state, incl. the one whole-run value that had looked negative — the "bad zone" is real, not a transient) |
+
+**Two corrected conclusions:**
+1. **The descending-arm confirmed default is confirmed more strongly than
+   originally reported**, not less: 0.20/0.15's steady-state
+   corr(F-E_L,F-E_R) is −0.839 in *both* seeds — not just same-sign but
+   numerically identical, the tightest replication of any point tested in
+   either arm. No change to the shipped default.
+2. **Cap-domination is not the sensory arm's real, persistent problem — L/R
+   phase-locking is.** Every tested genuine=0.25 point reaches clean,
+   non-cap-dominated bout timing at steady state; what actually
+   distinguishes them is whether the legs settle into anti-phase (0.10: good
+   in both seeds) or in-phase (0.1125-0.1375: bad in both seeds) lock, with
+   0.15 sitting on a genuine bistable boundary (excellent at seed 1, bad at
+   seed 2) rather than being noise either way. The working recommendation
+   (genuine=0.25, forced=0.10) is unchanged by this correction — if anything
+   it's better supported now, since its steady-state numbers show it
+   converging to a real anti-phase attractor rather than merely averaging out
+   noise — but the previous framing ("`frac_at_cap` stays ~3x worse than
+   no-consolidate, a real open regression") was measuring recovery-period
+   length, not steady-state quality, and should not be read as a persisting
+   defect. **Whole-run metrics should not be used alone for `--consolidate`
+   tuning going forward — always pair with `--steady-from-ms` on
+   `scripts/cpg_cutforce_diagnostics.py`.**
 
 ### Sensory-driven mode (`--freeze-bs-rg`, now just freezing BS since Ia→RG is always on — WMAX_IA=10)
 
