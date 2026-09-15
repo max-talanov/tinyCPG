@@ -684,17 +684,28 @@ def main():
                          "that triggers a capture event, freezing the current "
                          "weight as the new baseline. The gain flags below are "
                          "defined relative to this.")
-    ap.add_argument("--consolidate-prp-gain-genuine", type=float, default=0.15,
+    ap.add_argument("--consolidate-prp-gain-genuine", type=float, default=0.20,
                     help="MOD_CONSOLIDATE: PRP-pool increment per genuine "
-                         "(real force-threshold) bout ending. Default reaches "
-                         "capture after ~7 consecutive genuine bouts.")
-    ap.add_argument("--consolidate-prp-gain-forced", type=float, default=0.30,
+                         "(real force-threshold) bout ending. Default (0.20, "
+                         "vs. --consolidate-prp-gain-forced's 0.15) is a mildly "
+                         "genuine-favoring ratio confirmed across two seeds at "
+                         "the round-5 operating point (Round 1+2 tuning, "
+                         "CLAUDE.md): a 1:1 ratio never captures at all, and "
+                         "more aggressive genuine-favoring ratios (0.25+) do "
+                         "reach capture but their L/R desynchronization outcome "
+                         "was seed-sensitive enough to flip sign between seeds "
+                         "-- 0.20/0.15 was the only point that stayed robustly "
+                         "good (corr(F-E_L,F-E_R) approx -0.7) in both.")
+    ap.add_argument("--consolidate-prp-gain-forced", type=float, default=0.15,
                     help="MOD_CONSOLIDATE: PRP-pool decrement (floored at 0) "
-                         "per failsafe-forced bout ending. Steeper than "
-                         "--consolidate-prp-gain-genuine by default, matching "
-                         "Grau's finding that non-contingent outcomes actively "
-                         "suppress spinal learning rather than merely fail to "
-                         "reinforce it.")
+                         "per failsafe-forced bout ending. See "
+                         "--consolidate-prp-gain-genuine for how this default "
+                         "was chosen -- forced bouts still suppress capture "
+                         "(Grau: non-contingent outcomes actively suppress "
+                         "spinal learning) but the shipped ratio is only "
+                         "mildly asymmetric (~1.3:1), not the originally-"
+                         "guessed 2:1, which was confirmed to never capture "
+                         "at all at this operating point.")
     # ---- ablation flags (paper Figure: necessity of each component) ----
     ap.add_argument("--ablate-ia-loop", action="store_true",
                     help="ABLATION: zero Ia→InE/InF closed-loop (W_IA2IN=0). Tests "
@@ -791,8 +802,8 @@ def main():
                           "in timer/paced-gait mode).")
     CONSOLIDATE_TAU_TAG_MS = float(getattr(args, "consolidate_tau_tag_ms", 2000.0))
     CONSOLIDATE_PRP_THRESHOLD = float(getattr(args, "consolidate_prp_threshold", 1.0))
-    CONSOLIDATE_PRP_GAIN_GENUINE = float(getattr(args, "consolidate_prp_gain_genuine", 0.15))
-    CONSOLIDATE_PRP_GAIN_FORCED = float(getattr(args, "consolidate_prp_gain_forced", 0.30))
+    CONSOLIDATE_PRP_GAIN_GENUINE = float(getattr(args, "consolidate_prp_gain_genuine", 0.20))
+    CONSOLIDATE_PRP_GAIN_FORCED = float(getattr(args, "consolidate_prp_gain_forced", 0.15))
     # ---- sweep mode (Option C): run one (mu, CV) pair per Slurm array task ----
     def _parse_pairs(s: str):
         s = (s or "").strip()

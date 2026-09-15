@@ -525,17 +525,58 @@ Three findings, none of them "just raise the gain":
    genuine over-consolidation failure mode, not a tuning artifact to shrug
    off.
 
-**Status: promising lead, not a confirmed replacement default.** 0.20/0.15/1.0
-is the best point from this single round, at a single operating point and
-seed — it has not been bracketed (nearby values not yet tested to confirm
-it's a real optimum vs. noise) or re-checked at a second operating point/seed,
-the same standard every other constant in this file was held to before being
-called "confirmed" (cf. Phase 3 rounds 1-6). The shipped CLI defaults
-(`--consolidate-prp-gain-genuine 0.15`/`-forced 0.30`) are deliberately **not**
-changed based on this one round. Next step: a confirmation round bracketing
-0.15-0.25/0.10-0.20 gain pairs with `tau_tag_ms` also swept (untested this
-round — held at its default 2000ms throughout), across at least one more
-operating point and seed.
+**Status after round 1: promising lead, not yet confirmed.** 0.20/0.15/1.0
+was the best point from a single round, at a single operating point and
+seed — not yet bracketed or re-checked at a second seed, the same standard
+every other constant in this file was held to before being called
+"confirmed" (cf. Phase 3 rounds 1-6).
+
+**Round 2 confirmation (2026-09-15) — bracket 0.15-0.25 (genuine) ×
+0.10-0.20 (forced) at a second seed (54321 vs. round 1's 12345), same
+round-5 operating point, `tau_tag_ms` still untested/held at 2000 (not part
+of this round's scope):**
+
+| genuine/forced | captures L/R | `frac_at_cap` L/R | corr(F-E,F-F) L/R | corr(F-E_L,F-E_R) |
+|---|---|---|---|---|
+| no-consolidate (reference) | n/a | 0.03 / 0.01 | −0.607 / −0.663 | −0.286 |
+| 0.15/0.10 | 3 / 3 | 0.06 / 0.06 | −0.487 / −0.653 | −0.559 |
+| 0.15/0.15 (symmetric-ish) | 0 / 0 | 0.14 / 0.09 | −0.417 / −0.570 | **+0.194** |
+| 0.15/0.20 | 0 / 0 | 0.10 / 0.13 | −0.374 / −0.486 | −0.637 |
+| 0.20/0.10 | 7 / 7 | 0.06 / 0.03 | −0.416 / −0.601 | −0.027 |
+| **0.20/0.15 (round-1 winner)** | 4 / 4 | 0.03 / 0.06 | −0.501 / −0.557 | **−0.688** |
+| 0.20/0.20 | 0 / 0 | 0.19 / 0.17 | −0.377 / −0.530 | −0.356 |
+| 0.25/0.10 | 11 / 11 | 0.03 / 0.06 | −0.579 / −0.605 | −0.761 |
+| 0.25/0.15 | 7 / 7 | 0.03 / 0.04 | −0.670 / −0.732 | −0.656 |
+| 0.25/0.20 | 4 / 4 | 0.10 / 0.06 | −0.514 / −0.648 | +0.003 |
+
+Two findings, one confirming round 1 and one qualifying it:
+
+1. **Round 1's two structural findings replicate exactly.** Ratios at or
+   below 1:1 (0.15/0.15, 0.15/0.20, 0.20/0.20) again either never capture at
+   all or capture zero times, and 0.15/0.15 again gives a desynchronized/
+   positive corr(F-E_L,F-E_R) (+0.194, vs. +0.009 at seed 1) — the same
+   failure mode, reproduced with an independent seed. Genuine-favoring gain
+   is confirmed to be the real lever, not a seed-1 artifact.
+2. **But most individual points in the bracket are seed-sensitive — only
+   0.20/0.15 is not.** 0.25/0.15 scored corr(F-E_L,F-E_R) **+0.273** (bad,
+   synchronized) at seed 1 and **−0.656** (good) at seed 2 — the sign
+   flips on the same config with only the seed changed. 0.20/0.10 similarly
+   degrades from −0.462 (seed 1) to −0.027 (seed 2). **0.20/0.15 is the one
+   point that stayed good in both**: −0.724 (seed 1) → −0.688 (seed 2), a
+   ~5% difference, not a coin flip. Higher-capture-count configs (7-11
+   captures, at 0.25/0.10 or 0.25/0.15) can look excellent at a given seed
+   (0.25/0.10 hits the best corrLR of the whole seed-2 grid, −0.761) but
+   without a second seed there was no way to tell that apart from noise —
+   which is exactly why this confirmation step existed.
+
+**0.20/0.15 is now confirmed and promoted to the shipped CLI defaults**
+(`--consolidate-prp-gain-genuine 0.20`, `--consolidate-prp-gain-forced 0.15`,
+replacing the original guessed 2:1 ratio of 0.15/0.30, which is now confirmed
+across two seeds to never capture at all at this operating point). Still
+open for a future round: `tau_tag_ms` was never varied (held at 2000ms
+throughout both rounds), and everything so far is at one operating point
+(τ=260/off=0.35/cap=450) — generalization to other force-trigger configs or
+to the sensory/descending-arm modes is untested.
 
 ### Sensory-driven mode (`--freeze-bs-rg`, now just freezing BS since Ia→RG is always on — WMAX_IA=10)
 
