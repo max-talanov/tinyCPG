@@ -68,24 +68,21 @@ but never mixed in one chart or one table.
 
 ### 1.3 Bidirectional homeostatic scaling: upscaling and downscaling
 
-The upscaling row above is one direction of a bidirectional mechanism first
-characterized in cortical culture (Turrigiano & Nelson 2004; Turrigiano 2008,
-"the self-tuning neuron"): chronic silencing drives synaptic **upscaling**
-(GluA1 Ser845 phosphorylation and insertion), while chronic hyperactivity
-drives synaptic **downscaling** (stargazin dephosphorylation, GluA1 removal)
-— the same AMPAR-trafficking toolkit running in opposite directions to hold
-network activity near a set point. The spinal cord shows the upscaling side
-cleanly (deafferentation → GluA2-lacking, Ca²⁺-permeable AMPAR insertion in
-motoneurons, already in the table). The downscaling side is where the spinal
-literature gets more interesting than a simple mirror image: after SCI, the
-dominant documented homeostatic-*failure* mode is not "excitatory synapses
-fail to scale down" but **inhibitory efficacy itself collapsing** — KCC2,
-the potassium-chloride cotransporter that keeps the Cl⁻ reversal potential
-hyperpolarized enough for GABA/glycine to inhibit, is downregulated in
-motoneuron membranes after SCI (Boulenguez et al. 2010, *Nature Medicine*),
-which is functionally equivalent to a failed downscaling response —
-excitability stays elevated because the compensatory brake never engages —
-and is a well-established mechanistic account of post-SCI spasticity.
+The upscaling row above is one direction of a bidirectional mechanism —
+chronic silencing drives synaptic **upscaling**, chronic hyperactivity drives
+synaptic **downscaling**, the same AMPAR-trafficking toolkit running in
+opposite directions to hold network activity near a set point (Turrigiano
+2008). The rat spinal cord shows the upscaling side cleanly (deafferentation
+→ GluA2-lacking, Ca²⁺-permeable AMPAR insertion in motoneurons, already in
+the table). The downscaling side is more interesting than a simple mirror
+image: after SCI, the dominant documented failure mode is not "excitatory
+synapses fail to scale down" but **inhibitory efficacy itself collapsing** —
+KCC2, the potassium-chloride cotransporter that keeps the Cl⁻ reversal
+potential hyperpolarized enough for GABA/glycine to inhibit, is
+downregulated in motoneuron membranes after SCI (Boulenguez et al. 2010),
+functionally a failed downscaling response — excitability stays elevated
+because the compensatory brake never engages — and a well-established
+mechanistic account of post-SCI spasticity.
 
 **This closes the loop with the document's rehab framing rather than sitting
 outside it**: the same Boulenguez-line literature reports that locomotor
@@ -101,97 +98,49 @@ homeostasis) than the tag-and-capture story in §2.
 
 ## 2. Tag-and-capture and contingency-gated consolidation in spinal circuits
 
-Three independent literatures converge on the same two-stage structure the
-hippocampal document derives from STC — a labile, spontaneously-decaying
-change, stabilized only by a second, slower, separately-gated signal — without
-citing each other or the hippocampal literature:
+Three independent rat literatures converge on the same two-stage structure
+the hippocampal document derives from STC — a labile, decaying change,
+stabilized only by a separate, slower gating signal — without citing each
+other or the hippocampal work:
 
-**Molecular substrate (Sandkühler & Liu 1998; Yang, Chen, Zhang & Sandkühler 2004; Zhang & Sandkühler 2008).**
-Dorsal-horn E-LTP behaves exactly like a decaying tag: NMDA-receptor-dependent,
-induced by a single tetanic conditioning stimulus, present within minutes, and
-gone within a few hours if nothing else happens. Its conversion to L-LTP is a
-discrete regime change — selectively blocked by the protein-synthesis
-inhibitors cycloheximide and anisomycin, which affect neither induction nor
-baseline transmission — and that conversion is itself gated by a separate,
-non-glutamatergic signal: activation of spinal D1/D5 dopamine receptors
-*occludes only the late phase*, not the early phase, and exogenous BDNF is
-independently sufficient to induce a late phase on its own. This is the
-molecular-level proof that "labile tag, stabilized only if a distinct
-neuromodulatory signal arrives before decay" is not a hippocampus-specific
-trick — it is present, with the same pharmacological dissociation the
-hippocampal document relies on (§2 of that document), at spinal synapses with
-no cortex or hippocampus involved. **This substrate's own primary literature
-framing is pathological, not adaptive**, worth flagging before treating it
-purely as this document's tag/capture analogy: the identical NMDAR-dependent,
-BDNF/dopamine-gated dorsal-horn potentiation is the standard cellular model
-of central sensitization underlying hyperalgesia and chronic pain (Sandkühler
-& Liu 1998; Ruscheweyh, Wilder-Smith, Drdla, Liu & Sandkühler 2011) — the same
-mechanism the pain field studies specifically *to block it*. The retention
-rule itself is not "good" or "bad"; §2.1/§2.2 below collect this alongside the
-other three mechanisms above that are similarly two-directional.
+**Molecular substrate.** Dorsal-horn E-LTP (Sandkühler & Liu 1998) behaves
+like a decaying tag: NMDA-receptor-dependent, present within minutes, gone
+within hours unless converted to L-LTP — a discrete regime change blocked by
+protein-synthesis inhibitors and gated by spinal D1/D5 dopamine receptors or
+exogenous BDNF (Yang et al. 2004; Zhang & Sandkühler 2008). **This
+substrate's own primary framing is pathological, not adaptive**: the same
+mechanism is the standard cellular model of central sensitization in chronic
+pain (Ruscheweyh et al. 2011). Borrowed here purely as a motor-consolidation
+analogy — the retention rule itself is neutral machinery, not "good" or
+"bad" (§2.1/§2.2 below).
 
-**Behavioral/computational gate — contingency, not activity (Grau 2014; Crown & Grau 2001; Ferguson, Crown & Grau 2006).**
-The isolated spinal cord (transected, brain removed from the loop) can be
-trained: if shock is delivered *only* when a hindlimb is extended, the limb
-learns to hold a flexed position, and this improvement requires ionotropic
-glutamate receptors, NMDA-receptor-dependent plasticity, BDNF release, and new
-protein synthesis to outlast the training session — the same molecular
-signature as L-LTP above, but on a instrumental, response-contingent
-timescale. Critically, the gate here is **bidirectional and is set by
-contingency, not by how much afferent drive occurred**: uncontrollable
-(non-contingent) shock at the same intensity and frequency produces the
-*opposite* outcome — a protein-synthesis-dependent, actively **maladaptive**
-suppression of the spinal cord's future capacity to learn the same task,
-mediated in part through group-I metabotropic glutamate receptors acting via
-protein kinase C (a genuine metaplasticity mechanism, not just "no capture
-happened"). The falsification structure is already built into these papers:
-block protein synthesis and the transient within-session change still occurs,
-but it does not outlast the session — the same dashed-trace logic §2 of the
-hippocampal document proposes as a memristor test, already run as a wet-lab
-experiment on spinal tissue.
+**Behavioral gate.** In transected rats, response-contingent training (a
+limb flexion that terminates shock) produces NMDAR/BDNF/protein-synthesis-
+dependent potentiation that outlasts the session (Grau 2014; Crown & Grau
+2001). The gate is **bidirectional and set by contingency, not activity
+level**: identical, uncontrollable shock produces the opposite outcome —
+active, protein-synthesis-dependent suppression of future learning, via
+group-I mGluR/PKC signaling, not merely an absence of reinforcement
+(Ferguson, Crown & Grau 2006).
 
-**Structural, two-phase consolidation on exactly this model's Ia pathway (Wolpaw; Chen, Chen, Liu & Wolpaw 2006; Thompson & Wolpaw 2014).**
-H-reflex operant conditioning is the most direct match to `Ia→RG` specifically,
-because it is conditioning of the monosynaptic Ia-afferent-to-motoneuron
-reflex pathway itself, in awake, behaving animals (rats, monkeys, and humans),
-sustained over weeks. It has an explicitly reported two-phase time course:
-**Phase I**, a small change appearing within 1–2 days, and **Phase II**, a
-much larger and more stable change developing over roughly 6–7 weeks and
-distributed across multiple sites — altered motoneuron firing threshold and
-axonal conduction velocity, changed density of GABAergic (and other) synaptic
-terminals on the motoneuron, and interneuron-level changes. This is a
-structural instantiation of "fast, labile component" and "slow, stable,
-multi-site component" reached without invoking any tag/capture vocabulary at
-all — and it is not merely a laboratory curiosity: H-reflex up-conditioning
-has been shown to increase the soleus burst and **correct locomotor asymmetry
-after spinal cord injury in rats**, and an equivalent protocol improves
-walking in humans with incomplete SCI. This is the closest published result to
-this model's own stated debug goal (self-sustained alternation under reduced
-descending drive, carried by the sensory-afferent pathway) — achieved in real
-spinal cords via training-induced consolidation of exactly the Ia-to-motor
-pathway this model already represents.
+**Structural two-phase consolidation.** H-reflex operant conditioning in
+rats — training the monosynaptic Ia-afferent-to-motoneuron reflex directly —
+shows a fast, small Phase I (1–2 days) and a slow, large, multi-site Phase II
+(6–7 weeks: motoneuron firing threshold, GABAergic terminal density,
+interneuron changes) (Chen, Chen, Liu & Wolpaw 2006). Up-conditioning
+**corrects locomotor asymmetry after spinal cord injury in rats** — the
+closest published result to this model's own debug goal, achieved by
+consolidating exactly the `Ia→RG` pathway this model represents.
 
-**Synthesis.** All three literatures independently reproduce the same shape:
-(1) a fast, NMDA-receptor-gated, spontaneously-decaying change; (2) a slower,
-separately-gated conversion to a stable state, requiring protein synthesis and
-a distinct signal (a neuromodulator, a behavioral-contingency outcome, or an
-accumulating structural change) arriving before the fast component decays;
-(3) the *sign* of the stable outcome is not guaranteed positive — a failed or
-uncontrollable contingency produces active, protein-synthesis-dependent
-suppression, not neutrality. None of this requires borrowing hippocampal
-machinery; it is the spinal cord's own, independently-evolved version of the
-same two-timescale plasticity problem, and it is better matched to a
-locomotor CPG than the hippocampal case is, because two of the three
-literatures (Wolpaw; Grau) were generated in exactly this kind of circuit.
+**Synthesis.** All three reproduce the same shape: a fast, decaying change; a
+slower, gated conversion to stability; and a sign that is not guaranteed
+positive — an uncontrollable contingency actively suppresses, not just fails
+to reinforce. This is the spinal cord's own version of the STC problem, a
+better match for a locomotor CPG than the hippocampal case, since two of the
+three literatures were generated in this kind of circuit.
 
-Every mechanism introduced above is two-directional, and the prose so far
-mostly narrated the adaptive direction. The retention rule (tag → decay →
-gated capture) this document proposes is mechanism-neutral machinery, not an
-inherently "good" plasticity rule — what makes a given instance of it
-adaptive or pathological is which signal gates the capture and which synapse
-it acts on, nothing else. §2.1 and §2.2 list the two directions as two
-separate tables rather than side-by-side columns, matching the §1.1/§1.2
-split above, so neither list is read as a footnote to the other.
+Every mechanism above is two-directional. §2.1/§2.2 list the two directions
+as separate tables, matching the §1.1/§1.2 split.
 
 ### 2.1 Healthy / adaptive directions
 
@@ -201,161 +150,50 @@ split above, so neither list is read as a footnote to the other.
 | Spinal instrumental learning (Grau, §1.1) | Contingent (response-produced) outcome → NMDAR/BDNF/protein-synthesis-dependent potentiation that outlasts the session |
 | Dorsal-horn E-/L-LTP (Sandkühler, §1.2) | Borrowed as this document's molecular-substrate analogy for a motor-consolidation tag/capture rule — not this mechanism's own primary framing, see §2.2 |
 | Serotonergic gating, chronic axis (§1.1) | Partly restored by locomotor training and serotonergic agonists post-injury |
-| H-reflex conditioning (Wolpaw, §1.1) | Up-conditioning corrects locomotor asymmetry after SCI, in both rats and humans |
+| H-reflex conditioning (§1.1) | Up-conditioning corrects locomotor asymmetry after SCI in rats |
 
-*Table 2a — For each two-directional mechanism introduced in §1-2, the direction its cited literature reports as adaptive or rehab-positive. Pairs row-for-row with Table 2b except the last, which Table 2b leaves blank rather than inventing a counterpart.*
+*Table 2a — The adaptive direction of each two-directional mechanism from §1-2. Pairs row-for-row with Table 2b except the last, which Table 2b leaves blank rather than inventing a counterpart.*
 
 ### 2.2 Pathological / maladaptive directions
 
 | Mechanism | What the maladaptive direction looks like |
 |---|---|
 | Homeostatic scaling (§1.2) | **Downscaling failure**: KCC2 loss after SCI leaves inhibition too weak, producing spasticity (Boulenguez et al. 2010) — training partially reverses it |
-| Spinal instrumental learning (Grau, §1.2) | Non-contingent (uncontrollable) outcome at the *identical* intensity → active, protein-synthesis-dependent **suppression** of future learning capacity (Ferguson, Crown & Grau 2006) — not merely an absence of learning |
+| Spinal instrumental learning (Grau, §1.2) | Non-contingent (uncontrollable) outcome at the *identical* intensity → active, protein-synthesis-dependent **suppression** of future learning capacity (Ferguson, Crown & Grau 2006) |
 | Dorsal-horn E-/L-LTP (Sandkühler, §1.2) | **Its own primary literature framing**: the standard cellular model of central sensitization underlying hyperalgesia and chronic pain (Ruscheweyh et al. 2011) |
 | Serotonergic gating, chronic axis (§1.2) | Persistently altered CPG sensitivity to 5-HT if left untreated after injury |
-| H-reflex conditioning (Wolpaw) | *No entry* — no specific pathological counterpart in the literature cited here. Left as an open question rather than asserted, unlike the four rows above (which is also why §1's Fig. 1b/Table 1b has no H-reflex row at all). |
+| H-reflex conditioning | *No entry* — no specific pathological counterpart in the literature cited here (also why Table 1b has no H-reflex row) |
 
-*Table 2b — The maladaptive direction of the same mechanisms, where the cited literature documents one. Four of five rows are populated; the H-reflex row is deliberately left without an entry (§2's synthesis explains why, below) rather than filled with an invented failure mode.*
-
-Four of five mechanisms have a confirmed pathological counterpart in the
-cited literature; H-reflex conditioning is left asymmetric deliberately
-rather than inventing one. The pattern that recurs across all four confirmed
-pairs is the same one §2's synthesis above already generalizes across
-mechanisms: gate signal and target synapse determine the outcome, not a
-separate "adaptive plasticity" versus "maladaptive plasticity" machinery.
-This is not only a biological aside — §3 below closes the loop back to
-`cpg_2legs_fast.py` itself, where the same duality shows up as literal,
-observed failure modes.
+*Table 2b — The maladaptive direction, where the cited literature documents one. Gate signal and target synapse determine the outcome, not a separate "adaptive" vs. "maladaptive" machinery — §3 closes the loop with `cpg_2legs_fast.py`'s own observed failure modes.*
 
 ### 2.3 Maladaptive plasticity after spinal cord injury: synthesis
 
-Table 2b's four populated rows are not four independent side-effects — after
-SCI they are commonly reported together, and the literature has its own name
-for the pattern: **maladaptive plasticity**, plasticity mechanisms that
-persist (the retention rule doesn't switch off after injury) but now degrade
-function instead of preserving or restoring it, precisely because the signal
-gating capture and the synapse it acts on have both been changed by the
-lesion, not because plasticity itself became a different kind of process
-(Ferguson et al. 2012's own framing: **"maladaptive spinal plasticity opposes
-spinal learning and recovery in spinal cord injury"** — the mechanism this
-whole document borrows from Grau to explain adaptive spinal learning is, in
-the same body of work, the explanation for why recovery sometimes fails to
-happen at all).
+Table 2b's four rows are not independent side effects — in rat SCI models
+they are commonly reported together, a pattern the literature calls
+**maladaptive plasticity**: retention rules that persist but now degrade
+function because injury changed the gating signal or target synapse, not
+because plasticity itself changed kind (Ferguson et al. 2012: *"maladaptive
+spinal plasticity opposes spinal learning and recovery in spinal cord
+injury"* — the same mechanism this document borrows from Grau to explain
+adaptive learning, in its own field's account of why recovery sometimes
+fails).
 
-Four convergent, commonly-co-occurring changes, each already a row in Table
-1b/2b:
+1. **Spasticity** via KCC2 loss (Boulenguez et al. 2010).
+2. **Central/neuropathic pain** via dorsal-horn LTP consolidation (Sandkühler
+   & Liu 1998; Ruscheweyh et al. 2011).
+3. **Impaired further learning** under uncontrollable training (Ferguson,
+   Crown & Grau 2006).
+4. **Altered serotonergic sensitivity** if left untreated.
 
-1. **Spasticity via chloride dysregulation.** KCC2 loss depolarizes the Cl⁻
-   reversal potential, so GABA/glycine input that should inhibit a motoneuron
-   instead barely restrains it — hyperreflexia and spasticity, not a single
-   symptom but the direct electrophysiological consequence (Boulenguez et al.
-   2010).
-2. **Central/neuropathic pain via dorsal-horn LTP consolidation.** The same
-   NMDA/BDNF/dopamine-gated capture mechanism this document borrows as a
-   *motor*-consolidation analogy (§2) is, in its own field, understood as
-   consolidating a *pain* state — hyperalgesia and allodynia that outlast the
-   original noxious input by exactly the E-LTP→L-LTP transition described
-   above (Sandkühler & Liu 1998; Ruscheweyh et al. 2011).
-3. **Impaired capacity for further learning if training is uncontrollable.**
-   Grau's own metaplasticity result: input the spinal cord cannot control
-   (as opposed to input it can control, e.g. active stepping practice) leaves
-   a protein-synthesis-dependent deficit that suppresses *subsequent*
-   learning, not just the immediate trial — a mechanistic argument that
-   passive or poorly-timed rehabilitation is not merely less helpful than
-   active, contingent training, it can be actively counterproductive
-   (Ferguson, Crown & Grau 2006).
-4. **Altered descending neuromodulatory sensitivity.** The CPG's own
-   response to serotonin — not just its resting drive — shifts after injury
-   and, left untreated, stays shifted (§1 table).
+None is a separate disease process — each is the Table 2a mechanism tipped
+toward the maladaptive branch by what the lesion changed, matching the
+general rat SCI literature's multiple-hit picture (motoneurons,
+interneurons, and afferents concurrently, not one dominant cause).
 
-**None of these four is a separate disease process bolted onto normal
-plasticity** — each is the same class of mechanism as its Table 2a
-counterpart (homeostatic scaling, tag/capture, contingency-gated learning,
-neuromodulatory gating), running on the same retention rule, tipped toward
-the maladaptive branch by what the lesion changed about the gating signal or
-the target synapse. This is why §2's synthesis frames the retention rule as
-neutral machinery rather than an inherently protective one: after a real
-injury, several of these mechanisms plausibly tip in the same direction at
-once, which is a *multiple-hit* picture, not a single lesion causing a
-single problem, and matches the general SCI neuroplasticity literature's own
-framing of concurrently-operating mechanisms across motoneurons,
-interneurons, and afferents rather than one dominant cause.
-
-**Consequence for this document's own proposal.** A `--consolidate`-style
-mechanism (§2, implemented in `cpg_2legs_fast.py`, see [CLAUDE.md](CLAUDE.md))
-is exactly this retention rule, and it inherited the same double edge: tuned
-one way it reproduces Table 2a's outcomes (§3 below), tuned another way it
-reproduces literal analogs of Table 2b's — cap-domination as a positive-
-feedback runaway structurally like unchecked central sensitization, and
-leg-synchronization as a loss of the differentiation a healthy pair of limbs
-maintains. Building the mechanism was necessary but insufficient; which
-regime it lands in is an empirical, per-configuration question, exactly as
-it is in the biology this document is modeled on.
-
-### 2.4 Active forgetting: erasing an already-consolidated trace
-
-![Line chart: dorsal-horn synaptic potentiation, normalized so 1.0 is fully consolidated and 0 is the naive baseline, plotted against hours since an intervention. All traces start at the same consolidated plateau. Without a trigger the trace stays flat indefinitely (dotted gray). Opioid-triggered depotentiation collapses it rapidly toward baseline within about 2 hours (solid red). PKM-zeta blockade via ZIP collapses it on a slightly slower timescale, over roughly 6-8 hours (dashed green).](spinal_active_forgetting.png)
-
-*Fig. 3 — Active forgetting at dorsal-horn synapses: two independent, literature-documented triggers erase an already-consolidated trace, contrasted with the default (no trigger) of indefinite persistence. Unlike Fig. 2's normal-vs-blocked contrast (which is about whether capture happens at all), every trace here starts already consolidated — the divergence is entirely about whether an active erasure signal arrives afterward. Curve shapes are illustrative, chosen only to show relative onset/timescale differences between the two triggers as each citation describes them qualitatively, not digitized data.*
-
-Everything decaying in this document so far is **passive**: an uncaptured
-tag relaxes back toward baseline on its own because nothing sustains it
-(§2's E-LTP decay; the hippocampal document's own Fig. 2, where the
-blocked/dashed trace just drifts back down each cycle with no dedicated
-mechanism driving it). The general active-forgetting literature (outside
-the spinal cord) draws a sharp line between that and **active** forgetting:
-a dedicated, triggerable process that dismantles a trace that would
-otherwise persist — in *Drosophila*, specific dopaminergic "forgetting
-cells" driving Rac1/cofilin-mediated actin remodeling in mushroom-body
-neurons, with blocking those cells making memories last *longer*, not
-shorter (Shuai et al. 2010; Cervantes-Sandoval et al. 2016's Scribble-Rac1-
-Cofilin "forgetting signalosome"). The spinal cord has its own, independent
-version of exactly this category — not borrowed from the fly literature, at
-the same dorsal-horn synapses this document already uses as its molecular
-substrate (§2):
-
-**Opioid-triggered depotentiation (Drdla-Schütting, Benrath, Wunderbaldinger
-& Sandkühler 2012, *Science*).** A brief, high-dose opioid-receptor
-activation actively reverses already-established C-fiber LTP — not by
-withdrawing support and letting it drift down, but through its own
-Ca²⁺-dependent signaling cascade that normalizes AMPA-receptor
-phosphorylation back to baseline, on demand. Critically, this **reverses
-hyperalgesia in behaving animals**: it is not merely analgesia (the pain
-signal is temporarily damped) but the erasure of the underlying synaptic
-memory trace of pain, with the behavioral change outlasting the drug. This
-is the most literal spinal counterpart to "active forgetting" available —
-closer to it, in fact, than the hippocampal document's own STC-blocked
-counterfactual, which only ever shows a trace that *failed to consolidate*,
-never one that consolidated and was then actively taken back down.
-
-**Maintenance-dependent erasure via PKMζ (Asiedu, Tillu, Melemedjian, Shy,
-Sanoja, Bodell, Ghosh, Porreca & Price 2011, *J. Neurosci.*).** A second,
-independent route to the same outcome: the spinal cord's consolidated
-(late-phase) nociceptive sensitization is not a state that persists for
-free once captured — it requires *ongoing* synthesis/activity of protein
-kinase Mζ to remain maintained at all. Blocking PKMζ (with the
-ζ-pseudosubstrate inhibitory peptide, ZIP) collapses the already-established
-potentiation. This mirrors the well-known hippocampal PKMζ/ZIP maintenance
-literature (Sacktor and colleagues) point for point, again without either
-field citing the other — a second, independent line of evidence that
-"capture" in real neural tissue is not the discrete permanent write this
-document's tag/capture vocabulary (and the hippocampal circuit proposal it
-mirrors) makes it sound like; maintenance itself can be an ongoing,
-interruptible process with its own active-erasure failure mode.
-
-**Consequence for `--consolidate` (this document's own proposal).** The
-implemented mechanism (§2, `cpg_2legs_fast.py`) only has the *passive* half
-of this picture: an uncaptured tag decays on its own (`consolidation_leak`),
-but once a capture event freezes `baseline`, nothing in the current design
-can ever move it back down again short of the *loading-dependent* logic
-built for other reasons ([CLAUDE.md](CLAUDE.md), "Core architecture fix").
-There is no analog of an actively-triggered erasure signal that could reset
-an already-captured baseline — the spinal literature above says such a
-signal (opioid receptor activation reversing a specific pathological
-capture; a maintenance-kinase blockade collapsing another) is a real,
-separate mechanism, not a hypothetical one, and this document does not yet
-propose a model-level counterpart for it. Flagged here as an open gap for a
-future pass, not addressed by the current plan.
+**Consequence.** `--consolidate` (`cpg_2legs_fast.py`) is exactly this
+retention rule, and inherited the same double edge — tuned one way it
+reproduces Table 2a's outcomes, tuned another it reproduces Table 2b's, with
+direct model-level counterparts found empirically (§3, closing paragraph).
 
 ## 3. Mapping onto the tinyCPG architecture
 
@@ -440,14 +278,11 @@ picked adaptive or maladaptive.
 - Crown, E.D. & Grau, J.W. (2001). [Preserving and restoring behavioral potential within the spinal cord using an instrumental training paradigm](https://pubmed.ncbi.nlm.nih.gov/11495955/).
 - Ferguson, Crown & Grau (2006). [Group I metabotropic glutamate receptors control metaplasticity of spinal cord learning through a PKC-dependent mechanism](https://pmc.ncbi.nlm.nih.gov/articles/PMC2628285/).
 - Ferguson, A.R., Huie, J.R., Crown, E.D., Baumbauer, K.M., Hook, M.A., Garraway, S.M., Lee, K.H., Hoy, K.C. & Grau, J.W. (2012). [Maladaptive spinal plasticity opposes spinal learning and recovery in spinal cord injury](https://pmc.ncbi.nlm.nih.gov/articles/PMC3468083/), *Front. Physiol.* (§2.3's synthesis reference: the same borrowed mechanism explaining adaptive spinal learning, in its own field's framing of why recovery sometimes fails).
-- Drdla-Schütting, R., Benrath, J., Wunderbaldinger, G. & Sandkühler, J. (2012). [Erasure of a spinal memory trace of pain by a brief, high-dose opioid administration](https://pubmed.ncbi.nlm.nih.gov/22246779/), *Science* 335:235-238 (§2.4: active, triggered depotentiation of already-consolidated C-fiber LTP, reversing hyperalgesia in behaving animals).
-- Asiedu, M.N., Tillu, D.V., Melemedjian, O.K., Shy, A., Sanoja, R., Bodell, B., Ghosh, S., Porreca, F. & Price, T.J. (2011). [Spinal protein kinase Mζ underlies the maintenance mechanism of persistent nociceptive sensitization](https://www.jneurosci.org/content/31/18/6646), *J. Neurosci.* (§2.4: the consolidated state requires ongoing PKMζ activity to persist at all — blocking it with ZIP collapses an already-established potentiation, mirroring the hippocampal PKMζ/ZIP maintenance literature independently).
-- Shuai, Y., Lu, B., Hu, Y., Wang, L., Sun, K. & Zhong, Y. (2010). [Forgetting is regulated through Rac activity in Drosophila](https://www.cell.com/fulltext/S0092-8674(09)01630-4), *Cell* (§2.4: the canonical active-forgetting mechanism this section contrasts the spinal findings against — a dedicated Rac-dependent process, not passive decay).
-- Cervantes-Sandoval, I. et al. (2016). [Scribble scaffolds a signalosome for active forgetting](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4926877/), *Neuron* (§2.4: the dopamine-gated Scribble-Rac1-Cofilin "forgetting signalosome" in *Drosophila* mushroom body, cited for contrast with the spinal mechanisms above).
-- Wolpaw, J.R. — overview of H-reflex operant conditioning and multi-site spinal plasticity: [Operant conditioning of H-reflex can correct a locomotor abnormality after SCI in rats](https://www.jneurosci.org/content/26/48/12537); [Memory traces in primate spinal cord produced by operant conditioning of H-reflex](https://journals.physiology.org/doi/abs/10.1152/jn.1989.61.3.563); [Operant conditioning of a spinal reflex can improve locomotion after SCI in humans](https://www.jneurosci.org/content/33/6/2365).
+- Chen, Y., Chen, X.Y., Liu, Z. & Wolpaw, J.R. (2006). H-reflex operant conditioning and its multi-site plasticity in the rat.
+- Wolpaw, J.R. — [Operant conditioning of H-reflex can correct a locomotor abnormality after spinal cord injury in rats](https://www.jneurosci.org/content/26/48/12537).
 - Côté, M.-P., Azzam, G.A., Lemay, M.A., Zhukareva, V. & Houlé, J.D. (2011). [Activity-dependent increase in neurotrophic factors is associated with an enhanced modulation of spinal reflexes after spinal cord injury](https://pmc.ncbi.nlm.nih.gov/articles/PMC3037803/), *J. Neurotrauma*.
 - Role of serotonin in locomotor CPG control and recovery after SCI: [The role of serotonin in the control of locomotor movements and strategies for restoring locomotion after SCI](https://pubmed.ncbi.nlm.nih.gov/24993627/); [The role of the serotonergic system in locomotor recovery after SCI](https://pmc.ncbi.nlm.nih.gov/articles/PMC4321350/).
 - Homeostatic/AMPAR-mediated plasticity after SCI: [AMPA receptor phosphorylation and synaptic colocalization on motor neurons drive maladaptive plasticity below complete SCI](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4677690/); [Synaptic up-scaling preserves motor circuit output after chronic, natural inactivity](https://elifesciences.org/articles/30005).
-- Turrigiano, G.G. (2008). The self-tuning neuron: synaptic scaling of excitatory synapses. *Cell* 135(3):422-435 (bidirectional AMPAR up-/downscaling, the general framework §1.1 specializes to the spinal cord).
+- Turrigiano, G.G. (2008). The self-tuning neuron: synaptic scaling of excitatory synapses. *Cell* 135(3):422-435 (bidirectional AMPAR up-/downscaling, the general framework §1.3 specializes to the rat spinal cord).
 - Boulenguez, P. et al. (2010). [Down-regulation of the potassium-chloride cotransporter KCC2 contributes to spasticity after spinal cord injury](https://www.nature.com/articles/nm.2107), *Nature Medicine* (KCC2 loss as a homeostatic-downscaling failure; exercise/training partially restores KCC2 — the closest spinal-specific evidence that a homeostatic failure is training-reversible).
 - For context, the hippocampal-side analogy this document mirrors: [Hippocampal Timescales as a Circuit Specification](https://github.com/max-talanov/tinyHippo/blob/main/hippocampal_timescales_as_circuit_spec.md).
