@@ -627,12 +627,45 @@ the excitatory load.
 **Consequence: `--consolidate`'s shipped defaults are validated for the
 descending arm only.** Do not use `--consolidate` on `--freeze-bs-rg` runs
 with the current defaults without its own tuning round — this bracket found
-a *different* promising corner (high-genuine/low-forced, e.g. 0.25/0.10-0.15)
-but has not bracketed *around* that corner or confirmed it at a second seed,
-so nothing here is being promoted to a sensory-arm default the way 0.20/0.15
-was for the descending arm. This also means `--consolidate` cannot yet be
-treated as arm-agnostic — a real, non-obvious asymmetry worth remembering
-before it's used in any sensory-arm sweep script.
+a *different* promising corner (high-genuine/low-forced, e.g. 0.25/0.10-0.15).
+
+**Sensory-arm tuning round (2026-09-15) — the 0.25/0.10-0.15 corner has a
+reproducible bad zone in its middle, not a smooth trade-off.** Fine-swept
+forced ∈ {0.10, 0.1125, 0.125, 0.1375, 0.15} at genuine=0.25 fixed, first at
+seed 12345 then repeated at seed 54321 to separate real structure from
+per-seed noise (the same check that mattered for the descending arm):
+
+| forced | seed1 `frac_at_cap` L/R | seed1 corrLR | seed2 `frac_at_cap` L/R | seed2 corrLR |
+|---|---|---|---|---|
+| no-consolidate | 0.04 / 0.03 | −0.267 | 0.03 / 0.04 | −0.670 |
+| **0.10** | 0.23 / 0.07 | **−0.147** | 0.10 / 0.09 | **−0.262** |
+| 0.1125 | 0.20 / 0.07 | +0.299 | 0.23 / 0.16 | +0.527 |
+| 0.125 | 0.12 / 0.07 | +0.257 | 0.22 / 0.13 | +0.714 |
+| 0.1375 | 0.23 / 0.20 | −0.072 | 0.23 / 0.17 | +0.318 |
+| 0.15 | 0.38 / 0.17 | −0.440 | 0.28 / 0.23 | +0.076 |
+
+Two-seed comparison separates a real effect from what first looked like
+random scatter: **0.10 is the only forced value that stays negative
+(anti-phase) in both seeds** — the interior of the box (0.1125-0.1375) gives
+a **positive** (synchronized) corrLR in *both* seeds, a reproducible bad zone,
+not noise. 0.15, which looked like the round's best point at seed 1
+(−0.440), flips to positive (+0.076) at seed 2 — unreliable, same pattern as
+0.25/0.15 and 0.20/0.10 in the earlier descending-arm confirmation. Nothing
+in this box fully restores `frac_at_cap` to the no-consolidate level (best
+case 0.10/0.09 at seed 2, still ~3x worse than baseline) — this remains a
+real, open regression for the sensory arm, not a solved problem.
+
+**Working recommendation for `--freeze-bs-rg` runs: `--consolidate-prp-gain-
+genuine 0.25 --consolidate-prp-gain-forced 0.10`** — the only point in the
+tested region that is reproducibly better than doing nothing on
+corr(F-E_L,F-E_R) without a compensating cap-domination regression as bad as
+the rest of the box. This is a working recommendation, not a "confirmed
+default" promoted into the CLI's global defaults the way 0.20/0.15 was for
+the descending arm — it is still worse than no-consolidate on `frac_at_cap`
+in both seeds, and only two seeds and one (genuine, timing) point have been
+tested. `--consolidate` cannot yet be treated as arm-agnostic, and this
+gap should stay open (not silently assumed closed) before any sensory-arm
+sweep script turns `--consolidate` on by default.
 
 ### Sensory-driven mode (`--freeze-bs-rg`, now just freezing BS since Ia→RG is always on — WMAX_IA=10)
 
