@@ -83,7 +83,7 @@ hippocampal document derives from STC — a labile, spontaneously-decaying
 change, stabilized only by a second, slower, separately-gated signal — without
 citing each other or the hippocampal literature:
 
-**Molecular substrate (Sandkühler & Liu 2003; Yang, Chen, Zhang & Sandkühler 2004; Zhang & Sandkühler 2008).**
+**Molecular substrate (Sandkühler & Liu 1998; Yang, Chen, Zhang & Sandkühler 2004; Zhang & Sandkühler 2008).**
 Dorsal-horn E-LTP behaves exactly like a decaying tag: NMDA-receptor-dependent,
 induced by a single tetanic conditioning stimulus, present within minutes, and
 gone within a few hours if nothing else happens. Its conversion to L-LTP is a
@@ -97,7 +97,15 @@ molecular-level proof that "labile tag, stabilized only if a distinct
 neuromodulatory signal arrives before decay" is not a hippocampus-specific
 trick — it is present, with the same pharmacological dissociation the
 hippocampal document relies on (§2 of that document), at spinal synapses with
-no cortex or hippocampus involved.
+no cortex or hippocampus involved. **This substrate's own primary literature
+framing is pathological, not adaptive**, worth flagging before treating it
+purely as this document's tag/capture analogy: the identical NMDAR-dependent,
+BDNF/dopamine-gated dorsal-horn potentiation is the standard cellular model
+of central sensitization underlying hyperalgesia and chronic pain (Sandkühler
+& Liu 1998; Ruscheweyh, Wilder-Smith, Drdla, Liu & Sandkühler 2011) — the same
+mechanism the pain field studies specifically *to block it*. The retention
+rule itself is not "good" or "bad"; §2.1 below collects this alongside the
+other three mechanisms above that are similarly two-directional.
 
 **Behavioral/computational gate — contingency, not activity (Grau 2014; Crown & Grau 2001; Ferguson, Crown & Grau 2006).**
 The isolated spinal cord (transected, brain removed from the loop) can be
@@ -153,6 +161,33 @@ same two-timescale plasticity problem, and it is better matched to a
 locomotor CPG than the hippocampal case is, because two of the three
 literatures (Wolpaw; Grau) were generated in exactly this kind of circuit.
 
+### 2.1 Which direction is healthy, which is pathological
+
+Every mechanism introduced above is two-directional, and the prose so far
+mostly narrated the adaptive direction. Collecting the maladaptive direction
+in one place matters for a rehabilitation-motivated document specifically:
+the retention rule (tag → decay → gated capture) this document proposes is
+mechanism-neutral machinery, not an inherently "good" plasticity rule — what
+makes a given instance of it adaptive or pathological is which signal gates
+the capture and which synapse it acts on, nothing else.
+
+| Mechanism | Healthy / adaptive direction | Pathological / maladaptive direction |
+|---|---|---|
+| Homeostatic scaling (§1.1) | Upscaling after deafferentation restores excitability lost to reduced afferent drive | **Downscaling failure**: KCC2 loss after SCI leaves inhibition too weak, producing spasticity (Boulenguez et al. 2010) — training partially reverses it |
+| Spinal instrumental learning (Grau) | Contingent (response-produced) outcome → NMDAR/BDNF/protein-synthesis-dependent potentiation that outlasts the session | Non-contingent (uncontrollable) outcome at the *identical* intensity → active, protein-synthesis-dependent **suppression** of future learning capacity (Ferguson, Crown & Grau 2006) — not merely an absence of learning |
+| Dorsal-horn E-/L-LTP (Sandkühler) | Borrowed above as this document's molecular-substrate analogy for a motor-consolidation tag/capture rule | **Its own primary literature framing**: the standard cellular model of central sensitization underlying hyperalgesia and chronic pain (Ruscheweyh et al. 2011) |
+| Serotonergic gating, chronic axis (§1 table) | Partly restored by locomotor training and serotonergic agonists post-injury | Persistently altered CPG sensitivity to 5-HT if left untreated after injury |
+| H-reflex conditioning (Wolpaw) | Up-conditioning corrects locomotor asymmetry after SCI, in both rats and humans | No specific pathological counterpart in the literature cited here — an open question, not asserted, unlike the four rows above |
+
+Four of five rows have a confirmed pathological counterpart in the cited
+literature; H-reflex conditioning is left asymmetric deliberately rather than
+inventing one. The pattern that recurs across all four confirmed pairs is the
+same one §2's synthesis above already generalizes across mechanisms: gate
+signal and target synapse determine the outcome, not a separate "adaptive
+plasticity" versus "maladaptive plasticity" machinery. This is not only a
+biological aside — §3 below closes the loop back to `cpg_2legs_fast.py`
+itself, where the same duality shows up as literal, observed failure modes.
+
 ## 3. Mapping onto the tinyCPG architecture
 
 This model already has three standing plastic pathways
@@ -197,9 +232,38 @@ Implementation (state variables, update equations, where in
 `cpg_2legs_fast.py`'s sim loop this would live) is intentionally left to the
 separate implementation plan, not this document.
 
+**§2.1's healthy/pathological duality is not just biological framing — it
+recurs as literal, measured failure modes once `--consolidate` was actually
+built and tuned** (see [CLAUDE.md](CLAUDE.md), "Tag-and-capture
+consolidation"). Two of that section's four confirmed pathological
+directions have a direct model-level counterpart, found empirically, not
+predicted in advance by this document:
+
+- **Cap-domination** (`frac_at_cap` near 1.0 — the failsafe timer, not
+  genuine sensory feedback, driving every stance/swing transition) is the
+  model's own version of the homeostatic-downscaling failure above: a
+  positive-feedback loop (`CUT→RG-E→force_e→CUT`) that never releases,
+  structurally the same shape as excitation that never gets scaled back down
+  because the compensatory brake (there, KCC2; here, a capture gate tuned
+  too permissively) never engages.
+- **Leg-synchronization** (corr(F-E_L,F-E_R) flipping positive — both legs'
+  `CUT→RG-E` consolidating to the same stable plateau instead of staying
+  desynchronized) is a direct instance of over-consolidation: capturing too
+  easily and too often erased exactly the kind of run-to-run,
+  synapse-to-synapse asymmetry that real tag/capture leaves intact (§2's
+  "labile, spontaneously-decaying" tag is *supposed* to preserve variability
+  between reinforcement events, not average it away).
+
+Both were found by tuning `--consolidate`'s gain/threshold constants after
+implementation, the same way the biology's own pathological directions were
+found by perturbing (not designing) real spinal circuits — the retention
+rule was neutral machinery in both cases; the tuning (or the lesion) is what
+picked adaptive or maladaptive.
+
 ## References
 
-- Sandkühler, J. & Liu, X. (2003). Induction of long-term potentiation at spinal synapses by noxious stimulation or nerve injury. *Eur. J. Neurosci.*
+- Sandkühler, J. & Liu, X. (1998). [Induction of long-term potentiation at spinal synapses by noxious stimulation or nerve injury](https://onlinelibrary.wiley.com/doi/10.1046/j.1460-9568.1998.00278.x), *Eur. J. Neurosci.*
+- Ruscheweyh, R., Wilder-Smith, O., Drdla, R., Liu, X.-G. & Sandkühler, J. (2011). [Long-term potentiation in spinal nociceptive pathways as a novel target for pain therapy](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3078873/), *Mol. Pain* (dorsal-horn LTP's primary literature framing: a cellular model of pathological hyperalgesia/chronic pain, cited in §2 and §2.1 as the pathological counterpart to this document's tag/capture analogy).
 - Zhang, H.-M. & Sandkühler, J. (2008) et al. — [Protein synthesis inhibition blocks the late-phase LTP of C-fiber evoked field potentials](https://journals.physiology.org/doi/full/10.1152/jn.01027.2002), *J. Neurophysiol.*
 - Yang, Chen, Zhang & Sandkühler (2004). [Activation of spinal D1/D5 receptors induces late-phase LTP of C-fiber–evoked field potentials](https://journals.physiology.org/doi/full/10.1152/jn.01324.2004), *J. Neurophysiol.*
 - [BDNF induces late-phase LTP of C-fiber evoked field potentials in rat spinal dorsal horn](https://sciencedirect.com/science/article/abs/pii/S0014488608002045), *Eur. J. Pain* / Neurosci. Lett.
