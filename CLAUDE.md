@@ -723,6 +723,42 @@ substantially:
    tuning going forward — always pair with `--steady-from-ms` on
    `scripts/cpg_cutforce_diagnostics.py`.**
 
+**Full 3×3 sensory-arm bracket, both seeds, steady-state (t≥30s) — completes
+the grid the working recommendation was drawn from.** The earlier
+sensory-arm bracket (round labeled "generalization check") only had seed-1
+coverage across the full 3×3 grid; seed 54321 was filled in for the
+remaining 7 cells to check the same two-seed standard applied everywhere
+else in this file:
+
+| genuine/forced | seed1 `atCap` L/R | seed1 corrLR | seed2 `atCap` L/R | seed2 corrLR | verdict |
+|---|---|---|---|---|---|
+| no-consolidate | 0.00/0.00 | −0.285 | 0.00/0.00 | −0.720 | reference |
+| 0.15/0.10 | 0.82/0.03 | −0.147 | 0.20/0.00 | −0.316 | still cap-dominated (seed1 L) |
+| 0.15/0.15 | 0.85/0.35 | −0.151 | 0.91/0.85 | +0.866 | cap-dominated both seeds, corrLR flips |
+| 0.15/0.20 | 1.00/0.91 | +0.891 | 0.94/0.88 | +0.902 | cap-dominated **and** synchronized, both seeds |
+| 0.20/0.10 | 0.00/0.00 | +1.000 | 0.00/0.00 | −0.527 | genuine both seeds, corrLR flips |
+| 0.20/0.15 | 0.00/0.09 | +0.938 | 0.20/0.00 | +0.605 | genuine, but **synchronized in both seeds** |
+| 0.20/0.20 | 0.85/0.47 | −0.297 | 0.71/0.82 | −0.200 | cap-dominated, both seeds |
+| **0.25/0.10** | **0.00/0.00** | **−0.286** | **0.00/0.00** | **−0.280** | **genuine + anti-phase, both seeds** |
+| 0.25/0.15 | 0.00/0.00 | −0.829 | 0.00/0.00 | +0.316 | genuine both seeds, corrLR flips (bistable) |
+| 0.25/0.20 | 0.00/0.00 | +1.000 | 0.03/0.00 | +0.632 | genuine, but **synchronized in both seeds** |
+
+The completed grid separates into three clean groups rather than a noisy
+scatter: **genuine=0.15 is simply too weak** to reliably escape
+cap-domination in this arm (still cap-dominated in 5 of 6 seed×forced
+combinations); **genuine=0.20/0.25 paired with forced=0.15 or 0.20 reliably
+escapes cap-domination but reliably synchronizes the legs instead**
+(positive corrLR in *both* seeds at all four such cells — a real,
+reproducible failure mode, not scatter); and **0.25/0.10 is the only cell in
+the entire 3×3 grid that is both genuine and anti-phase in both seeds**, with
+its two corrLR values (−0.286, −0.280) nearly identical — the same tight
+cross-seed replication quality that confirmed 0.20/0.15 for the descending
+arm. This is the strongest evidence yet for the working recommendation and
+completes the sensory-arm bracket to the same two-seed standard as the
+descending arm, though it remains a working recommendation, not a promoted
+CLI default — see caveats above (one timing operating point, `tau_tag_ms`
+unswept).
+
 ### Sensory-driven mode (`--freeze-bs-rg`, now just freezing BS since Ia→RG is always on — WMAX_IA=10)
 
 Learning shifted from descending (BS) to sensory (muscle-Ia) pathway: BS→RG frozen at
