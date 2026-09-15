@@ -294,6 +294,10 @@ it is in the biology this document is modeled on.
 
 ### 2.4 Active forgetting: erasing an already-consolidated trace
 
+![Line chart: dorsal-horn synaptic potentiation, normalized so 1.0 is fully consolidated and 0 is the naive baseline, plotted against hours since an intervention. All traces start at the same consolidated plateau. Without a trigger the trace stays flat indefinitely (dotted gray). Opioid-triggered depotentiation collapses it rapidly toward baseline within about 2 hours (solid red). PKM-zeta blockade via ZIP collapses it on a slightly slower timescale, over roughly 6-8 hours (dashed green).](spinal_active_forgetting.png)
+
+*Fig. 3 — Active forgetting at dorsal-horn synapses: two independent, literature-documented triggers erase an already-consolidated trace, contrasted with the default (no trigger) of indefinite persistence. Unlike Fig. 2's normal-vs-blocked contrast (which is about whether capture happens at all), every trace here starts already consolidated — the divergence is entirely about whether an active erasure signal arrives afterward. Curve shapes are illustrative, chosen only to show relative onset/timescale differences between the two triggers as each citation describes them qualitatively, not digitized data.*
+
 Everything decaying in this document so far is **passive**: an uncaptured
 tag relaxes back toward baseline on its own because nothing sustains it
 (§2's E-LTP decay; the hippocampal document's own Fig. 2, where the
