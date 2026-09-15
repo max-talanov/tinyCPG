@@ -55,6 +55,7 @@ sbatch run.sh
 | `run_cutforce_sweep5.sh` | CONFIRMATION refinement (9 tasks, not a new exploration): brackets round 4's τ=250/off=0.35 optimum — fatigue-onset-τ {240,250,260} × `--cut-force-off-frac` {0.35,0.375,0.40}, cap still fixed at 450ms. **Confirmed: frac_at_cap=0.00 on all 9 configs** — best point τ=260/off=0.35, see "Force-triggered CUT" below. |
 | `run_cutforce_sweep6.sh` | PHASE 3 — seed/init robustness (10 tasks, 120s each): holds round 5's winning config fixed (τ=260, off=0.35, cap=450ms), sweeps the same 10-point (μ,CV) STDP-init grid as `run.sh`/paper Algorithm 1. Tests whether the operating point found in rounds 1-5 holds away from μ=3.5. |
 | `run_cutforce_sensory_unload.sh` | EXPLORATORY, round 1 (9 tasks, 120s each): production-scale test of the unloading-rescue mechanism (Ia→RG-E/F now loading-dependent, see "Core architecture fix" below) — sensory arm (`--freeze-bs-rg`), 3×3 grid of `--cut-feedback-gain` (loading) × `--ia-feedback-gain` (compensation). Local debug-scale tuning plateaued at weak counter-phase across a wide search; suspected debug-scale population-size ceiling (N_IA_E/F=30 vs 100 production), not a broken mechanism — see "Force-triggered CUT" below. |
+| `run_consolidate_speed_arm_loading.sh` | Stage 4 MN5 array (24 tasks): `--consolidate` production sweep, force-trigger mode — 2 confirmed speeds (medium/slow, fast excluded — unresolved, see "Force-trigger speed axis" below) × 2 arms (descending/sensory, each at its own confirmed gain pair) × loading (medium speed only: full/toe/air; slow speed: full only, since loading is only paper-defined at the baseline speed anchor). Seed/init-robustness (μ:CV grid) and per-speed/per-loading consolidate re-tuning (Stages 2-3) are explicitly NOT part of this sweep — see "MN5 readiness verdict" below. |
 | `CLAUDE.md` | This file. |
 | `spinal_plasticity_as_learning_spec.md` | Literature-grounded spec for the `--consolidate` tag-and-capture mechanism (see "Tag-and-capture consolidation" below) — spinal-cord analogue of hippocampal synaptic tagging and capture, written by direct analogy to [`hippocampal_timescales_as_circuit_spec.md`](https://github.com/max-talanov/tinyHippo/blob/main/hippocampal_timescales_as_circuit_spec.md). |
 
@@ -1163,6 +1164,117 @@ excitatory drive when cutaneous input is genuinely reduced) engaging
 correctly — previously validated only in timer/paced-gait mode; this is its
 first confirmation under `--cut-trigger force`. New files:
 `results/{descending,sensory}_{toe,air}_seed12345.h5`.
+
+**Fast direction, attempt 6 — SUB_STANCE_MS scaled too (2026-09-15): the
+noise/chatter and reliable-synchronization failures are both fixed; a
+sharper, purely bistable failure remains.** Scaled the third previously-
+untested absolute-time constant flagged above — `SUB_STANCE_MS` (the Ia-E
+heel→toe sub-group window, derived from `--step-period-ms`/
+`--stance-fraction`/`--n-ia-groups`) — down alongside the already-confirmed
+levers: `--step-period-ms` 1000→750 (0.75×, giving `sub_stance`≈125ms
+instead of the ~167ms every prior attempt left fixed), `--lead-offset-ms`
+150→112 (0.75×, factor 1 from the desynchronization investigation above),
+and the same 0.75× fatigue-onset/recovery scale from the earlier failed
+uniform-scale attempt (τ=195/recovery=450). Tested three cap values at
+off-frac=0.30 (the confirmed-fast value), two seeds each:
+
+| cap (ms) | seed1 steady atCap L/R | seed1 corrLR | seed2 steady atCap L/R | seed2 corrLR | steady duration (both seeds) |
+|---|---|---|---|---|---|
+| 340 | 1.00/1.00 | −0.793 | 1.00/1.00 | −0.738 | 350±0ms (disguised clock) |
+| 420 | 0.00/0.00 | **−0.541** | 0.00/0.00 | **+0.576** | 400±0ms (genuine) |
+| 450 | 0.00/0.00 | **−0.536** | 0.00/0.00 | **+0.999** | 400±0ms (genuine) |
+
+(Loosening off-frac instead of the cap, at the 340ms cap, was tried first
+and made things worse, not better — off=0.35 gave `frac_at_cap` 0.58-0.65
+with corrLR flipping positive [+0.20]; off=0.40 gave 0.49-0.50 with corrLR
+collapsing toward zero [-0.20]. Loosening the cap while holding off=0.30
+fixed was the lever that actually worked.)
+
+Two real, opposite-direction improvements over every earlier fast attempt,
+both confirmed at 420ms and 450ms cap alike: (1) **bout duration is now
+exactly deterministic** (±0ms steady-state std, vs. attempt 5's ±144-160ms
+chatter) — scaling `SUB_STANCE_MS` alongside the tick/filter work removed
+the noise-driven variability that every earlier fast attempt suffered from;
+(2) **corr(F-E_L,F-E_R) is strongly negative in one seed of every config
+tested**, unlike attempts 2-5 which were reliably *positive* (synchronized)
+at comparable speeds. But the sign now **flips between seeds at both cap
+values** (−0.54→+0.58 at 420ms, −0.54→+0.999 at 450ms) — a clean,
+reproducible bistability, the same failure category already named and
+rejected for several `--consolidate` gain configs elsewhere in this file,
+not noise or a tuning miss. The underlying dynamics settle into a genuinely
+deterministic 400ms limit cycle at both cap values (cap itself stops
+mattering once it's loosened past ~380-400ms) — which leg-phase relationship
+that limit cycle locks into is decided by run-to-run spike-timing
+happenstance, not by any parameter tested so far.
+
+**Conclusion: SUB_STANCE_MS was a real, load-bearing lever — it just
+resolves a different failure mode than the one blocking a usable fast
+point.** All three previously-identified absolute-time constants
+(`--lead-offset-ms`, tick/filter, `SUB_STANCE_MS`) are now confirmed
+individually load-bearing, and scaling them together removes the
+noise/chatter pathology entirely. What remains is a structurally different
+problem — a genuine deterministic bistability in L/R phase-locking at this
+speed — that time-constant scaling doesn't touch, because it isn't a noise
+or timing-resolution problem at all. **Stage 1's fast direction is closed
+for this pass, unresolved, after 6 distinct attempts** (single-axis nudges,
+proportional 0.75× fatigue-only scaling, lead-offset correction, two filter
+strengths, and now full time-constant-family scaling including
+`SUB_STANCE_MS`). A genuine fix would need to address the bistability
+itself — e.g. a small deliberate L/R asymmetry maintained throughout the
+run (not just at priming) — which is a different, not-yet-attempted class
+of intervention, not a further parameter nudge. New files:
+`results/stage1_fast_substance_{scaled,off040,off035,cap420,cap450}_seed*.h5`.
+
+**Stage 1 final status: 2 of 3 speed points confirmed (medium, slow); fast
+excluded from the production scope below.** Medium (τ=260/off=0.35/
+cap=450) and slow (τ=340/recovery=780/caps=585, 1.3× scale) are both
+genuine and tightly cross-seed-confirmed. Fast has no confirmed point after
+six attempts and should not be included in an MN5 submission until solved
+in its own future pass.
+
+**Production-scale (full N, BS=60Hz) sanity check, medium point, descending
+arm, no `--consolidate` (2026-09-15).** Before scoping an MN5 run, checked
+directly whether the confirmed medium operating point (last validated at
+debug-small scale only, post-2026-09-14 architecture fix) even runs sanely
+at production N — this was the outstanding flag from the "Core architecture
+fix" re-confirmation above ("not yet checked at production N/BS=60Hz").
+15s local run (`--step-period-ms 520`, same flags as `run_cutforce_sweep6.sh`
+minus `--debug-small`): completed without error, `frac_at_cap` **0.00 both
+legs** (genuine), bout duration 306±62/312±68ms — same ballpark as the
+debug-scale confirmed value (308±27/310±29ms), corr(F-E_L,F-E_R) −0.526
+(anti-phase). corr(Force-E,Force-F) itself was weaker (−0.41 L / −0.64 R)
+than the debug-scale steady-state number, but 15s is almost entirely inside
+the documented early recovery-transient window (steady-state metrics need
+t≥30s) — not a discrepancy, just too short a smoke test to read as
+converged. **Confirms the operating point is not broken at production
+scale**, closing that outstanding flag; a full 60s+, two-seed production
+confirmation (the actual Stage-0-at-production-scale bar) has not been run
+locally — wall time is the reason: this 15s smoke test alone took 5m45s at
+8 local threads (bookkeeping still ~91% of wall time, consistent with the
+overhead noted earlier), so a proper 60s×2-seed local confirmation would
+cost roughly an hour and was judged not worth spending before MN5
+submission — a short array job on MN5 itself is the more efficient place to
+get that confirmation, not a further local delay. New file:
+`results/prodsmoke_medium_descending_seed12345.h5`.
+
+**MN5 readiness verdict (2026-09-15): ready for a scoped production run —
+2 confirmed speeds × 2 arms × 3 loading levels, `--consolidate` at its
+arm-specific confirmed defaults, fast excluded.** Given Stage 1's fast
+direction remains open and Stages 2-3 (re-tuning `--consolidate` gains per
+speed point and per loading level, rather than assuming the single
+medium-point gains transfer) haven't been executed, the honest scope for
+the next MN5 submission is: medium + slow speeds (not fast), crossed with
+both arms (descending/sensory) and all three loading levels (full
+weight-bearing / toe / air stepping — loading is only meaningfully defined
+at the baseline speed anchor per the paper, so toe/air stepping runs at
+medium-speed timing only, not also at slow), using each arm's own
+confirmed `--consolidate` gain pair (0.20/0.15 descending, 0.25/0.10
+sensory) rather than a single global default. This does **not** re-run
+Stages 2-3 (no speed-specific or loading-specific consolidate re-tuning) —
+it ships the one validated gain pair per arm and flags in the script itself
+that loading-level and slow-speed consolidate behavior is unconfirmed,
+consistent with this file's existing practice of not silently promoting an
+untested transfer to a production default. See `run_consolidate_speed_arm_loading.sh`.
 
 ### Sensory-driven mode (`--freeze-bs-rg`, now just freezing BS since Ia→RG is always on — WMAX_IA=10)
 
