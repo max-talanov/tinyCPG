@@ -776,6 +776,67 @@ descending arm, though it remains a working recommendation, not a promoted
 CLI default — see caveats above (one timing operating point, `tau_tag_ms`
 unswept).
 
+**Summary: every `--consolidate` config tested this session, sorted into
+healthy vs. pathological.** The round-by-round tables above are the lab
+notebook (chronological, includes dead ends); this collects the same numbers
+by outcome instead, using the two failure modes this document already
+established (cap-domination: `frac_at_cap` elevated; leg-synchronization:
+corr(F-E_L,F-E_R) positive) plus two outcomes that are neither: a config that
+never captures at all (**inert** — the mechanism is a no-op, not a failure,
+but doesn't do anything either), and a config whose verdict **flips sign
+between seeds** (**bistable** — confirmed reproducible in both directions,
+not noise, but unusable as a fixed default either way). Steady-state
+(t≥30s) numbers are used wherever computed; whole-run numbers are used
+otherwise and marked accordingly — see the methodological correction above
+for why that distinction matters.
+
+*Descending arm (τ=260/off=0.35/cap=450):*
+
+| genuine/forced/threshold | seed(s) | corrLR | Verdict |
+|---|---|---|---|
+| **0.20/0.15/1.0** | 12345 **and** 54321 | **−0.839 / −0.839** (steady-state, identical) | **HEALTHY — shipped CLI default** |
+| 0.15/0.10/1.0 | 54321 only | −0.559 (whole-run) | Healthy-looking, single-seed only — not cross-confirmed |
+| 0.25/0.10/1.0 | 54321 only | −0.761 (whole-run) | Healthy-looking, single-seed only — not cross-confirmed |
+| 0.15/0.15/1.0 | 12345 **and** 54321 | +0.009 / +0.194 | **PATHOLOGICAL — synchronized, both seeds** |
+| 0.25/0.20/1.0 | 54321 only | +0.003 | Pathological (borderline-synchronized) |
+| 0.20/0.15/**0.5** | 12345 only | +0.242 | **PATHOLOGICAL — synchronized** (threshold, not just gain ratio, matters) |
+| 0.25/0.15/1.0 | 12345 **and** 54321 | +0.297 (steady-state) / −0.720 (steady-state) | **BISTABLE — flips sign between seeds, do not use** |
+| 0.20/0.10/1.0 | 12345 **and** 54321 | −0.462 / −0.027 | Unreliable — collapses toward zero at the second seed |
+| 0.15/0.30/1.0 (original guess) | 12345 only | −0.491 | Inert — 0 captures, mechanism never engages |
+| 0.15/0.20/1.0 | 54321 only | −0.637 | Inert — 0 captures despite an incidentally-OK corrLR |
+| 0.20/0.20/1.0 | 54321 only | −0.356 | Inert — 0 captures |
+
+*Sensory arm (`--freeze-bs-rg`, same timing config), full 3×3 bracket +
+genuine=0.25 fine-sweep, steady-state, both seeds throughout:*
+
+| genuine/forced | corrLR (seed1 / seed2) | Verdict |
+|---|---|---|
+| **0.25/0.10** | **−0.286 / −0.280** (nearly identical) | **HEALTHY — working recommendation, confirmed both seeds** |
+| 0.15/0.10 | −0.147 / −0.316 | Pathological — cap-dominated at seed1 (`atCap` 0.82) |
+| 0.15/0.15 | −0.151 / +0.866 | Pathological — cap-dominated both seeds, synchronizes at seed2 |
+| 0.15/0.20 | +0.891 / +0.902 | **PATHOLOGICAL — worst case: cap-dominated AND synchronized, both seeds** |
+| 0.20/0.15 | +0.938 / +0.605 | Pathological — genuine bout timing, but synchronized in both seeds |
+| 0.20/0.20 | −0.297 / −0.200 | Pathological — cap-dominated both seeds |
+| 0.25/0.1125 | positive, both seeds | Pathological — synchronized both seeds (interior "bad zone") |
+| 0.25/0.125 | positive, both seeds | Pathological — synchronized both seeds (interior "bad zone") |
+| 0.25/0.1375 | positive, both seeds | Pathological — synchronized both seeds (interior "bad zone") |
+| 0.25/0.20 | +1.000 / +0.632 | Pathological — genuine bout timing, but synchronized both seeds |
+| 0.20/0.10 | +1.000 / −0.527 | **BISTABLE — flips sign between seeds, do not use** |
+| 0.25/0.15 | −0.829 / +0.316 | **BISTABLE — flips sign between seeds, do not use** |
+
+**Reading the two tables together**: exactly one point per arm is healthy —
+0.20/0.15 (descending, shipped) and 0.25/0.10 (sensory, working
+recommendation) — and both are healthy for the same reason, tight
+same-sign, near-identical corrLR across two independent seeds, not just a
+good number once. Everything else sorts into one of three unhealthy
+buckets, and they are different failures needing different fixes: inert
+configs need a stronger genuine-favoring push before they'll do anything at
+all; pathological configs need to move *away* from wherever they are,
+generally toward less capture (sensory arm) or more (descending arm's
+symmetric case) or a different threshold entirely; bistable configs are the
+most dangerous of the three to mistake for progress, since a single-seed run
+can make one look like either a clean win or a clean failure at random.
+
 ### Sensory-driven mode (`--freeze-bs-rg`, now just freezing BS since Ia→RG is always on — WMAX_IA=10)
 
 Learning shifted from descending (BS) to sensory (muscle-Ia) pathway: BS→RG frozen at
