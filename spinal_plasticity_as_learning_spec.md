@@ -292,6 +292,67 @@ maintains. Building the mechanism was necessary but insufficient; which
 regime it lands in is an empirical, per-configuration question, exactly as
 it is in the biology this document is modeled on.
 
+### 2.4 Active forgetting: erasing an already-consolidated trace
+
+Everything decaying in this document so far is **passive**: an uncaptured
+tag relaxes back toward baseline on its own because nothing sustains it
+(§2's E-LTP decay; the hippocampal document's own Fig. 2, where the
+blocked/dashed trace just drifts back down each cycle with no dedicated
+mechanism driving it). The general active-forgetting literature (outside
+the spinal cord) draws a sharp line between that and **active** forgetting:
+a dedicated, triggerable process that dismantles a trace that would
+otherwise persist — in *Drosophila*, specific dopaminergic "forgetting
+cells" driving Rac1/cofilin-mediated actin remodeling in mushroom-body
+neurons, with blocking those cells making memories last *longer*, not
+shorter (Shuai et al. 2010; Cervantes-Sandoval et al. 2016's Scribble-Rac1-
+Cofilin "forgetting signalosome"). The spinal cord has its own, independent
+version of exactly this category — not borrowed from the fly literature, at
+the same dorsal-horn synapses this document already uses as its molecular
+substrate (§2):
+
+**Opioid-triggered depotentiation (Drdla-Schütting, Benrath, Wunderbaldinger
+& Sandkühler 2012, *Science*).** A brief, high-dose opioid-receptor
+activation actively reverses already-established C-fiber LTP — not by
+withdrawing support and letting it drift down, but through its own
+Ca²⁺-dependent signaling cascade that normalizes AMPA-receptor
+phosphorylation back to baseline, on demand. Critically, this **reverses
+hyperalgesia in behaving animals**: it is not merely analgesia (the pain
+signal is temporarily damped) but the erasure of the underlying synaptic
+memory trace of pain, with the behavioral change outlasting the drug. This
+is the most literal spinal counterpart to "active forgetting" available —
+closer to it, in fact, than the hippocampal document's own STC-blocked
+counterfactual, which only ever shows a trace that *failed to consolidate*,
+never one that consolidated and was then actively taken back down.
+
+**Maintenance-dependent erasure via PKMζ (Asiedu, Tillu, Melemedjian, Shy,
+Sanoja, Bodell, Ghosh, Porreca & Price 2011, *J. Neurosci.*).** A second,
+independent route to the same outcome: the spinal cord's consolidated
+(late-phase) nociceptive sensitization is not a state that persists for
+free once captured — it requires *ongoing* synthesis/activity of protein
+kinase Mζ to remain maintained at all. Blocking PKMζ (with the
+ζ-pseudosubstrate inhibitory peptide, ZIP) collapses the already-established
+potentiation. This mirrors the well-known hippocampal PKMζ/ZIP maintenance
+literature (Sacktor and colleagues) point for point, again without either
+field citing the other — a second, independent line of evidence that
+"capture" in real neural tissue is not the discrete permanent write this
+document's tag/capture vocabulary (and the hippocampal circuit proposal it
+mirrors) makes it sound like; maintenance itself can be an ongoing,
+interruptible process with its own active-erasure failure mode.
+
+**Consequence for `--consolidate` (this document's own proposal).** The
+implemented mechanism (§2, `cpg_2legs_fast.py`) only has the *passive* half
+of this picture: an uncaptured tag decays on its own (`consolidation_leak`),
+but once a capture event freezes `baseline`, nothing in the current design
+can ever move it back down again short of the *loading-dependent* logic
+built for other reasons ([CLAUDE.md](CLAUDE.md), "Core architecture fix").
+There is no analog of an actively-triggered erasure signal that could reset
+an already-captured baseline — the spinal literature above says such a
+signal (opioid receptor activation reversing a specific pathological
+capture; a maintenance-kinase blockade collapsing another) is a real,
+separate mechanism, not a hypothetical one, and this document does not yet
+propose a model-level counterpart for it. Flagged here as an open gap for a
+future pass, not addressed by the current plan.
+
 ## 3. Mapping onto the tinyCPG architecture
 
 This model already has three standing plastic pathways
@@ -375,6 +436,10 @@ picked adaptive or maladaptive.
 - Crown, E.D. & Grau, J.W. (2001). [Preserving and restoring behavioral potential within the spinal cord using an instrumental training paradigm](https://pubmed.ncbi.nlm.nih.gov/11495955/).
 - Ferguson, Crown & Grau (2006). [Group I metabotropic glutamate receptors control metaplasticity of spinal cord learning through a PKC-dependent mechanism](https://pmc.ncbi.nlm.nih.gov/articles/PMC2628285/).
 - Ferguson, A.R., Huie, J.R., Crown, E.D., Baumbauer, K.M., Hook, M.A., Garraway, S.M., Lee, K.H., Hoy, K.C. & Grau, J.W. (2012). [Maladaptive spinal plasticity opposes spinal learning and recovery in spinal cord injury](https://pmc.ncbi.nlm.nih.gov/articles/PMC3468083/), *Front. Physiol.* (§2.3's synthesis reference: the same borrowed mechanism explaining adaptive spinal learning, in its own field's framing of why recovery sometimes fails).
+- Drdla-Schütting, R., Benrath, J., Wunderbaldinger, G. & Sandkühler, J. (2012). [Erasure of a spinal memory trace of pain by a brief, high-dose opioid administration](https://pubmed.ncbi.nlm.nih.gov/22246779/), *Science* 335:235-238 (§2.4: active, triggered depotentiation of already-consolidated C-fiber LTP, reversing hyperalgesia in behaving animals).
+- Asiedu, M.N., Tillu, D.V., Melemedjian, O.K., Shy, A., Sanoja, R., Bodell, B., Ghosh, S., Porreca, F. & Price, T.J. (2011). [Spinal protein kinase Mζ underlies the maintenance mechanism of persistent nociceptive sensitization](https://www.jneurosci.org/content/31/18/6646), *J. Neurosci.* (§2.4: the consolidated state requires ongoing PKMζ activity to persist at all — blocking it with ZIP collapses an already-established potentiation, mirroring the hippocampal PKMζ/ZIP maintenance literature independently).
+- Shuai, Y., Lu, B., Hu, Y., Wang, L., Sun, K. & Zhong, Y. (2010). [Forgetting is regulated through Rac activity in Drosophila](https://www.cell.com/fulltext/S0092-8674(09)01630-4), *Cell* (§2.4: the canonical active-forgetting mechanism this section contrasts the spinal findings against — a dedicated Rac-dependent process, not passive decay).
+- Cervantes-Sandoval, I. et al. (2016). [Scribble scaffolds a signalosome for active forgetting](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4926877/), *Neuron* (§2.4: the dopamine-gated Scribble-Rac1-Cofilin "forgetting signalosome" in *Drosophila* mushroom body, cited for contrast with the spinal mechanisms above).
 - Wolpaw, J.R. — overview of H-reflex operant conditioning and multi-site spinal plasticity: [Operant conditioning of H-reflex can correct a locomotor abnormality after SCI in rats](https://www.jneurosci.org/content/26/48/12537); [Memory traces in primate spinal cord produced by operant conditioning of H-reflex](https://journals.physiology.org/doi/abs/10.1152/jn.1989.61.3.563); [Operant conditioning of a spinal reflex can improve locomotion after SCI in humans](https://www.jneurosci.org/content/33/6/2365).
 - Côté, M.-P., Azzam, G.A., Lemay, M.A., Zhukareva, V. & Houlé, J.D. (2011). [Activity-dependent increase in neurotrophic factors is associated with an enhanced modulation of spinal reflexes after spinal cord injury](https://pmc.ncbi.nlm.nih.gov/articles/PMC3037803/), *J. Neurotrauma*.
 - Role of serotonin in locomotor CPG control and recovery after SCI: [The role of serotonin in the control of locomotor movements and strategies for restoring locomotion after SCI](https://pubmed.ncbi.nlm.nih.gov/24993627/); [The role of the serotonergic system in locomotor recovery after SCI](https://pmc.ncbi.nlm.nih.gov/articles/PMC4321350/).
