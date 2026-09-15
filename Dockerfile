@@ -2,10 +2,6 @@ FROM python:3.11-slim
 
 WORKDIR /tinyCPG
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    openmpi-bin \
-    libopenmpi-dev \
- && rm -rf /var/lib/apt-get/lists/*
 COPY requirements.txt ./
 RUN pip install decorator attrs psutil absl-py "tensorflow>=1.10.0"
 RUN pip install --no-cache-dir -r requirements.txt
