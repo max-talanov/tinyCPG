@@ -95,13 +95,9 @@ homeostatic failure is *training-reversible*, not fixed — precisely the
 give a mechanistic answer to, on a completely different pathway (chloride
 homeostasis) than the tag-and-capture story in §2.
 
-![Synaptic AMPAR weight rising smoothly from baseline to a compensated plateau over about three days after deafferentation.](spinal_scaling_healthy.png)
+![Two-panel chart: (a) synaptic AMPAR weight rising smoothly from baseline to a compensated plateau over about three days after deafferentation (healthy upscaling); (b) motoneuron KCC2/inhibitory efficacy dropping sharply at spinal cord injury, then either staying flat at the reduced floor with no training (dashed red, spasticity persists) or partially recovering toward baseline over several weeks with locomotor training (solid green) (pathological downscaling failure).](spinal_scaling_dynamics.png)
 
-*Fig. 2a — Healthy: the upscaling response to deafferentation. A single, reliably-reported trajectory — there is no "blocked" condition in the cited literature, so only one trace is shown. Curve shape is illustrative (an exponential fit to the qualitative time course the citation reports), not digitized data.*
-
-![Motoneuron KCC2/inhibitory efficacy dropping sharply at spinal cord injury, then either staying flat at the reduced floor with no training (dashed red, spasticity persists) or partially recovering toward baseline over several weeks with locomotor training (solid green).](spinal_scaling_pathological.png)
-
-*Fig. 2b — Pathological: KCC2 loss (downscaling failure) after SCI, training vs. none. Both traces take the identical acute post-injury drop; they diverge only in whether locomotor training is applied afterward, which is the direct spinal analog of "capture" rescuing an otherwise-lost trace — the same normal-vs-blocked contrast Fig. 2 of the hippocampal document uses for capture. Curve shapes are illustrative, not digitized data.*
+*Fig. 2 — Bidirectional homeostatic scaling. **(2a) Healthy** (left): the upscaling response to deafferentation — a single, reliably-reported trajectory; there is no "blocked" condition in the cited literature, so only one trace is shown. **(2b) Pathological** (right): KCC2 loss (downscaling failure) after SCI, training vs. none — both traces take the identical acute post-injury drop; they diverge only in whether locomotor training is applied afterward, which is the direct spinal analog of "capture" rescuing an otherwise-lost trace, the same normal-vs-blocked contrast the hippocampal document's Fig. 2 uses for capture. Curve shapes are illustrative (exponential fits to the qualitative time course each citation reports), not digitized data.*
 
 ## 2. Tag-and-capture and contingency-gated consolidation in spinal circuits
 
@@ -231,6 +227,71 @@ This is not only a biological aside — §3 below closes the loop back to
 `cpg_2legs_fast.py` itself, where the same duality shows up as literal,
 observed failure modes.
 
+### 2.3 Maladaptive plasticity after spinal cord injury: synthesis
+
+Table 2b's four populated rows are not four independent side-effects — after
+SCI they are commonly reported together, and the literature has its own name
+for the pattern: **maladaptive plasticity**, plasticity mechanisms that
+persist (the retention rule doesn't switch off after injury) but now degrade
+function instead of preserving or restoring it, precisely because the signal
+gating capture and the synapse it acts on have both been changed by the
+lesion, not because plasticity itself became a different kind of process
+(Ferguson et al. 2012's own framing: **"maladaptive spinal plasticity opposes
+spinal learning and recovery in spinal cord injury"** — the mechanism this
+whole document borrows from Grau to explain adaptive spinal learning is, in
+the same body of work, the explanation for why recovery sometimes fails to
+happen at all).
+
+Four convergent, commonly-co-occurring changes, each already a row in Table
+1b/2b:
+
+1. **Spasticity via chloride dysregulation.** KCC2 loss depolarizes the Cl⁻
+   reversal potential, so GABA/glycine input that should inhibit a motoneuron
+   instead barely restrains it — hyperreflexia and spasticity, not a single
+   symptom but the direct electrophysiological consequence (Boulenguez et al.
+   2010).
+2. **Central/neuropathic pain via dorsal-horn LTP consolidation.** The same
+   NMDA/BDNF/dopamine-gated capture mechanism this document borrows as a
+   *motor*-consolidation analogy (§2) is, in its own field, understood as
+   consolidating a *pain* state — hyperalgesia and allodynia that outlast the
+   original noxious input by exactly the E-LTP→L-LTP transition described
+   above (Sandkühler & Liu 1998; Ruscheweyh et al. 2011).
+3. **Impaired capacity for further learning if training is uncontrollable.**
+   Grau's own metaplasticity result: input the spinal cord cannot control
+   (as opposed to input it can control, e.g. active stepping practice) leaves
+   a protein-synthesis-dependent deficit that suppresses *subsequent*
+   learning, not just the immediate trial — a mechanistic argument that
+   passive or poorly-timed rehabilitation is not merely less helpful than
+   active, contingent training, it can be actively counterproductive
+   (Ferguson, Crown & Grau 2006).
+4. **Altered descending neuromodulatory sensitivity.** The CPG's own
+   response to serotonin — not just its resting drive — shifts after injury
+   and, left untreated, stays shifted (§1 table).
+
+**None of these four is a separate disease process bolted onto normal
+plasticity** — each is the same class of mechanism as its Table 2a
+counterpart (homeostatic scaling, tag/capture, contingency-gated learning,
+neuromodulatory gating), running on the same retention rule, tipped toward
+the maladaptive branch by what the lesion changed about the gating signal or
+the target synapse. This is why §2's synthesis frames the retention rule as
+neutral machinery rather than an inherently protective one: after a real
+injury, several of these mechanisms plausibly tip in the same direction at
+once, which is a *multiple-hit* picture, not a single lesion causing a
+single problem, and matches the general SCI neuroplasticity literature's own
+framing of concurrently-operating mechanisms across motoneurons,
+interneurons, and afferents rather than one dominant cause.
+
+**Consequence for this document's own proposal.** A `--consolidate`-style
+mechanism (§2, implemented in `cpg_2legs_fast.py`, see [CLAUDE.md](CLAUDE.md))
+is exactly this retention rule, and it inherited the same double edge: tuned
+one way it reproduces Table 2a's outcomes (§3 below), tuned another way it
+reproduces literal analogs of Table 2b's — cap-domination as a positive-
+feedback runaway structurally like unchecked central sensitization, and
+leg-synchronization as a loss of the differentiation a healthy pair of limbs
+maintains. Building the mechanism was necessary but insufficient; which
+regime it lands in is an empirical, per-configuration question, exactly as
+it is in the biology this document is modeled on.
+
 ## 3. Mapping onto the tinyCPG architecture
 
 This model already has three standing plastic pathways
@@ -313,6 +374,7 @@ picked adaptive or maladaptive.
 - Grau, J.W. (2014). [Learning from the spinal cord: how the study of spinal cord plasticity informs learning theory](https://graulab.sites.tamu.edu/wp-content/uploads/sites/123/2018/09/Grau-2014-Learning-from-the-spinal-cord_-how-t.pdf).
 - Crown, E.D. & Grau, J.W. (2001). [Preserving and restoring behavioral potential within the spinal cord using an instrumental training paradigm](https://pubmed.ncbi.nlm.nih.gov/11495955/).
 - Ferguson, Crown & Grau (2006). [Group I metabotropic glutamate receptors control metaplasticity of spinal cord learning through a PKC-dependent mechanism](https://pmc.ncbi.nlm.nih.gov/articles/PMC2628285/).
+- Ferguson, A.R., Huie, J.R., Crown, E.D., Baumbauer, K.M., Hook, M.A., Garraway, S.M., Lee, K.H., Hoy, K.C. & Grau, J.W. (2012). [Maladaptive spinal plasticity opposes spinal learning and recovery in spinal cord injury](https://pmc.ncbi.nlm.nih.gov/articles/PMC3468083/), *Front. Physiol.* (§2.3's synthesis reference: the same borrowed mechanism explaining adaptive spinal learning, in its own field's framing of why recovery sometimes fails).
 - Wolpaw, J.R. — overview of H-reflex operant conditioning and multi-site spinal plasticity: [Operant conditioning of H-reflex can correct a locomotor abnormality after SCI in rats](https://www.jneurosci.org/content/26/48/12537); [Memory traces in primate spinal cord produced by operant conditioning of H-reflex](https://journals.physiology.org/doi/abs/10.1152/jn.1989.61.3.563); [Operant conditioning of a spinal reflex can improve locomotion after SCI in humans](https://www.jneurosci.org/content/33/6/2365).
 - Côté, M.-P., Azzam, G.A., Lemay, M.A., Zhukareva, V. & Houlé, J.D. (2011). [Activity-dependent increase in neurotrophic factors is associated with an enhanced modulation of spinal reflexes after spinal cord injury](https://pmc.ncbi.nlm.nih.gov/articles/PMC3037803/), *J. Neurotrauma*.
 - Role of serotonin in locomotor CPG control and recovery after SCI: [The role of serotonin in the control of locomotor movements and strategies for restoring locomotion after SCI](https://pubmed.ncbi.nlm.nih.gov/24993627/); [The role of the serotonergic system in locomotor recovery after SCI](https://pmc.ncbi.nlm.nih.gov/articles/PMC4321350/).
