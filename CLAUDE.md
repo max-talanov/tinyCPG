@@ -55,7 +55,7 @@ sbatch run.sh
 | `run_cutforce_sweep5.sh` | CONFIRMATION refinement (9 tasks, not a new exploration): brackets round 4's τ=250/off=0.35 optimum — fatigue-onset-τ {240,250,260} × `--cut-force-off-frac` {0.35,0.375,0.40}, cap still fixed at 450ms. **Confirmed: frac_at_cap=0.00 on all 9 configs** — best point τ=260/off=0.35, see "Force-triggered CUT" below. |
 | `run_cutforce_sweep6.sh` | PHASE 3 — seed/init robustness (10 tasks, 120s each): holds round 5's winning config fixed (τ=260, off=0.35, cap=450ms), sweeps the same 10-point (μ,CV) STDP-init grid as `run.sh`/paper Algorithm 1. Tests whether the operating point found in rounds 1-5 holds away from μ=3.5. |
 | `run_cutforce_sensory_unload.sh` | EXPLORATORY, round 1 (9 tasks, 120s each): production-scale test of the unloading-rescue mechanism (Ia→RG-E/F now loading-dependent, see "Core architecture fix" below) — sensory arm (`--freeze-bs-rg`), 3×3 grid of `--cut-feedback-gain` (loading) × `--ia-feedback-gain` (compensation). Local debug-scale tuning plateaued at weak counter-phase across a wide search; suspected debug-scale population-size ceiling (N_IA_E/F=30 vs 100 production), not a broken mechanism — see "Force-triggered CUT" below. |
-| `run_consolidate_speed_arm_loading.sh` | Stage 4 MN5 array (24 tasks): production sweep, force-trigger mode — 2 confirmed speeds (medium/slow, fast excluded — unresolved, see "Force-trigger speed axis" below) × 2 arms (descending/sensory) × loading (medium speed only: full/toe/air; slow speed: full only). `--consolidate` runs at medium only (each arm's own confirmed gain pair); the two slow cells are no-consolidate controls — Stage 2 found the medium-confirmed gain pair actively harmful at slow (see "Stage 2" below). Seed/init-robustness (μ:CV grid) and per-loading consolidate re-tuning (Stage 3) are explicitly NOT part of this sweep — see "MN5 readiness verdict" below. |
+| `run_consolidate_speed_arm_loading.sh` | Stage 4 MN5 array (12 tasks): production sweep, force-trigger mode — 2 confirmed speeds (medium/slow, fast excluded — unresolved, see "Force-trigger speed axis" below) × 2 arms (descending/sensory), full weight-bearing only. `--consolidate` runs at medium only (each arm's own confirmed gain pair); the two slow cells are no-consolidate controls — Stage 2 found the medium-confirmed gain pair actively harmful at slow (see "Stage 2" below). Toe/air loading is excluded entirely — Stage 3 found the medium timing config fails even without `--consolidate` at reduced loading (cap-domination at toe, tick-floor chattering at air, see "Stage 3" below). Seed/init-robustness (μ:CV grid) is explicitly NOT part of this sweep — see "MN5 readiness verdict" below. |
 | `CLAUDE.md` | This file. |
 | `spinal_plasticity_as_learning_spec.md` | Literature-grounded spec for the `--consolidate` tag-and-capture mechanism (see "Tag-and-capture consolidation" below) — spinal-cord analogue of hippocampal synaptic tagging and capture, written by direct analogy to [`hippocampal_timescales_as_circuit_spec.md`](https://github.com/max-talanov/tinyHippo/blob/main/hippocampal_timescales_as_circuit_spec.md). |
 
@@ -1257,27 +1257,28 @@ submission — a short array job on MN5 itself is the more efficient place to
 get that confirmation, not a further local delay. New file:
 `results/prodsmoke_medium_descending_seed12345.h5`.
 
-**MN5 readiness verdict (2026-09-15, revised after Stage 2's slow-point
-result below): ready for a scoped production run — 2 confirmed speeds ×
-2 arms × 3 loading levels, but `--consolidate` only at medium; slow ships
-as a no-consolidate control, not a speculative gain pair.** Given Stage 1's
-fast direction remains open and Stage 2 found the medium-confirmed gain
-pair is actively harmful at the slow point (12 configs tried across three
-axes, none genuine-and-stable — see "Stage 2" above), the honest scope for
-the next MN5 submission is: medium + slow speeds (not fast), crossed with
-both arms (descending/sensory) and all three loading levels (full
-weight-bearing / toe / air stepping — loading is only meaningfully defined
-at the baseline speed anchor per the paper, so toe/air stepping runs at
-medium-speed timing only, not also at slow). `--consolidate` runs at
-medium only, at each arm's own confirmed gain pair (0.20/0.15 descending,
-0.25/0.10 sensory); the two slow-speed cells run **without**
-`--consolidate` (a no-consolidate control at slow, which is already known
-to be excellent there — steady-state corrLR −0.822) rather than shipping a
-gain pair known to make it worse. This does **not** re-run Stage 3
-(no loading-specific consolidate re-tuning at medium) or resolve Stage 2 —
-it ships only what's actually confirmed and flags in the script itself that
-slow-point consolidation and loading-specific consolidate behavior both
-remain open. See `run_consolidate_speed_arm_loading.sh`.
+**MN5 readiness verdict (2026-09-15, revised again after Stage 3's
+loading-axis result above): ready for a scoped production run — 2
+confirmed speeds × 2 arms, full weight-bearing only; loading axis and fast
+speed both excluded pending their own passes.** Three things narrow this
+submission below the original "all speeds and sensory ablation modes"
+ask: Stage 1's fast direction remains open (bistable after 6 attempts);
+Stage 2 found the medium-confirmed `--consolidate` gain pair actively
+harmful at the slow point (12 configs, none genuine-and-stable); and Stage
+3 found the medium timing config itself — independent of `--consolidate`
+entirely — fails at toe and air loading in both arms (cap-domination at
+toe, tick-floor chattering at air). The honest scope for the next MN5
+submission is: medium + slow speeds (not fast), crossed with both arms
+(descending/sensory), **full weight-bearing only** (not toe/air — those
+need their own timing re-tune first, a "Stage 1 for the loading axis," not
+yet attempted). `--consolidate` runs at medium only, at each arm's own
+confirmed gain pair (0.20/0.15 descending, 0.25/0.10 sensory); the two
+slow-speed cells run **without** `--consolidate` (a no-consolidate control
+at slow, already confirmed excellent there — steady-state corrLR −0.822).
+This ships only what's actually confirmed: no loading axis, no fast speed,
+no consolidate at slow. See `run_consolidate_speed_arm_loading.sh` (now 4
+cells × 3 seeds = 12 tasks, down from the original 8×3=24 once toe/air was
+pulled).
 
 ### Stage 2 — `--consolidate` at the slow speed point, descending arm (2026-09-15)
 
@@ -1337,6 +1338,92 @@ actively harmful. Sensory arm at slow was never itself tested with
 `--consolidate` (Stage 2 only ran the descending arm) — moot now that
 `--consolidate` is off for both arms at that speed. See "MN5 readiness
 verdict" update below.
+
+### Stage 3 — `--consolidate` at toe/air loading, medium speed, both arms (2026-09-15)
+
+Set out to test whether each arm's confirmed medium-speed gain pair
+(0.20/0.15 descending, 0.25/0.10 sensory) transfers to reduced loading —
+the loading-axis analogue of Stage 2's speed-axis question. Ran
+no-consolidate references plus the confirmed-pair test at toe
+(`--ia-feedback-gain`/`--cut-feedback-gain` 0.5) and air (0.1) stepping,
+both arms, seed 12345, same medium timing config (τ=260/off=0.35/cap=450)
+throughout. **Result: the question of whether `--consolidate` transfers
+doesn't arise, because the no-consolidate baseline itself is already broken
+at both loading levels, in both arms:**
+
+| config | steady atCap L/R | steady corrLR | steady duration | verdict |
+|---|---|---|---|---|
+| descending, toe, no-consolidate | 1.00/1.00 | +0.992 | 450±0ms | cap-dominated **and** synchronized |
+| descending, toe, 0.20/0.15 | 0.00/0.07 | +0.291 | 57-97ms | escapes cap, but collapsed/erratic duration, synchronized |
+| descending, air, no-consolidate | 0.00/0.00 | +0.738 | **50±0ms** | degenerate — pinned to the rate-update-ms tick floor |
+| descending, air, 0.20/0.15 | 0.00/0.00 | +0.548 | **50±0ms** | same degenerate chatter |
+| sensory, toe, no-consolidate | 1.00/1.00 | −0.758 | 450±0ms | cap-dominated (good-looking corrLR, disguised clock) |
+| sensory, toe, 0.25/0.10 | 0.57/0.68 | −0.385 | 347-359ms | still substantially cap-dominated |
+| sensory, air, no-consolidate | 0.00/0.00 | +0.753 | **50±0ms** | same degenerate chatter |
+| sensory, air, 0.25/0.10 | 0.00/0.00 | +0.764 | **50±0ms** | same degenerate chatter |
+
+Two distinct failure modes, neither caused by `--consolidate`:
+
+1. **Toe stepping cap-dominates at steady state in both arms** — bout
+   duration locks to exactly `--cut-max-stance-ms` (450ms) with zero
+   variance, the same disguised-clock signature flagged throughout this
+   file's "Force-triggered CUT" rounds. The reduced force ceiling under
+   partial unloading apparently isn't reaching the 0.35 off-threshold
+   within 450ms at this τ, the same class of problem rounds 1-2 solved for
+   full loading by retuning τ/off-frac/cap together — never done for toe
+   loading specifically.
+2. **Air stepping doesn't cap-dominate — it chatters at the tick floor.**
+   Every air condition, consolidate on or off, either arm, converges to
+   *exactly* 50ms bout duration with zero variance — `--rate-update-ms`'s
+   own tick granularity, the same chattering pathology already documented
+   for Stage 1's fast-direction fine-tick attempts and for the original
+   sensory-arm unloading-rescue work earlier in this file ("bout durations
+   were a degenerate 50±0ms — chattering every tick"). Air stepping's much
+   smaller force ceiling (see "Unloading-rescue attempt" above: ~7-9 vs. the
+   normal ~17) makes the Schmitt trigger's relative on/off thresholds
+   cross on tick-to-tick noise rather than a real envelope.
+
+**This invalidates part of an earlier finding, not the whole thing.** The
+"Toe/air stepping reproduce the paper's documented unloading degradation"
+section above reported toe/air as a weaker-but-still-qualitatively-correct
+version of the paper's finding, based on whole-run corr(Force-E,Force-F)
+alone (r ≈ −0.09 to −0.62) — that correlation number itself isn't wrong,
+but it was never checked against `frac_at_cap` or steady-state windowing,
+the same two diagnostics this file has required for every other
+force-trigger claim since round 1. Once checked, the "weaker rhythm" is
+partly a disguised clock (toe) or outright chattering (air), not a clean
+signal at reduced amplitude. The earlier finding's other claim — that
+`MOD_IA_RG_LOADING_GAIN`'s `--wmax-ia-unloaded` cap-relaxation mechanism
+engages correctly under loading — is unaffected by this (that was measured
+directly from weight trajectories, not from timing diagnostics).
+
+**Consequence: toe/air loading needs its own timing re-tune before any
+`--consolidate` work there is meaningful — a "Stage 1 for the loading
+axis."** Not attempted this round; scope note only. Pulled the four
+medium-speed toe/air cells out of `run_consolidate_speed_arm_loading.sh`
+(was 8 cells × 3 seeds = 24 tasks; now 4 cells × 3 seeds = 12 tasks —
+medium/slow × descending/sensory, full weight-bearing only) rather than
+ship cells known to be broken at the timing level. See "MN5 readiness
+verdict" below for the updated scope.
+
+**Also fixed in the same pass: a real shell portability bug, found while
+building this round's test harness.** A space-joined flag string (e.g.
+`LOADING_FLAGS="--ia-feedback-gain 0.5 --cut-feedback-gain 0.5"`) handed to
+a command as unquoted `${LOADING_FLAGS}` is not guaranteed to word-split
+back into separate argv tokens on every shell configuration — confirmed
+directly in this session's own local shell, where it silently collapsed
+into one unrecognized token instead of erroring cleanly, which is what
+surfaced it. `run_consolidate_speed_arm_loading.sh`'s `ARM_FLAGS`/
+`LOADING_FLAGS`/`CONSOLIDATE_FLAGS` used exactly this pattern; rewritten as
+bash arrays (`ARM_FLAGS=(--freeze-bs-rg)`, expanded as
+`"${ARM_FLAGS[@]}"`), which don't depend on IFS/word-splitting at all.
+Smoke-tested end to end after the fix (debug-small, both arms) — confirmed
+correct flag parsing, including `--freeze-bs-rg` correctly zeroing
+`bs_rge`/`bs_rgf` plastic-synapse counts. This was latent in the version
+committed for Stage 2 and could plausibly have misbehaved on MN5's shell
+too, depending on its IFS/login-shell configuration — worth remembering as
+a general pattern for any future script using this style of conditional
+flag-building.
 
 ### Sensory-driven mode (`--freeze-bs-rg`, now just freezing BS since Ia→RG is always on — WMAX_IA=10)
 

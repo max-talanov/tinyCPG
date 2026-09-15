@@ -4,7 +4,7 @@
 #SBATCH --error=Nest_consol_sal_%A_%a.slurmerr
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --array=0-23
+#SBATCH --array=0-11
 #SBATCH --cpus-per-task=64
 #SBATCH --time=12:00:00
 #SBATCH --partition=acc
@@ -17,7 +17,7 @@
 # per-loading consolidate re-tuning (Stages 2-3) are not both complete --
 # see "MN5 readiness verdict" in CLAUDE.md for the full reasoning.
 #
-# SCOPE (8 cells x 3 seeds = 24 tasks):
+# SCOPE (4 cells x 3 seeds = 12 tasks):
 #   Speeds:  medium (step-period=520ms, the paper's ~13.5cm/s anchor) and
 #            slow (step-period=1200ms, ~6cm/s) -- FAST IS EXCLUDED. Six
 #            distinct local attempts (single-axis nudges, proportional
@@ -43,12 +43,24 @@
 #            control (already confirmed excellent at slow: steady-state
 #            corr(F-E_L,F-E_R) -0.822) -- not a placeholder, a deliberate
 #            choice not to ship a gain pair known to regress that speed.
-#   Loading: full weight-bearing / toe stepping / air stepping, but ONLY at
-#            medium speed -- the paper defines the loading axis at the
-#            baseline speed anchor only, not as an independent grid over
-#            every speed (see "Correction: use the paper's own
-#            5-locomotion-mode terminology" in CLAUDE.md). Slow-speed rows
-#            are full weight-bearing only.
+#   Loading: FULL WEIGHT-BEARING ONLY -- toe and air stepping are excluded.
+#            Stage 3's seed-1 screen found the confirmed medium timing
+#            config (tau=260/off=0.35/cap=450) fails EVEN WITHOUT
+#            --consolidate at toe stepping (steady-state atCap 1.00/1.00,
+#            both arms -- a disguised clock) and at air stepping (bout
+#            duration collapses to the 50ms rate-update-ms tick floor with
+#            zero variance, both arms -- degenerate chattering, not a
+#            genuine rhythm at all). This is a timing-mechanism failure at
+#            reduced loading, independent of --consolidate entirely -- see
+#            "Stage 3" in CLAUDE.md. A previous whole-run-correlation-only
+#            check had read this as the paper's expected qualitative
+#            unloading degradation; it wasn't checked against frac_at_cap or
+#            steady-state windowing until now, and that check shows the
+#            mechanism itself is broken there, not just weaker. Toe/air stay
+#            out of this script until the medium timing config (or a
+#            loading-specific alternative) is re-tuned for the reduced force
+#            ceiling under partial/full unloading -- a "Stage 1 for the
+#            loading axis," not yet attempted.
 #   Seeds:   12345 / 54321 / 98765 -- three, not two, given the documented
 #            same-seed/same-config run-to-run nondeterminism finding (NEST
 #            multi-threaded execution can flip corr(F-E_L,F-E_R) sign with
@@ -59,10 +71,8 @@
 #   - Fast speed (unresolved, see above).
 #   - --consolidate at the slow point (confirmed harmful, see above) --
 #     the two slow cells are no-consolidate controls, not a TODO.
-#   - Per-loading --consolidate gain re-tuning (Stage 3). The 6 medium-speed
-#     cells reuse the single confirmed gain pair for their arm regardless of
-#     loading -- treat toe/air results as a TRANSFER TEST of that pair, not
-#     as already-validated for those loading levels.
+#   - Toe/air loading at any speed (confirmed broken even without
+#     --consolidate, see above) -- needs its own timing re-tune first.
 #   - STDP initial-weight (mu, CV) robustness grid (Phase 3's own 10-point
 #     sweep, never repeated with --consolidate on).
 #
@@ -99,11 +109,11 @@ SIM_MS=120000
 
 SEEDS=(12345 54321 98765)
 
-# cell index 0-7 -- see header comment for what each one is
-CELL_LABELS=(medium_desc_full medium_desc_toe medium_desc_air medium_sens_full medium_sens_toe medium_sens_air slow_desc_full_noconsolidate slow_sens_full_noconsolidate)
-CELL_SPEED=(medium medium medium medium medium medium slow slow)
-CELL_ARM=(desc desc desc sens sens sens desc sens)
-CELL_LOADING=(full toe air full toe air full full)
+# cell index 0-3 -- see header comment for what each one is. Full weight-
+# bearing only -- toe/air excluded, see header "Loading" note above.
+CELL_LABELS=(medium_desc_full medium_sens_full slow_desc_full_noconsolidate slow_sens_full_noconsolidate)
+CELL_SPEED=(medium medium slow slow)
+CELL_ARM=(desc sens desc sens)
 
 TASK=${SLURM_ARRAY_TASK_ID:-0}
 CELL_IDX=$(( TASK / 3 ))
@@ -112,7 +122,6 @@ SEED=${SEEDS[$SEED_IDX]}
 LABEL=${CELL_LABELS[$CELL_IDX]}
 SPEED=${CELL_SPEED[$CELL_IDX]}
 ARM=${CELL_ARM[$CELL_IDX]}
-LOADING=${CELL_LOADING[$CELL_IDX]}
 
 # ---- speed -> confirmed force-trigger timing (Stage 1: medium, slow only) ----
 if [ "$SPEED" = "medium" ]; then
@@ -132,9 +141,15 @@ else # slow
 fi
 
 # ---- arm -> BS plasticity + confirmed --consolidate gain pair (do not transfer between arms) ----
-ARM_FLAGS=""
+# NOTE: flags are built as arrays, not space-joined strings -- a space-joined
+# string handed to "${VAR}" (unquoted) is not guaranteed to word-split back
+# into separate argv tokens on every shell/IFS configuration (confirmed to
+# silently fail, landing as one unrecognized argparse token, in local testing
+# for this exact pattern -- see "Stage 3" in CLAUDE.md). Arrays sidestep the
+# ambiguity entirely.
+ARM_FLAGS=()
 if [ "$ARM" = "sens" ]; then
-  ARM_FLAGS="--freeze-bs-rg"
+  ARM_FLAGS=(--freeze-bs-rg)
   GAIN_GENUINE=0.25
   GAIN_FORCED=0.10
 else
@@ -142,21 +157,16 @@ else
   GAIN_FORCED=0.15
 fi
 
-# ---- loading -> Ia/CUT feedback gain (full = defaults, no flags needed) ----
-LOADING_FLAGS=""
-if [ "$LOADING" = "toe" ]; then
-  LOADING_FLAGS="--ia-feedback-gain 0.5 --cut-feedback-gain 0.5"
-elif [ "$LOADING" = "air" ]; then
-  LOADING_FLAGS="--ia-feedback-gain 0.1 --cut-feedback-gain 0.1"
-fi
+# loading is full weight-bearing only in this script (see header) -- default
+# --ia-feedback-gain/--cut-feedback-gain (1.0) apply, no flags needed.
 
 # ---- --consolidate is medium-speed only (Stage 2: harmful at slow, see header) ----
 if [ "$SPEED" = "medium" ]; then
-  CONSOLIDATE_FLAGS="--consolidate --consolidate-prp-gain-genuine ${GAIN_GENUINE} --consolidate-prp-gain-forced ${GAIN_FORCED}"
-  echo "[ConsolSAL] task=$TASK cell=$LABEL speed=$SPEED(period=${PERIOD}ms) arm=$ARM loading=$LOADING seed=$SEED gains=${GAIN_GENUINE}/${GAIN_FORCED}"
+  CONSOLIDATE_FLAGS=(--consolidate --consolidate-prp-gain-genuine "${GAIN_GENUINE}" --consolidate-prp-gain-forced "${GAIN_FORCED}")
+  echo "[ConsolSAL] task=$TASK cell=$LABEL speed=$SPEED(period=${PERIOD}ms) arm=$ARM loading=full seed=$SEED gains=${GAIN_GENUINE}/${GAIN_FORCED}"
 else
-  CONSOLIDATE_FLAGS=""
-  echo "[ConsolSAL] task=$TASK cell=$LABEL speed=$SPEED(period=${PERIOD}ms) arm=$ARM loading=$LOADING seed=$SEED consolidate=OFF (no-consolidate control, see header)"
+  CONSOLIDATE_FLAGS=()
+  echo "[ConsolSAL] task=$TASK cell=$LABEL speed=$SPEED(period=${PERIOD}ms) arm=$ARM loading=full seed=$SEED consolidate=OFF (no-consolidate control, see header)"
 fi
 
 srun --cpu-bind=cores --distribution=block:block \
@@ -200,7 +210,6 @@ srun --cpu-bind=cores --distribution=block:block \
     --fatigue-tau-onset-ms "$FAT_ONSET" \
     --fatigue-tau-recovery-ms "$FAT_RECOVERY" \
     --fatigue-max-frac 0.95 \
-    $CONSOLIDATE_FLAGS \
-    $ARM_FLAGS \
-    $LOADING_FLAGS \
+    "${CONSOLIDATE_FLAGS[@]}" \
+    "${ARM_FLAGS[@]}" \
     --long-run
