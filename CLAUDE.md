@@ -324,6 +324,23 @@ corr(Force-E_L,Force-E_R) −0.25 (anti-phase, not synchronized), `frac_at_cap`
 operating point was tuned on the old circuit; Phase 1 of the rollout plan is to
 re-confirm/re-tune it on the new one, not assume it transfers exactly).
 
+**Re-confirmation, steady-state (2026-09-15) — the operating point holds; the
+0.06-0.07 above was the same recovery-transient artifact found throughout the
+`--consolidate` tuning work, not a persisting regression.** Re-ran the identical
+operating point at two seeds (12345, 54321) and applied
+`scripts/cpg_cutforce_diagnostics.py --steady-from-ms 30000` (built during the
+`--consolidate` tuning rounds specifically because whole-run `frac_at_cap`
+conflates an early settling period with steady-state behavior — see "Tag-and-
+capture consolidation" below). Steady-state: `frac_at_cap` **0.00/0.00 in both
+seeds** (even cleaner than the whole-run 0.01/0.00-0.01), corr(Force-E_L,
+Force-E_R) reproducibly negative in both (−0.286, −0.529) — no synchronization.
+**This operating point is confirmed still genuine on the current (post-2026-09-14)
+circuit at debug scale**, closing the "not yet re-tuned" flag above. Not yet
+checked at production N/BS=60Hz (see CLAUDE.md's own MN5 checklist), and this
+confirmation is a prerequisite for, not a substitute for, defining a force-trigger
+speed axis (see `~/.claude/plans/resilient-soaring-flamingo.md` Stage 1) — this
+single point remains one fixed timing, not a speed sweep.
+
 **Sensory arm re-tested at baseline loading, new circuit:** stable and improved — 60s
 debug, corr(Force-E,Force-F) −0.81(L)/−0.79(R), `frac_at_cap` 0.05-0.06,
 corr(Force-E_L,Force-E_R) properly anti-phase (though its exact value bounces between
