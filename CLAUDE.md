@@ -56,6 +56,7 @@ sbatch run.sh
 | `run_cutforce_sweep6.sh` | PHASE 3 — seed/init robustness (10 tasks, 120s each): holds round 5's winning config fixed (τ=260, off=0.35, cap=450ms), sweeps the same 10-point (μ,CV) STDP-init grid as `run.sh`/paper Algorithm 1. Tests whether the operating point found in rounds 1-5 holds away from μ=3.5. |
 | `run_cutforce_sensory_unload.sh` | EXPLORATORY, round 1 (9 tasks, 120s each): production-scale test of the unloading-rescue mechanism (Ia→RG-E/F now loading-dependent, see "Core architecture fix" below) — sensory arm (`--freeze-bs-rg`), 3×3 grid of `--cut-feedback-gain` (loading) × `--ia-feedback-gain` (compensation). Local debug-scale tuning plateaued at weak counter-phase across a wide search; suspected debug-scale population-size ceiling (N_IA_E/F=30 vs 100 production), not a broken mechanism — see "Force-triggered CUT" below. |
 | `CLAUDE.md` | This file. |
+| `spinal_plasticity_as_learning_spec.md` | Literature-grounded spec for the `--consolidate` tag-and-capture mechanism (see "Tag-and-capture consolidation" below) — spinal-cord analogue of hippocampal synaptic tagging and capture, written by direct analogy to [`hippocampal_timescales_as_circuit_spec.md`](https://github.com/max-talanov/tinyHippo/blob/main/hippocampal_timescales_as_circuit_spec.md). |
 
 ## Frozen-weight control (`run_frozen.sh`)
 
@@ -388,6 +389,98 @@ this section). `run_cutforce_sensory_unload.sh` tests this directly: production 
 (`--ia-feedback-gain` 1.0/4.0/8.0), sensory arm (`--freeze-bs-rg`), 120s, otherwise
 the confirmed operating point unchanged. Not yet submitted.
 
+### Tag-and-capture consolidation (`--consolidate`, 2026-09-15)
+
+Motivated by the unloading-rescue plateau immediately above and the round 1-6
+tuning history: every search so far looked for a **static** fixed point of
+gain/cap parameters, and rounds 1, 2 and 4 kept reverting to
+`frac_at_cap`-dominated (disguised-clock) results under small perturbations.
+[`spinal_plasticity_as_learning_spec.md`](spinal_plasticity_as_learning_spec.md)
+(literature review, written this session) argues the mechanistic reason:
+vanilla STDP with a fixed `Wmax` has no way to tell "genuine progress" apart
+from "an artifact of a degenerate (failsafe-forced) bout" and un-learn the
+latter — every potentiation is kept permanently. Real spinal plasticity has an
+explicit retention gate absent here: Sandkühler's spinal dorsal-horn E-LTP/
+L-LTP (protein-synthesis-dependent, BDNF/D1-D5-gated), Grau's contingency-
+gated spinal instrumental learning (non-contingent outcomes actively
+*suppress*, not just fail to reinforce), and Wolpaw's two-phase H-reflex
+conditioning (a fast Phase I, a slow multi-site Phase II) on exactly the
+Ia→motor pathway this model has.
+
+**Mechanism** (full design: `~/.claude/plans/resilient-soaring-flamingo.md`):
+NEST's native `stdp_synapse` keeps driving `weight` exactly as before (the
+fast, local, per-synapse tag-setting process). A new per-connection
+`baseline` is the captured/stable component; the live tag
+(`weight − baseline`) decays toward it with time constant
+`--consolidate-tau-tag-ms` at every gate tick, unless a shared per-leg
+PRP-pool-like accumulator crosses `--consolidate-prp-threshold` first — genuine
+(real force-threshold) bout endings push the pool up via
+`--consolidate-prp-gain-genuine`, failsafe-forced ones push it down (steeper,
+via `--consolidate-prp-gain-forced`), and crossing the threshold freezes
+`baseline := weight` for every connection in that pathway/leg (a capture
+event). `Wmax` is untouched throughout — this governs retention *within* the
+existing ceiling, not the ceiling itself. Applies to `CUT→RG-E` and
+`Ia→RG-E/F`; `BS→RG` gets identical bookkeeping logged for measurement
+symmetry only and is never written back (weak literature support for
+touching `WMAX_BS`'s documented anti-runaway role — spec doc §3). Scoped to
+`--cut-trigger force` only (the only mode with a genuine-vs-failsafe-forced
+bout-boundary signal to gate on); raises at start-up if passed without it.
+
+**First-pass verification (debug-small, this session) — mechanism confirmed
+working, default parameters do not yet show a self-correction benefit.**
+Three checks:
+
+1. *Regression*: `debug_force.sh` unmodified (no `--consolidate`) is
+   byte-for-byte unaffected — confirmed, the flag is a true no-op when absent.
+2. *Mechanism sanity* (a naturally-occurring falsification-test case): the
+   plain `debug_force.sh` config has no `--muscle-fatigue`, so every bout is
+   failsafe-forced (`frac_at_cap`=1.00 both legs, confirmed) — a run where
+   `prp_pool` can only ever decrease. With `--consolidate` on, `baseline`
+   stayed exactly flat at its t=0 init the entire 10s run on all three
+   pathways (`prp_pool` never left 0) while `weight` visibly drifted away
+   from it (`cut→rge`: baseline 22.2, live weight 34.6) — directly confirming
+   the tag/capture split is doing real, inspectable work: an unreinforced
+   potentiation shows up as a persistent gap from baseline instead of being
+   silently retained the way vanilla STDP would.
+3. *Self-correction hypothesis* (the actual target): re-ran the round-5
+   operating point (τ=260/off=0.35/cap=450, 60s, new Ia-direct-pathway
+   circuit) and round 4's brittle τ=300/off=0.30 point, with vs. without
+   `--consolidate`. Results were **mixed, not positive**: at the round-5
+   point (already near-genuine post-architecture-fix, `frac_at_cap`
+   0.00-0.01 without consolidation), turning consolidation on made it
+   slightly *worse* (0.10-0.12) — with the default gain ratio
+   (`prp_gain_forced`=0.30 vs `prp_gain_genuine`=0.15) and this config's
+   roughly even genuine/forced mix (~69/71 events each over the run),
+   `prp_pool` net-decays to 0 almost every cycle and **capture never once
+   triggered** on any pathway, so `Ia→RG` sat capture-starved near its low
+   init the whole run instead of being allowed to reach the level that
+   otherwise helps stabilize genuine crossings. At round 4's fully-degenerate
+   point (100% `frac_at_cap` from the start, zero genuine bouts ever),
+   consolidation made **no difference** (still 100% both legs) — with no
+   genuine bouts to ever seed a PRP increment, there is nothing for the
+   mechanism to bootstrap from; it cannot rescue a starting point that never
+   produces the signal it depends on.
+
+**Conclusion: implementation is correct and behaves exactly as designed
+(confirmed by direct state inspection, not just aggregate correlation
+numbers), but the first-pass default constants
+(`tau_tag_ms`=2000, `prp_threshold`=1.0, `prp_gain_genuine`=0.15,
+`prp_gain_forced`=0.30) do not yet demonstrate the hoped-for self-correction
+benefit and need their own local tuning round** — the same multi-round
+process Phase 3 (rounds 1-6) needed, not a one-shot fix. Two concrete levers
+for that round: (a) the genuine/forced gain ratio is currently the most
+aggressive part of the default (2:1) and may be actively starving capture at
+borderline operating points — worth trying a shallower ratio or a lower
+`prp_threshold` first; (b) the mechanism has no way to help a 100%-forced
+starting point recover on its own — if that turns out to matter, it would
+need either an exploration term (occasional stochastic relaxation of the
+failsafe) or accepting that this mechanism only refines already-partially-
+working operating points rather than rescuing fully broken ones. Also note:
+bookkeeping overhead roughly doubled with `--consolidate` on (77-83% of wall
+time vs. ~50% without, at 60s debug-small) from the added per-tick
+`GetStatus`/`SetStatus` round trips — fine at debug scale, but worth
+profiling before any production-scale use.
+
 ### Sensory-driven mode (`--freeze-bs-rg`, now just freezing BS since Ia→RG is always on — WMAX_IA=10)
 
 Learning shifted from descending (BS) to sensory (muscle-Ia) pathway: BS→RG frozen at
@@ -468,6 +561,7 @@ Cross-leg: L↔R commissural inhibition on RG-F (strong) and RG-E (weak).
 | `MOD_MUSCLE_FATIGUE` | `--muscle-fatigue`: opt-in (OFF by default) slow activity-dependent force attenuation (`--fatigue-tau-onset-ms`/`--fatigue-tau-recovery-ms`/`--fatigue-max-frac`), so `force_e` can decay on its own during sustained activation instead of relying entirely on the `--cut-trigger force` failsafe cap. Only affects the force proxy, not the neural circuit. |
 | `MOD_FREEZE_BS` | `--freeze-bs-rg`: BS→RG-E/RG-F static (no STDP), held at weak lognormal init (W_INIT_BS). BS becomes fixed tonic drive; Ia→RG and CUT→RG keep training regardless (see MOD_IA_RG_STDP). |
 | `MOD_IA_RG_STDP` | **Always wired, always plastic homonymous Ia→RG** (Ia-E→RG-E, Ia-F→RG-F, Wmax=WMAX_IA=10, density P_IA2RG_STDP=0.5) — matches the reference architecture diagram's direct excitatory Ia→RG projection (distinct from the Ia→InE/InF reciprocal-inhibition loop, MOD_IA_LOOP). A third standing plastic pathway alongside BS→RG and CUT→RG in every mode (2026-09-14 — previously gated behind `--stdp-ia-rg`, opt-in only for the sensory-learning arm; see "Core architecture fix" below for why). `--wmax-ia`/`--p-ia2rg` still override the cap/density. |
+| `MOD_CONSOLIDATE` | `--consolidate`: opt-in (OFF by default), requires `--cut-trigger force`. Replaces vanilla STDP's "every potentiation kept forever, up to Wmax" retention with tag-and-capture consolidation on `CUT→RG-E` and `Ia→RG-E/F`: `weight` still evolves via native `stdp_synapse` (unchanged, the fast/local tag-setting process); a new per-connection `baseline` is the captured/stable component, and the live tag (`weight − baseline`) decays toward it with time constant `--consolidate-tau-tag-ms` unless a shared per-leg PRP-pool-like accumulator crosses `--consolidate-prp-threshold` first (genuine force-threshold bout endings push it up via `--consolidate-prp-gain-genuine`, failsafe-forced endings push it down via `--consolidate-prp-gain-forced`, matching Grau's finding that non-contingent outcomes actively suppress rather than merely fail to reinforce). `Wmax` is untouched — this governs retention *within* the existing ceiling, not the ceiling itself. `BS→RG` (when not frozen) gets identical bookkeeping logged for measurement symmetry only and is never written back to NEST — literature support for touching `WMAX_BS`'s documented anti-runaway role is weak (see [`spinal_plasticity_as_learning_spec.md`](spinal_plasticity_as_learning_spec.md) §3). See "Tag-and-capture consolidation" below for the literature basis and first-pass verification results. |
 | `--ia-feedback-gain` | Multiplicative gain on closed-loop Ia rate. 1.0 baseline / 0.5 toe stepping / 0.1 air stepping (Courtine/Lavrov SCI paradigm). |
 | `--cut-feedback-gain` | Multiplicative gain on cutaneous CUT stance drive (loading-dependent paw contact). Scaled with loading alongside `--ia-feedback-gain`; the external Ia-E heel→toe ramp (stim pacing) stays at full. |
 | `--ia-ext-f-hz` | MOD_FLEXOR_AFFERENT: rate (Hz) of the external flexor swing-afferent (hip/flexor-stretch signal; Grillner & Rossignol 1978). Drives RG-F directly + InF during swing, clocking the flexor symmetrically to the stance Ia-E ramp. 0 = off (intrinsic-only flexor); 80 = on. Un-gated by loading (joint-position, not load-based). |

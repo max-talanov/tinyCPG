@@ -128,6 +128,29 @@ def main():
                   f"{mode:>6s} {cap_stance:5.0f} {fmt_dur(bouts['L']):>13s} {bouts['L']['frac_at_cap']:7.2f} "
                   f"{fmt_dur(bouts['R']):>13s} {bouts['R']['frac_at_cap']:7.2f}")
 
+            # MOD_CONSOLIDATE: when present, report final baseline-vs-weight gap
+            # (the live, uncaptured tag) and capture count per behavioral pathway,
+            # alongside the frac_at_cap verdict above -- no effect on that verdict
+            # or on files without a --consolidate run.
+            if bool(f.attrs.get("consolidate", False)):
+                for side in ("L", "R"):
+                    g = f.get(f"leg_{side}/consolidation")
+                    ev = f.get(f"leg_{side}/consolidation_event")
+                    if g is None:
+                        continue
+                    n_capture = int(np.sum(np.abs(np.asarray(ev)) > 1.5)) if ev is not None else -1
+                    parts = []
+                    for key in ("cut->rge", "ia->rge", "ia->rgf"):
+                        bkey = f"{key}_baseline_mean"
+                        if bkey not in g:
+                            continue
+                        b = np.asarray(g[bkey])
+                        w = np.asarray(f[f"leg_{side}/weights/{key}_mean"])
+                        if b.size == 0 or w.size == 0:
+                            continue
+                        parts.append(f"{key}: baseline={b[-1]:.2f} weight={w[-1]:.2f} gap={w[-1]-b[-1]:+.2f}")
+                    print(f"    [consolidate {side}] captures={n_capture} " + "; ".join(parts))
+
     print("\nfrac_at_cap close to 1.0 means the failsafe timer is doing the work, not "
           "a genuine force-threshold crossing. 'recon' rows (no cut_on array in the "
           "file) are indicative only -- see module docstring.", file=sys.stderr)

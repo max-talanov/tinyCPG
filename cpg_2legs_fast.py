@@ -651,6 +651,50 @@ def main():
                          "activation ~1.2) against an off-threshold of ~1.9 and never "
                          "crossed it. 0.95 leaves a floor of ~0.9, safely below a "
                          "typical off-threshold even for a modest bout peak.")
+    # ---- MOD_CONSOLIDATE: tag-and-capture consolidation (replaces vanilla STDP's
+    # "every potentiation is kept forever, up to Wmax" retention with a genuine
+    # retention gate -- see spinal_plasticity_as_learning_spec.md secs 1-2 and the
+    # implementation plan for the literature basis (Sandkuhler spinal E-LTP/L-LTP +
+    # BDNF/D1-D5 gating; Grau contingency-gated spinal instrumental learning;
+    # Wolpaw two-phase H-reflex conditioning on Ia->motor). Opt-in, OFF by default,
+    # and requires --cut-trigger force (the only mode with a genuine-vs-failsafe-
+    # forced bout-boundary signal to gate captures on).
+    ap.add_argument("--consolidate", action="store_true",
+                    help="MOD_CONSOLIDATE: replace vanilla unconditional STDP "
+                         "retention with tag-and-capture consolidation on "
+                         "CUT->RG-E and Ia->RG-E/F. A per-connection 'tag' "
+                         "(weight above its captured baseline) decays with "
+                         "--consolidate-tau-tag-ms unless a shared per-leg "
+                         "PRP-pool-like accumulator crosses "
+                         "--consolidate-prp-threshold first, in which case the "
+                         "baseline is frozen at the current weight. Genuine "
+                         "(real force-threshold) bout endings push the pool up; "
+                         "failsafe-forced ones push it down. BS->RG gets the "
+                         "same bookkeeping for measurement only -- WMAX_BS's "
+                         "documented anti-runaway role is never touched. "
+                         "Requires --cut-trigger force. OFF by default.")
+    ap.add_argument("--consolidate-tau-tag-ms", type=float, default=2000.0,
+                    help="MOD_CONSOLIDATE: time constant (ms) for a synapse's "
+                         "uncaptured tag (weight above its baseline) to decay "
+                         "back toward that baseline. A few bout-cycles by "
+                         "default; needs its own local tuning round like every "
+                         "other timing constant in this project.")
+    ap.add_argument("--consolidate-prp-threshold", type=float, default=1.0,
+                    help="MOD_CONSOLIDATE: PRP-pool threshold (arbitrary units) "
+                         "that triggers a capture event, freezing the current "
+                         "weight as the new baseline. The gain flags below are "
+                         "defined relative to this.")
+    ap.add_argument("--consolidate-prp-gain-genuine", type=float, default=0.15,
+                    help="MOD_CONSOLIDATE: PRP-pool increment per genuine "
+                         "(real force-threshold) bout ending. Default reaches "
+                         "capture after ~7 consecutive genuine bouts.")
+    ap.add_argument("--consolidate-prp-gain-forced", type=float, default=0.30,
+                    help="MOD_CONSOLIDATE: PRP-pool decrement (floored at 0) "
+                         "per failsafe-forced bout ending. Steeper than "
+                         "--consolidate-prp-gain-genuine by default, matching "
+                         "Grau's finding that non-contingent outcomes actively "
+                         "suppress spinal learning rather than merely fail to "
+                         "reinforce it.")
     # ---- ablation flags (paper Figure: necessity of each component) ----
     ap.add_argument("--ablate-ia-loop", action="store_true",
                     help="ABLATION: zero Ia→InE/InF closed-loop (W_IA2IN=0). Tests "
@@ -737,6 +781,18 @@ def main():
     FATIGUE_MAX_FRAC = float(args.fatigue_max_frac)
     if not (0.0 <= FATIGUE_MAX_FRAC <= 1.0):
         raise ValueError(f"--fatigue-max-frac ({FATIGUE_MAX_FRAC}) must be in [0,1].")
+    # MOD_CONSOLIDATE: tag-and-capture consolidation, scoped to --cut-trigger force
+    # (the only mode with a genuine-vs-failsafe-forced bout-boundary signal).
+    CONSOLIDATE = bool(getattr(args, "consolidate", False))
+    if CONSOLIDATE and CUT_TRIGGER != "force":
+        raise ValueError("--consolidate requires --cut-trigger force (it gates "
+                          "capture on that mode's genuine-vs-failsafe-forced "
+                          "bout-boundary classification, which does not exist "
+                          "in timer/paced-gait mode).")
+    CONSOLIDATE_TAU_TAG_MS = float(getattr(args, "consolidate_tau_tag_ms", 2000.0))
+    CONSOLIDATE_PRP_THRESHOLD = float(getattr(args, "consolidate_prp_threshold", 1.0))
+    CONSOLIDATE_PRP_GAIN_GENUINE = float(getattr(args, "consolidate_prp_gain_genuine", 0.15))
+    CONSOLIDATE_PRP_GAIN_FORCED = float(getattr(args, "consolidate_prp_gain_forced", 0.30))
     # ---- sweep mode (Option C): run one (mu, CV) pair per Slurm array task ----
     def _parse_pairs(s: str):
         s = (s or "").strip()
@@ -1625,15 +1681,90 @@ def main():
                 except Exception:
                     # If slicing is not supported, keep original
                     pass
+
+    # ---- MOD_CONSOLIDATE: tag-and-capture consolidation state (opt-in) ----
+    # Two components per synapse, replacing "whatever stdp_synapse says is
+    # permanent" with "only what gets captured is permanent": `weight` (native
+    # STDP induction, unchanged -- the fast, local, per-synapse tag-setting
+    # process) and `baseline` (new, persistent per-connection captured/stable
+    # component; the live tag = weight - baseline is not stored separately).
+    # A single shared "cell-wide" prp_pool per pathway/leg is the capture
+    # gate -- PRP synthesis is cell-wide in the biology while the tag is
+    # synapse-local, so this mirrors that split rather than tracking a pool
+    # per synapse. Initialized post-downsampling so array lengths always match
+    # conns_cache[side][key] exactly. cut->rge/ia->rge/ia->rgf actually get
+    # weight writes; bs->rge/bs->rgf (when not frozen) get identical
+    # bookkeeping for measurement symmetry only and are never written back.
+    consolidate_keys = list(plastic_keys)
+    consolidate_behavioral_keys = {"cut->rge", "ia->rge", "ia->rgf"}
+    baseline = {side: {} for side in LEGS}
+    prp_pool = {side: {k: 0.0 for k in consolidate_keys} for side in LEGS}
+    pending_consolidation_event = {side: 0 for side in LEGS}
+    if CONSOLIDATE:
+        for side in LEGS:
+            for key in consolidate_keys:
+                conns = conns_cache[side][key]
+                if conns is None or len(conns) == 0:
+                    baseline[side][key] = np.array([], dtype=float)
+                else:
+                    baseline[side][key] = np.asarray(nest.GetStatus(conns, "weight"), dtype=float)
+
+    def consolidation_bout_event(side: str, genuine: bool) -> bool:
+        """MOD_CONSOLIDATE: called once per real (non-priming) stance/swing
+        bout boundary. Genuine (real force-threshold) endings push the
+        shared prp_pool up toward capture; forced (failsafe-timeout) endings
+        push it down (Grau: non-contingent outcomes actively suppress rather
+        than merely fail to reinforce). On capture, every connection's
+        baseline is frozen at wherever weight currently sits (the hippocampal
+        doc's Fig. 2 staircase step). Returns True if any key captured this
+        event."""
+        captured_any = False
+        for key in consolidate_keys:
+            if genuine:
+                prp_pool[side][key] += CONSOLIDATE_PRP_GAIN_GENUINE
+            else:
+                prp_pool[side][key] = max(0.0, prp_pool[side][key] - CONSOLIDATE_PRP_GAIN_FORCED)
+            if prp_pool[side][key] >= CONSOLIDATE_PRP_THRESHOLD:
+                conns = conns_cache[side][key]
+                if conns is not None and len(conns) > 0:
+                    baseline[side][key] = np.asarray(nest.GetStatus(conns, "weight"), dtype=float)
+                prp_pool[side][key] -= CONSOLIDATE_PRP_THRESHOLD
+                captured_any = True
+        return captured_any
+
+    def consolidation_leak(side: str):
+        """MOD_CONSOLIDATE: spontaneous per-synapse tag decay toward the
+        captured baseline, applied every gate tick (~args.rate_update_ms).
+        This is the actual behavioral difference from vanilla STDP: an
+        unreinforced potentiation now relaxes back toward the last captured
+        baseline instead of being kept forever (Wmax is unaffected -- it
+        still bounds `weight` exactly as before; this governs retention
+        within that ceiling)."""
+        decay = float(np.exp(-float(args.rate_update_ms) / CONSOLIDATE_TAU_TAG_MS))
+        for key in consolidate_behavioral_keys:
+            conns = conns_cache[side][key]
+            if conns is None or len(conns) == 0:
+                continue
+            w = np.asarray(nest.GetStatus(conns, "weight"), dtype=float)
+            new_w = baseline[side][key] + (w - baseline[side][key]) * decay
+            nest.SetStatus(conns, [{"weight": float(wv)} for wv in new_w])
+
     # ---- storage ----
     times = []
     wstats = {side: {k: ([], []) for k in plastic_keys} for side in LEGS}
+    # MOD_CONSOLIDATE: baseline (captured/stable component) mean/std time series
+    # and the shared prp_pool trace, alongside the existing weight stats.
+    consolidate_stats = {side: {k: ([], []) for k in consolidate_keys} for side in LEGS}
+    prp_log = {side: {k: [] for k in consolidate_keys} for side in LEGS}
     logs = {side: dict(bs_e=[], bs_f=[], mus_e=[], mus_f=[],
                        rge=[], rgf=[],
                        ine=[], inf=[], iaint_e=[], iaint_f=[],  # MOD_NET_RECORD
                        act_e=[], act_f=[], force_e=[], force_f=[],
                        fatigue_e=[], fatigue_f=[], cut_on=[],
                        len_e=[], len_f=[], ia_e=[], ia_f=[]) for side in LEGS}
+    if CONSOLIDATE:  # MOD_CONSOLIDATE: +1 genuine / -1 forced / +-2 same-with-capture / 0 no-event
+        for side in LEGS:
+            logs[side]["consolidation_event"] = []
     state = {side: dict(act_e=0.0, act_f=0.0, force_e=0.0, force_f=0.0,
                         fatigue_e=0.0, fatigue_f=0.0,
                         len_e=L0, len_f=L0,
@@ -1813,6 +1944,7 @@ def main():
 
     # Keep last sampled mean/std so we can append smoothly without resampling every step
     last_wstats = {side: {k: (np.nan, np.nan) for k in plastic_keys} for side in LEGS}
+    last_cstats = {side: {k: (np.nan, np.nan) for k in consolidate_keys} for side in LEGS}  # MOD_CONSOLIDATE
 
     def log_weights(t_ms: float, step_idx: int):
         """Append weight mean/std time series.
@@ -1836,6 +1968,19 @@ def main():
                 mval, sval = last_wstats[side][key]
                 wstats[side][key][0].append(mval)
                 wstats[side][key][1].append(sval)
+
+            if CONSOLIDATE:  # MOD_CONSOLIDATE: baseline mean/std + prp_pool trace
+                for key in consolidate_keys:
+                    if do_sample:
+                        b = baseline[side].get(key)
+                        if b is None or b.size == 0:
+                            last_cstats[side][key] = (np.nan, np.nan)
+                        else:
+                            last_cstats[side][key] = (float(b.mean()), float(b.std()))
+                    bmval, bsval = last_cstats[side][key]
+                    consolidate_stats[side][key][0].append(bmval)
+                    consolidate_stats[side][key][1].append(bsval)
+                    prp_log[side][key].append(float(prp_pool[side][key]))
 
         # Full weight storage (snapshots at sampling ticks)
         if args.save_weights == "snapshots" and do_sample:
@@ -1965,6 +2110,8 @@ def main():
             # granularity, so check against the previous tick's time too).
             just_ended_priming = (not priming) and (t_now - float(args.rate_update_ms) < LEAD_OFFSET_MS)
 
+            forced = False  # MOD_CONSOLIDATE: was this bout ending a genuine threshold
+                             # crossing, or only the failsafe timeout forcing it?
             if priming:
                 is_on = True
             else:
@@ -1973,6 +2120,7 @@ def main():
                     is_on = True
                 elif was_on and fe <= off_thr:
                     is_on = False
+                is_on_pre_failsafe = is_on  # MOD_CONSOLIDATE: classification point
 
                 # Failsafe timeout: without adaptation/fatigue, CUT->RG-E->force_e is
                 # a stable positive-feedback plateau that a pure force threshold can
@@ -1985,6 +2133,7 @@ def main():
                     is_on = False
                 elif not was_on and not is_on and elapsed_phase >= CUT_MAX_SWING_MS:
                     is_on = True
+                forced = (is_on != is_on_pre_failsafe)  # MOD_CONSOLIDATE
 
                 # Priming just ended: hand the lagging leg to swing immediately so
                 # the leading/lagging phase offset actually takes hold, rather than
@@ -2002,9 +2151,18 @@ def main():
                     # the (loading-scaled) seed, so its OFF threshold isn't biased by
                     # history.
                     peak_e_est[side] = peak_e_seed
+                # MOD_CONSOLIDATE: gate on real bout-boundary events only --
+                # priming and the lag-side's artificial priming-end reset are
+                # experimental symmetry-breaking, not trained outcomes.
+                if CONSOLIDATE and not priming and not (side == lag_side and just_ended_priming):
+                    captured = consolidation_bout_event(side, genuine=not forced)
+                    code = (1 if not forced else -1) * (2 if captured else 1)
+                    pending_consolidation_event[side] = code
 
             cut_state[side] = is_on
             cut_force_apply(side, is_on, t_now)
+            if CONSOLIDATE:
+                consolidation_leak(side)
 
         for side in LEGS:
             cut_force_apply(side, cut_state[side], 0.0)
@@ -2037,6 +2195,8 @@ def main():
                 # the reconstruction threshold chosen). Exact bout durations from
                 # this array can be compared to cut_max_stance/swing_ms exactly.
                 logs[side]["cut_on"].append(is_on_now)
+                if CONSOLIDATE:  # MOD_CONSOLIDATE: default no-event; overwritten below if one fired
+                    logs[side]["consolidation_event"].append(0.0)
             if ENFORCE_TONIC_BS:
                 l_be = float(logs["L"]["bs_e"][-1]); r_be = float(logs["R"]["bs_e"][-1])
                 l_bf = float(logs["L"]["bs_f"][-1]); r_bf = float(logs["R"]["bs_f"][-1])
@@ -2047,6 +2207,12 @@ def main():
             if do_rate_update:
                 for side in LEGS:
                     cut_force_gate(side, t_ms)
+                    if CONSOLIDATE and pending_consolidation_event[side] != 0:
+                        # Overwrite this chunk's just-appended 0 with the event code
+                        # detected by the gate call above (one-tick-late, same as
+                        # the existing Ia sensor delay -- see cut_force_gate).
+                        logs[side]["consolidation_event"][-1] = float(pending_consolidation_event[side])
+                        pending_consolidation_event[side] = 0
             book_accum += (time.perf_counter() - t_book0)
 
             if rank == 0 and (
@@ -2208,6 +2374,12 @@ def main():
             h5.attrs["lead_offset_ms"] = float(LEAD_OFFSET_MS)
             h5.attrs["cut_max_stance_ms"] = float(CUT_MAX_STANCE_MS)
             h5.attrs["cut_max_swing_ms"] = float(CUT_MAX_SWING_MS)
+        h5.attrs["consolidate"] = bool(CONSOLIDATE)  # MOD_CONSOLIDATE
+        if CONSOLIDATE:
+            h5.attrs["consolidate_tau_tag_ms"] = float(CONSOLIDATE_TAU_TAG_MS)
+            h5.attrs["consolidate_prp_threshold"] = float(CONSOLIDATE_PRP_THRESHOLD)
+            h5.attrs["consolidate_prp_gain_genuine"] = float(CONSOLIDATE_PRP_GAIN_GENUINE)
+            h5.attrs["consolidate_prp_gain_forced"] = float(CONSOLIDATE_PRP_GAIN_FORCED)
         h5.attrs["muscle_fatigue"] = bool(MUSCLE_FATIGUE)
         if MUSCLE_FATIGUE:
             h5.attrs["fatigue_tau_onset_ms"] = float(FATIGUE_TAU_ONSET_MS)
@@ -2274,6 +2446,21 @@ def main():
                                   compression="gzip")
                 gw.create_dataset(f"{key}_std", data=np.asarray(wstats[side][key][1], dtype=np.float32),
                                   compression="gzip")
+
+            # MOD_CONSOLIDATE: captured-baseline mean/std + shared prp_pool trace,
+            # one group per leg alongside "weights" (only written when enabled).
+            if CONSOLIDATE:
+                gc = g.create_group("consolidation")
+                for key in consolidate_keys:
+                    gc.create_dataset(f"{key}_baseline_mean",
+                                      data=np.asarray(consolidate_stats[side][key][0], dtype=np.float32),
+                                      compression="gzip")
+                    gc.create_dataset(f"{key}_baseline_std",
+                                      data=np.asarray(consolidate_stats[side][key][1], dtype=np.float32),
+                                      compression="gzip")
+                    gc.create_dataset(f"{key}_prp_pool",
+                                      data=np.asarray(prp_log[side][key], dtype=np.float32),
+                                      compression="gzip")
 
             # Optional: full weight vectors (shape: [T_samples, N_connections])
             if len(wfull_times) > 0:
