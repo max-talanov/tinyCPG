@@ -1051,6 +1051,23 @@ losing noise rejection. Two problems found in sequence, both real:
    improved to -0.32 to -0.59 (better than the pre-fix -0.05 to -0.36, but
    still well short of working configs' -0.6 to -0.8).
 
+**Weight trajectories confirm this is corrupting learning, not just
+timing.** Every other comparison in this file (arms, gains, speeds) showed
+near-identical CUT→RG-E convergence regardless of condition (§ "why the
+weight profiles look identical" reasoning above) — this is the first
+exception. Plotting the three chattering configs
+(`scripts/cpg_consolidate_weights_grid.py`) against the medium reference
+shows CUT→RG-E climbing well past the reference's ~63-67 pA plateau in all
+three — off the top of a 0-70 pA axis, still rising at 60s, one case
+(τ_filter=100, no fix) in an almost linear, unsaturated trajectory. Rapid,
+spurious on/off flipping delivers far more STDP-eligible coincidence events
+per second than genuine, slower cycling does, so chattering doesn't just
+fail to produce a usable rhythm — it also drives the plastic synapse to a
+different (higher, seemingly still-growing) trajectory than every genuine
+operating point converges to. Another concrete way this fast-direction
+failure mode differs qualitatively from the medium/slow successes, not just
+quantitatively.
+
 **Conclusion: the filter approach is real, the bug fix was necessary, and
 neither is sufficient on its own.** Something beyond peak-tracking noise is
 also unscaled at fine ticks — a plausible next suspect, not yet tested: the
