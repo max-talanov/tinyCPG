@@ -33,6 +33,16 @@
 #            gain pair -- 0.20/0.15 descending, 0.25/0.10 sensory -- these
 #            do NOT transfer between arms (confirmed, two seeds, see
 #            "Sensory-arm generalization check" in CLAUDE.md).
+#   --consolidate is MEDIUM-SPEED ONLY. Stage 2 tested the medium-confirmed
+#            descending gain pair at the slow point across 12 configs (gain
+#            ratio, capture threshold, tag time constant) and found it
+#            actively harmful there in every case -- cap-domination,
+#            synchronization, or degenerate chattering, never genuine +
+#            stable (see "Stage 2" in CLAUDE.md). The two slow-speed cells
+#            below therefore run WITHOUT --consolidate, as a no-consolidate
+#            control (already confirmed excellent at slow: steady-state
+#            corr(F-E_L,F-E_R) -0.822) -- not a placeholder, a deliberate
+#            choice not to ship a gain pair known to regress that speed.
 #   Loading: full weight-bearing / toe stepping / air stepping, but ONLY at
 #            medium speed -- the paper defines the loading axis at the
 #            baseline speed anchor only, not as an independent grid over
@@ -47,10 +57,12 @@
 #
 # NOT in scope for this submission (deliberately -- do not silently add):
 #   - Fast speed (unresolved, see above).
-#   - Per-speed or per-loading --consolidate gain re-tuning (Stages 2-3).
-#     Every cell below reuses the single confirmed gain pair for its arm,
-#     unmodified by speed or loading -- treat this run's results as a
-#     TRANSFER TEST of that pair, not as already-validated for these cells.
+#   - --consolidate at the slow point (confirmed harmful, see above) --
+#     the two slow cells are no-consolidate controls, not a TODO.
+#   - Per-loading --consolidate gain re-tuning (Stage 3). The 6 medium-speed
+#     cells reuse the single confirmed gain pair for their arm regardless of
+#     loading -- treat toe/air results as a TRANSFER TEST of that pair, not
+#     as already-validated for those loading levels.
 #   - STDP initial-weight (mu, CV) robustness grid (Phase 3's own 10-point
 #     sweep, never repeated with --consolidate on).
 #
@@ -88,7 +100,7 @@ SIM_MS=120000
 SEEDS=(12345 54321 98765)
 
 # cell index 0-7 -- see header comment for what each one is
-CELL_LABELS=(medium_desc_full medium_desc_toe medium_desc_air medium_sens_full medium_sens_toe medium_sens_air slow_desc_full slow_sens_full)
+CELL_LABELS=(medium_desc_full medium_desc_toe medium_desc_air medium_sens_full medium_sens_toe medium_sens_air slow_desc_full_noconsolidate slow_sens_full_noconsolidate)
 CELL_SPEED=(medium medium medium medium medium medium slow slow)
 CELL_ARM=(desc desc desc sens sens sens desc sens)
 CELL_LOADING=(full toe air full toe air full full)
@@ -138,7 +150,14 @@ elif [ "$LOADING" = "air" ]; then
   LOADING_FLAGS="--ia-feedback-gain 0.1 --cut-feedback-gain 0.1"
 fi
 
-echo "[ConsolSAL] task=$TASK cell=$LABEL speed=$SPEED(period=${PERIOD}ms) arm=$ARM loading=$LOADING seed=$SEED gains=${GAIN_GENUINE}/${GAIN_FORCED}"
+# ---- --consolidate is medium-speed only (Stage 2: harmful at slow, see header) ----
+if [ "$SPEED" = "medium" ]; then
+  CONSOLIDATE_FLAGS="--consolidate --consolidate-prp-gain-genuine ${GAIN_GENUINE} --consolidate-prp-gain-forced ${GAIN_FORCED}"
+  echo "[ConsolSAL] task=$TASK cell=$LABEL speed=$SPEED(period=${PERIOD}ms) arm=$ARM loading=$LOADING seed=$SEED gains=${GAIN_GENUINE}/${GAIN_FORCED}"
+else
+  CONSOLIDATE_FLAGS=""
+  echo "[ConsolSAL] task=$TASK cell=$LABEL speed=$SPEED(period=${PERIOD}ms) arm=$ARM loading=$LOADING seed=$SEED consolidate=OFF (no-consolidate control, see header)"
+fi
 
 srun --cpu-bind=cores --distribution=block:block \
   python3 -u cpg_2legs_fast.py \
@@ -181,9 +200,7 @@ srun --cpu-bind=cores --distribution=block:block \
     --fatigue-tau-onset-ms "$FAT_ONSET" \
     --fatigue-tau-recovery-ms "$FAT_RECOVERY" \
     --fatigue-max-frac 0.95 \
-    --consolidate \
-    --consolidate-prp-gain-genuine "$GAIN_GENUINE" \
-    --consolidate-prp-gain-forced "$GAIN_FORCED" \
+    $CONSOLIDATE_FLAGS \
     $ARM_FLAGS \
     $LOADING_FLAGS \
     --long-run
