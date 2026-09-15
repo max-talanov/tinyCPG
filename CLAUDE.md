@@ -965,6 +965,62 @@ treat as the object of study itself (why does speeding up specifically
 desynchronize the legs?), rather than keep attacking with the same class of
 parameter nudge.
 
+**Investigating the asymmetry: why speeding up desynchronizes the legs
+(2026-09-15).** Two absolute-time constants are held fixed across every
+Stage 1 attempt while bout duration shrinks for faster configs — and both
+turn out to matter, for different reasons.
+
+**Confirmed factor 1 — `--lead-offset-ms` doesn't scale with cycle period.**
+It's a fixed 150ms absolute value throughout. As a *fraction of stance
+duration* it stays a safe 28-38% for the two confirmed-good points (medium
+400ms stance, slow 535ms) but balloons to 53-61% for every failed fast
+attempt (245-283ms stance) — directly the failure zone this file already
+documented for oversized priming windows (§ "Force-triggered CUT": 400ms
+priming against a ~1000ms cycle flipped corr(F-E_L,F-E_R) to +0.41). Testing
+it directly on the 0.75× scaled-fast config (150→112ms, same proportion):
+steady-state `frac_at_cap` dropped from 0.32-0.59 to 0.22-0.36, and one
+seed's corr(F-E_L,F-E_R) flipped from badly-synchronized (+0.342/+0.111) to
+strongly anti-phase (−0.700) — a real, substantial improvement, confirming
+this is a genuine contributing cause, not coincidence. Not a full fix on its
+own: residual cap-domination and one seed's near-zero (ambiguous) corrLR
+remained.
+
+**Confirmed factor 2 — `--rate-update-ms` (the gate-check tick) doesn't scale
+down either, but the "obvious" fix backfires.** Inspecting the raw
+steady-state bout-duration sequence for the lead-offset-corrected config
+showed durations locked to *only two discrete values*, 300 or 350ms — never
+anything between — because the failsafe check only runs at 50ms ticks, and
+340ms's failsafe fires at the first tick ≥340ms, which lands on 350
+regardless of how close to genuinely completing the bout actually was. At
+medium/slow speeds this tick is a fine fraction of bout duration (~9-12%);
+at this fast config's ~300ms bouts it's a much coarser ~17%, so a
+near-miss and a comfortable margin both round to the identical "at cap"
+verdict. **Tested the obvious fix directly (`--rate-update-ms`/
+`--simulate-chunk-ms` 50→20ms) and it made things dramatically worse, not
+better**: mean bout duration collapsed to 40-84ms with variance exceeding
+the mean (±78-128ms) — not finer resolution of the same rhythm, but outright
+Schmitt-trigger **chattering**. `peak_e_est = max(fe, peak_e_est)` and the
+on/off-threshold check both run every rate-update tick; sampling `force_e`
+more often lets the per-bout running peak track force noise more precisely,
+which makes the relative on/off thresholds cross spuriously on tiny
+fluctuations instead of the real envelope. The coarse tick isn't just a
+measurement artifact to fix by sampling faster — it's doing real,
+load-bearing noise-averaging that a naive resolution increase removes.
+
+**Answer to "why does speeding up desynchronize the legs": at least two
+independent, confirmed mechanisms, not one.** (1) A fixed-duration symmetric
+priming window becomes a larger fraction of a shorter cycle, pushing toward
+the already-known over-priming synchronization failure. (2) A fixed gate
+tick becomes a coarser fraction of a shorter cycle, inflating apparent
+cap-domination — but the fix isn't simply finer sampling, since the same
+tick also low-pass-filters the peak-tracking Schmitt trigger against noise,
+and removing that naively causes chattering instead. A genuine fast
+operating point likely needs `--lead-offset-ms` scaled down (factor 1,
+confirmed to help) *and* a noise-robust way to shrink the effective tick
+period (factor 2 — not yet solved; simple down-scaling doesn't work, and
+whatever replaces it needs to preserve peak-tracking noise rejection while
+still resolving a shorter bout).
+
 ### Sensory-driven mode (`--freeze-bs-rg`, now just freezing BS since Ia→RG is always on — WMAX_IA=10)
 
 Learning shifted from descending (BS) to sensory (muscle-Ia) pathway: BS→RG frozen at
