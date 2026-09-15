@@ -1102,6 +1102,27 @@ file, should be read with this in mind, and a genuine future confirmation
 pass would benefit from more than 2 repeats given now-demonstrated
 same-seed variance.
 
+**Full 3-speed × 2-arm visual summary (2026-09-15).** Filled in the two
+missing cells (sensory arm at the slow and fast timing configs — only the
+medium-speed sensory arm had been run before) and generated the full grid
+with `scripts/cpg_consolidate_force_stages.py`/`cpg_consolidate_weights_grid.py`:
+medium (τ=260/off=0.35/cap=450), slow (τ=340/recovery=780/caps=585, the
+1.3× scale), and fast (τ=200/off=0.30, the confirmed-but-only-~6%-faster
+point), each on both the descending arm and the sensory arm
+(`--freeze-bs-rg`), same seed (12345) throughout for comparability.
+All 18 force-stage panels (3 stages × 6 conditions) show clean, regular
+counter-phase rhythms — no surprises, this is the expected picture given
+every cell here is one of the two *confirmed-genuine* speed points, not one
+of the fast-direction failure attempts. All 6 weight-trajectory panels
+converge to the same CUT→RG-E ≈63-67 pA plateau and Ia→RG set-points
+regardless of speed or arm — consistent with every other comparison in this
+file except the chattering configs, and a useful independent confirmation
+that the medium/slow speed points and the descending/sensory arm split are
+all mutually compatible with each other, not just individually confirmed
+in isolation. New sensory-arm files:
+`results/sensory_slow_scaled13x_seed12345.h5`,
+`results/sensory_fast_tau200_off0.30_seed12345.h5`.
+
 ### Sensory-driven mode (`--freeze-bs-rg`, now just freezing BS since Ia→RG is always on — WMAX_IA=10)
 
 Learning shifted from descending (BS) to sensory (muscle-Ia) pathway: BS→RG frozen at
