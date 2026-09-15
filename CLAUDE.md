@@ -1021,6 +1021,70 @@ period (factor 2 — not yet solved; simple down-scaling doesn't work, and
 whatever replaces it needs to preserve peak-tracking noise rejection while
 still resolving a shorter bout).
 
+**Factor 2 follow-up: an explicit noise filter, decoupled from tick rate
+(2026-09-15) — implemented, tested, still doesn't solve it.** Added
+`--cut-force-filter-tau-ms` (`MOD_CUT_FORCE_TRIGGER`, default 0 = off, exact
+original behaviour): an exponential low-pass on `force_e` feeding both
+`peak_e_est` and the on/off threshold comparisons, with its own time
+constant independent of `--rate-update-ms`, so the tick can shrink without
+losing noise rejection. Two problems found in sequence, both real:
+
+1. **First test (τ_filter=30ms at rate-update=20ms) still chattered** —
+   durations ~24-32ms, barely above the tick floor. Root cause found by
+   inspection: the filter state was only re-seeded at *stance* onset
+   (reusing the existing `peak_e_est` reset point), so a swing phase
+   shorter than the filter's own settling time left `force_e_filt` carrying
+   a stale, lagging estimate from the *previous* stance into the new bout
+   — filter lag dominating a bout shorter than itself, not noise rejection.
+   Fixed: re-seed `force_e_filt[side] = None` at *every* phase transition,
+   not just stance onset.
+2. **A stronger filter (τ=100ms) made it worse before the fix** (durations
+   collapsed to exactly the 20ms tick floor, corr(F-E,F-F) degraded to
+   ~-0.05, essentially no rhythm) — consistent with (1): a filter slower
+   than the bout it's supposed to smooth doesn't stabilize the loop, it
+   destabilizes it (lagged feedback into a hysteresis/relay controller is a
+   classic route to a new oscillation mode, not noise suppression).
+3. **After the fix, re-tested τ=30ms at rate-update=20ms: still broken**,
+   though less severely — durations 28-90ms (still nowhere near the ~280
+   -300ms target), std comparable to or exceeding the mean, and markedly
+   asymmetric between legs in one seed (L=90ms vs R=28ms). corr(F-E,F-F)
+   improved to -0.32 to -0.59 (better than the pre-fix -0.05 to -0.36, but
+   still well short of working configs' -0.6 to -0.8).
+
+**Conclusion: the filter approach is real, the bug fix was necessary, and
+neither is sufficient on its own.** Something beyond peak-tracking noise is
+also unscaled at fine ticks — a plausible next suspect, not yet tested: the
+Ia-E heel→toe sub-group pacing (`SUB_STANCE_MS`, derived from
+`--step-period-ms`/`--stance-fraction`/`--n-ia-groups`, still at its
+original ~167ms value throughout every Stage 1 attempt) is now much larger
+than the collapsed ~20-90ms bouts, so only the first (weakest, 60Hz)
+sub-group ever fires — a third absolute-time constant that was never scaled
+alongside the others, on top of `--lead-offset-ms` (factor 1) and the tick/
+filter (factor 2). The pattern across all three is the same: this circuit
+has more independent absolute-time constants than were ever exercised by
+rounds 1-6's single-operating-point search, and a coherent fast operating
+point likely needs all of them scaled together, not one or two at a time.
+
+**Also surfaced during this work, orthogonal to the filter itself but
+consequential for the rest of this file's methodology: identical code, same
+seed, same flags, produced different corr(F-E_L,F-E_R) on two consecutive
+runs** (-0.318 vs +0.298, medium point, filter off) — confirmed not a code
+regression (per-leg `frac_at_cap` and corr(F-E,F-F) matched the established
+range in both runs; only corrLR differed) but genuine run-to-run
+nondeterminism, most likely from NEST's multi-threaded execution affecting
+spike-arrival order in ways a fixed `--seed` doesn't fully pin down. This is
+a re-surfacing of an already-documented caution in this file ("L/R-metric
+instability at debug scale... per-leg metrics are the stable/trustworthy
+ones here"), but this session's `--consolidate` and Stage 1 tuning leaned on
+corrLR more heavily than that caution suggests was warranted. Doesn't
+invalidate prior 2-seed-confirmed results (per-leg metrics were consistent
+throughout, and the confirmed points' corrLR matches were tight enough to
+be real signal, not just luck — e.g. 0.20/0.15's steady-state -0.839 in
+*both* seeds), but any *single* corrLR data point, including ones in this
+file, should be read with this in mind, and a genuine future confirmation
+pass would benefit from more than 2 repeats given now-demonstrated
+same-seed variance.
+
 ### Sensory-driven mode (`--freeze-bs-rg`, now just freezing BS since Ia→RG is always on — WMAX_IA=10)
 
 Learning shifted from descending (BS) to sensory (muscle-Ia) pathway: BS→RG frozen at

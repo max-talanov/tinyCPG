@@ -590,6 +590,23 @@ def main():
                     help="MOD_CUT_FORCE_TRIGGER: stance-OFF threshold as a fraction of "
                          "the leg's adaptive running peak force_e. Must be < "
                          "--cut-force-on-frac (hysteresis band prevents chatter).")
+    ap.add_argument("--cut-force-filter-tau-ms", type=float, default=0.0,
+                    help="MOD_CUT_FORCE_TRIGGER: time constant (ms) for an exponential "
+                         "low-pass filter applied to force_e before it feeds peak_e_est "
+                         "and the on/off threshold comparisons. Default 0 = off (raw "
+                         "force_e, original behaviour, unaffected regardless of "
+                         "--rate-update-ms). Exists because the gate's threshold "
+                         "comparisons were previously only ever run at --rate-update-ms "
+                         "50ms, which incidentally low-pass-filtered force_e's own "
+                         "tick-to-tick noise; naively shortening --rate-update-ms to "
+                         "resolve shorter (faster-gait) bouts removes that incidental "
+                         "filtering and the trigger chatters (confirmed by direct test: "
+                         "50->20ms alone collapsed bout duration to 40-84ms, i.e. rapid "
+                         "spurious on/off flips, not a shorter genuine rhythm). This "
+                         "flag reintroduces the noise rejection explicitly, decoupled "
+                         "from tick rate, so --rate-update-ms can be shortened for fast "
+                         "operating points without reintroducing chatter. Try a value "
+                         "comparable to or a little above the new --rate-update-ms.")
     ap.add_argument("--leading-leg", choices=["L", "R"], default="R",
                     help="MOD_CUT_FORCE_TRIGGER: which leg starts in stance at t=0 "
                          "(bio motivation: gait initiation from one already-planted "
@@ -782,6 +799,7 @@ def main():
     if not (0.0 < CUT_FORCE_OFF_FRAC < CUT_FORCE_ON_FRAC <= 1.0):
         raise ValueError(f"--cut-force-off-frac ({CUT_FORCE_OFF_FRAC}) must be < "
                           f"--cut-force-on-frac ({CUT_FORCE_ON_FRAC}), both in (0,1].")
+    CUT_FORCE_FILTER_TAU_MS = float(getattr(args, "cut_force_filter_tau_ms", 0.0))
     LEADING_LEG = str(getattr(args, "leading_leg", "R"))
     LEAD_OFFSET_MS = float(args.lead_offset_ms)
     CUT_MAX_STANCE_MS = float(args.cut_max_stance_ms)
@@ -2078,6 +2096,11 @@ def main():
         peak_e_est = {side: peak_e_seed for side in LEGS}
         stance_onset_ms = {side: 0.0 for side in LEGS}
         phase_onset_ms = {side: 0.0 for side in LEGS}
+        # MOD_CUT_FORCE_TRIGGER: optional EMA low-pass on force_e, decoupled from
+        # --rate-update-ms, so the tick can be shortened for fast operating points
+        # without losing the noise rejection the coarse tick used to provide
+        # incidentally (see --cut-force-filter-tau-ms help). None = not yet seeded.
+        force_e_filt = {side: None for side in LEGS}
 
         def cut_force_apply(side, is_on, t_now):
             nest.SetStatus(leg[side]["cut_pg"],
@@ -2102,7 +2125,18 @@ def main():
             # reflects spikes generated under the CUT/Ia rates set at the *previous*
             # gate tick -- the same one-tick sensor delay already used for Ia (natural
             # consequence of simulate-then-update-then-set-next-rate ordering).
-            fe = float(state[side]["force_e"])
+            fe_raw = float(state[side]["force_e"])
+            # MOD_CUT_FORCE_TRIGGER: optional explicit noise filter, decoupled from
+            # --rate-update-ms (see --cut-force-filter-tau-ms help). At tau=0 this is
+            # `fe = fe_raw`, byte-for-byte the original behaviour.
+            if CUT_FORCE_FILTER_TAU_MS > 0.0:
+                if force_e_filt[side] is None:
+                    force_e_filt[side] = fe_raw
+                alpha = 1.0 - np.exp(-float(args.rate_update_ms) / CUT_FORCE_FILTER_TAU_MS)
+                force_e_filt[side] += alpha * (fe_raw - force_e_filt[side])
+                fe = force_e_filt[side]
+            else:
+                fe = fe_raw
             # Per-bout running max, not a time-decaying one: grows monotonically
             # through the current stance bout, then holds exactly at that value
             # through the following swing (used as the ON reference), and is reset
@@ -2155,6 +2189,11 @@ def main():
 
             if is_on != was_on:
                 phase_onset_ms[side] = t_now
+                # MOD_CUT_FORCE_TRIGGER: re-seed the noise filter at every phase
+                # transition, not just stance onset -- otherwise it carries a stale,
+                # lagging estimate from the just-ended phase into a new bout that may
+                # be much shorter than the filter's own settling time.
+                force_e_filt[side] = None
                 if is_on:
                     stance_onset_ms[side] = t_now
                     # Fresh bout: forget the previous bout's peak (which may already
@@ -2381,6 +2420,7 @@ def main():
         if CUT_TRIGGER == "force":
             h5.attrs["cut_force_on_frac"] = float(CUT_FORCE_ON_FRAC)
             h5.attrs["cut_force_off_frac"] = float(CUT_FORCE_OFF_FRAC)
+            h5.attrs["cut_force_filter_tau_ms"] = float(CUT_FORCE_FILTER_TAU_MS)
             h5.attrs["leading_leg"] = str(LEADING_LEG)
             h5.attrs["lead_offset_ms"] = float(LEAD_OFFSET_MS)
             h5.attrs["cut_max_stance_ms"] = float(CUT_MAX_STANCE_MS)
