@@ -48,6 +48,8 @@ but never mixed in one chart or one table.
 | Serotonergic gating — chronic, **training-restored** | The same slow, injury-driven change in CPG serotonin sensitivity as §1.2's untreated case, but partly reversed by locomotor training and serotonergic agonists. | Days–weeks | Brainstem-to-spinal monoaminergic projections | Its *sensitivity*, not just its rate, changes with training — a second, slower plasticity axis this model does not yet represent (flagged here, not addressed by the plan in §3). |
 | H-reflex operant conditioning, Phase II | The slow, large, multi-site component of H-reflex conditioning — altered motoneuron firing threshold, GABAergic terminal density, and interneuron properties — that consolidates over weeks of continued training. | 6–7 weeks; large, stable; **multi-site** | Same pathway | Demonstrated to correct locomotor asymmetry after spinal cord injury when combined with training — the closest published result to the model's own stated rehab goal. |
 
+*Table 1a — The nine rows plotted in Fig. 1a above: baseline physiology plus every mechanism whose documented outcome in the cited literature is functional preservation or recovery. Two rows (spinal instrumental learning, serotonergic chronic axis) are one half of a bidirectional mechanism — their pathological counterpart is Table 1b, not absent, just not adaptive.*
+
 ### 1.2 Pathological processes (e.g., after spinal cord injury)
 
 ![Five pathological spinal plasticity processes on the same logarithmic time axis, hatched to distinguish them from the healthy set, colored by literature source — blue for Sandkühler's dorsal-horn E-/L-LTP now shown as a chronic-pain model, orange for Grau's non-contingent maladaptive suppression, teal for untreated chronic serotonergic dysregulation, and gray for KCC2-loss-driven homeostatic downscaling failure.](spinal_timescale_pathological.png)
@@ -59,8 +61,10 @@ but never mixed in one chart or one table.
 | Early-phase spinal LTP (E-LTP) | An NMDA-receptor-dependent potentiation of dorsal-horn transmission that forms within minutes of patterned afferent input and spontaneously decays within a few hours if nothing stabilizes it — in its own primary literature, the onset of central sensitization. | 1–3 h; NMDA-receptor-dependent; **protein-synthesis-independent** | Dorsal-horn C-fiber synapses, induced by afferent tetanic stimulation (Sandkühler & Liu 1998) | A transient, spontaneously-decaying potentiation that exists *before* any stabilizing signal arrives — the direct spinal analog of the hippocampal "tag," borrowed here as this document's molecular substrate even though its own field studies it to *block* it (see §2.2). |
 | Spinal instrumental learning — **non-contingent** (maladaptive) | The same training paradigm as §1.1's contingent case, but with the shock uncontrollable instead of response-produced. | Same acquisition/consolidation window as the contingent case — the outcome, not the timing, differs | Same circuits (Grau et al.) | An active, protein-synthesis-dependent **suppression** of future learning capacity, not merely an absence of learning — a bidirectional gate, not a one-way accumulator. |
 | Late-phase spinal LTP (L-LTP) | The protein-synthesis-dependent stabilization of E-LTP into a non-decaying potentiation — in its own primary literature, the cellular consolidation step for chronic pain. | Onset by ~3 h; **requires ongoing protein synthesis**; selectively induced/occluded by BDNF and spinal D1/D5 dopamine-receptor activation | Same dorsal-horn synapses | A discrete regime change from decaying to non-decaying — structurally identical to hippocampal "capture," but consolidating a pain state rather than a motor trace in the literature this mechanism is actually drawn from. |
-| Homeostatic **downscaling failure** (KCC2 loss, spasticity) | Instead of excitation scaling down to compensate for hyperactivity, motoneuron KCC2 (which sets the Cl⁻ gradient underlying GABA/glycine inhibition) is chronically **downregulated** after SCI, producing spasticity. | Onset within hours of injury; partial training-driven recovery over weeks | Motoneuron membrane Cl⁻ transporters, below a spinal cord injury | The spinal-specific evidence that "homeostatic compensation" is not automatically adaptive — it can fail in the *opposite* direction from §1.1's upscaling row, and, critically, that failure is training-reversible (Boulenguez et al. 2010; see Fig. 2), not fixed. |
+| Homeostatic **downscaling failure** (KCC2 loss, spasticity) | Instead of excitation scaling down to compensate for hyperactivity, motoneuron KCC2 (which sets the Cl⁻ gradient underlying GABA/glycine inhibition) is chronically **downregulated** after SCI, producing spasticity. | Onset within hours of injury; partial training-driven recovery over weeks | Motoneuron membrane Cl⁻ transporters, below a spinal cord injury | The spinal-specific evidence that "homeostatic compensation" is not automatically adaptive — it can fail in the *opposite* direction from §1.1's upscaling row, and, critically, that failure is training-reversible (Boulenguez et al. 2010; see Fig. 2b), not fixed. |
 | Serotonergic gating — chronic, **untreated** | The same injury-driven change in CPG serotonin sensitivity as §1.1's training-restored case, left to persist. | Days–weeks, and beyond without intervention | Brainstem-to-spinal monoaminergic projections | The pathological anchor for the same axis §1.1 shows can be treated — the two rows differ only in whether training happened, exactly like the KCC2 row above. |
+
+*Table 1b — The five rows plotted in Fig. 1b above. Every row is a maladaptive outcome documented in the cited literature, not a hypothetical worst case — and three of the five (E-/L-LTP, instrumental learning, serotonergic axis) share a mechanism family with a Table 1a row; only the outcome differs, per §2.1/§2.2 below.*
 
 ### 1.3 Bidirectional homeostatic scaling: upscaling and downscaling
 
@@ -91,9 +95,13 @@ homeostatic failure is *training-reversible*, not fixed — precisely the
 give a mechanistic answer to, on a completely different pathway (chloride
 homeostasis) than the tag-and-capture story in §2.
 
-![Two-panel chart: left panel shows synaptic AMPAR weight rising smoothly from baseline to a compensated plateau over about three days after deafferentation (upscaling); right panel shows motoneuron KCC2/inhibitory efficacy dropping sharply at spinal cord injury, then either staying flat at the reduced floor with no training (dashed red, spasticity persists) or partially recovering toward baseline over several weeks with locomotor training (solid green).](spinal_scaling_dynamics.png)
+![Synaptic AMPAR weight rising smoothly from baseline to a compensated plateau over about three days after deafferentation.](spinal_scaling_healthy.png)
 
-*Fig. 2 — Bidirectional homeostatic scaling, mirroring the hippocampal document's Fig. 2 structure (identical starting conditions, diverging only in whether an intervention happens). Left: the upscaling response to deafferentation is a single, reliably-reported trajectory — there is no "blocked" condition in the cited literature, so only one trace is shown. Right: the downscaling side is exactly the kind of normal-vs-blocked contrast Fig. 2 of the companion document uses for capture — both traces take the identical acute post-injury drop in KCC2; they diverge only in whether locomotor training is applied afterward, which is the direct spinal analog of "capture" rescuing an otherwise-lost trace. Curve shapes are illustrative (exponential fits to the qualitative time course each citation reports), not digitized data.*
+*Fig. 2a — Healthy: the upscaling response to deafferentation. A single, reliably-reported trajectory — there is no "blocked" condition in the cited literature, so only one trace is shown. Curve shape is illustrative (an exponential fit to the qualitative time course the citation reports), not digitized data.*
+
+![Motoneuron KCC2/inhibitory efficacy dropping sharply at spinal cord injury, then either staying flat at the reduced floor with no training (dashed red, spasticity persists) or partially recovering toward baseline over several weeks with locomotor training (solid green).](spinal_scaling_pathological.png)
+
+*Fig. 2b — Pathological: KCC2 loss (downscaling failure) after SCI, training vs. none. Both traces take the identical acute post-injury drop; they diverge only in whether locomotor training is applied afterward, which is the direct spinal analog of "capture" rescuing an otherwise-lost trace — the same normal-vs-blocked contrast Fig. 2 of the hippocampal document uses for capture. Curve shapes are illustrative, not digitized data.*
 
 ## 2. Tag-and-capture and contingency-gated consolidation in spinal circuits
 
@@ -199,6 +207,8 @@ split above, so neither list is read as a footnote to the other.
 | Serotonergic gating, chronic axis (§1.1) | Partly restored by locomotor training and serotonergic agonists post-injury |
 | H-reflex conditioning (Wolpaw, §1.1) | Up-conditioning corrects locomotor asymmetry after SCI, in both rats and humans |
 
+*Table 2a — For each two-directional mechanism introduced in §1-2, the direction its cited literature reports as adaptive or rehab-positive. Pairs row-for-row with Table 2b except the last, which Table 2b leaves blank rather than inventing a counterpart.*
+
 ### 2.2 Pathological / maladaptive directions
 
 | Mechanism | What the maladaptive direction looks like |
@@ -208,6 +218,8 @@ split above, so neither list is read as a footnote to the other.
 | Dorsal-horn E-/L-LTP (Sandkühler, §1.2) | **Its own primary literature framing**: the standard cellular model of central sensitization underlying hyperalgesia and chronic pain (Ruscheweyh et al. 2011) |
 | Serotonergic gating, chronic axis (§1.2) | Persistently altered CPG sensitivity to 5-HT if left untreated after injury |
 | H-reflex conditioning (Wolpaw) | *No entry* — no specific pathological counterpart in the literature cited here. Left as an open question rather than asserted, unlike the four rows above (which is also why §1's Fig. 1b/Table 1b has no H-reflex row at all). |
+
+*Table 2b — The maladaptive direction of the same mechanisms, where the cited literature documents one. Four of five rows are populated; the H-reflex row is deliberately left without an entry (§2's synthesis explains why, below) rather than filled with an invented failure mode.*
 
 Four of five mechanisms have a confirmed pathological counterpart in the
 cited literature; H-reflex conditioning is left asymmetric deliberately
