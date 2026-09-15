@@ -24,6 +24,10 @@ scope here — see the separate plan.
 
 ## 1. Spinal plasticity timescales and their modeling constraints
 
+![Ten spinal plasticity processes plotted on one logarithmic time axis from 1ms to several weeks, colored by literature source — blue for NMDAR/AMPAR induction and Sandkühler's dorsal-horn E-/L-LTP, orange for Grau's spinal instrumental learning, green for Wolpaw's two-phase H-reflex conditioning, purple for Côté's activity-dependent step-training, teal for serotonergic CPG gating (acute and chronic), and gray for homeostatic AMPAR scaling — bar position marks onset, length marks characteristic duration.](spinal_timescale_axis.png)
+
+*Fig. 1 — All ten processes from the table below on one log time axis, colored by which literature reports them. Unlike the hippocampal case's single continuous cascade (Fig. 1 of the companion document), these come from four non-overlapping literatures that were never meant to be read together — the point of this figure is that they nonetheless tile the same ms-to-weeks range without contradicting each other, which is what makes treating them as one specification rather than four separate anecdotes defensible.*
+
 | Process | Time constant | Site / pathway | What it constrains for a spiking-network model |
 |---|---|---|---|
 | NMDAR/AMPAR-dependent synaptic induction | ms-scale, same coincidence physics as everywhere else in CNS | Ubiquitous (dorsal horn, motoneuron) | Sets the same fast coincidence-detection floor as the hippocampal case — nothing spinal-specific here. |
