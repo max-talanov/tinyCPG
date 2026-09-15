@@ -932,6 +932,39 @@ preserving the confirmed point's ratios) rather than moving one axis at a
 time — this has not yet been attempted and is a reasonable next step, not
 a confirmed fix.
 
+**Tested — the scaling approach works cleanly for slow, but not for fast
+(2026-09-15).** Confirms the hypothesis for one direction and rules it out
+as a general fix for the other:
+
+- **Slow, confirmed: 1.3× scale** (τ=340, recovery=780, both caps=585,
+  off-frac unchanged at 0.35). Genuine and tight in both seeds
+  (`frac_at_cap` 0.00/0.00; stance 535±23/537±22ms seed 1, 513±22/513±22ms
+  seed 2 — **~4% relative variability, tighter than the confirmed medium
+  point's own ~9%**), and corr(F-E_L,F-E_R) is nearly identical across seeds
+  (−0.825, −0.832 — the same tight cross-seed match quality that confirmed
+  0.20/0.15 for `--consolidate` and the medium point itself). Full gait
+  cycle: **1135/1113ms vs. medium's 850ms, ≈31-34% slower** — a genuinely
+  distinct speed, not a marginal nudge. **This is now a second confirmed
+  force-trigger operating point** (slow), alongside the original medium one.
+- **Fast, still not solved: 0.75× scale failed.** (τ=195, recovery=450,
+  caps=340). Steady-state `frac_at_cap` 0.32-0.59 (partial cap-domination,
+  mixed genuine/capped bouts) and corr(F-E_L,F-E_R) **positive in both
+  seeds** (+0.342, +0.111 — synchronized, the same failure mode as every
+  other fast attempt). Would-be full cycle ≈630-646ms (≈25-26% faster,
+  a meaningfully distinct speed *if* it had worked) — but it isn't genuine,
+  so it doesn't count.
+
+**Net Stage 1 status: 2 of 3 speed points now confirmed (medium, slow);
+fast remains open after 5 distinct attempts** (τ=200/off=0.35;
+swing-cap-350-alone; 0.75× uniform scale; plus the earlier τ=200/off=0.30,
+which is genuine but only a ~6% speedup, not a distinct fast point). The
+fast direction is consistently harder than the slow direction across every
+method tried so far (single-axis and proportional-scaling alike) — a
+real, reproducible asymmetry in this circuit that a future round should
+treat as the object of study itself (why does speeding up specifically
+desynchronize the legs?), rather than keep attacking with the same class of
+parameter nudge.
+
 ### Sensory-driven mode (`--freeze-bs-rg`, now just freezing BS since Ia→RG is always on — WMAX_IA=10)
 
 Learning shifted from descending (BS) to sensory (muscle-Ia) pathway: BS→RG frozen at
