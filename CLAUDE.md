@@ -887,7 +887,52 @@ deliberately as part of defining "slow" is a different, defensible use, but
 changes what `frac_at_cap` even means for that point and should be flagged
 explicitly if done); (b) even the fast side's ~6% spread needs a second,
 more distinct fast point before "fast" is a meaningfully different speed
-rather than a slightly-tighter version of medium. (`--freeze-bs-rg`, now just freezing BS since Ia→RG is always on — WMAX_IA=10)
+rather than a slightly-tighter version of medium.
+
+**Swing has no closed-loop signal at all — it is a pure timer, always
+(2026-09-15).** Checked directly: `cut_force_gate()` never reads `force_f`;
+the only signal that ends swing is `fe >= on_thr` (extensor force rising),
+which has nothing to do with the flexor/swing side itself. Measuring stance
+and swing bout durations *separately* (the existing diagnostics script only
+ever reported stance) shows **swing sits at exactly `--cut-max-swing-ms`
+with zero variance in every config tested, including the confirmed
+"genuine" medium point** — swing has always been failsafe-timed, not
+force-triggered; there is no bug here, the model simply has no sensory
+variable analogous to hip/limb position that would let swing end any other
+way. This means `--cut-max-swing-ms` is not a backstop to avoid touching for
+swing the way it is for stance — it is the *only* thing that sets swing
+duration, so it looked like a natural, low-risk lever for the speed axis.
+
+**Tested that directly — it isn't low-risk, because stance and swing are
+coupled through muscle fatigue *recovery*, not independent.** Two attempts,
+stance parameters held at their already-confirmed values in both cases:
+- **Slow attempt 3**: medium's exact stance config (τ=260/off=0.35/stance-cap
+  450, unchanged) + swing cap raised 450→600ms alone. Expected stance to be
+  unaffected since nothing about it changed. Instead **stance itself
+  collapsed to 100% cap-domination in both seeds** — a longer swing gives
+  `fatigue_e` more time to clear via `--fatigue-tau-recovery-ms` before the
+  next stance, so that stance starts less fatigued and takes measurably
+  longer to re-fatigue down through `off_thr`, past the unchanged 450ms
+  stance cap. The two phases are coupled through shared fatigue state, not
+  independent just because they're gated by separate flags.
+- **Fast attempt 3**: the confirmed fast stance config (τ=200/off=0.30) +
+  swing cap lowered 450→350ms alone. Stance stayed genuine (`frac_at_cap`
+  0.00/0.00 both seeds) but reintroduced the same failure as the earlier
+  τ=200/off=0.35 attempt — high bout-duration variance (±144-160ms) and
+  inconsistent corrLR across seeds (−0.235, +0.249) — plausibly the same
+  coupling in reverse (less recovery time causing bout-to-bout drift).
+
+**Revised status: Stage 1 needs a "scale the whole clock together" approach,
+not single-parameter nudges.** Changing stance-side timing (τ, off-frac)
+alone breaks stance directly; changing swing-side timing (swing cap) alone
+breaks stance indirectly through fatigue recovery. The remaining untried
+approach is scaling `--fatigue-tau-onset-ms`, `--fatigue-tau-recovery-ms`,
+`--cut-max-stance-ms`, and `--cut-max-swing-ms` together (proportionally,
+preserving the confirmed point's ratios) rather than moving one axis at a
+time — this has not yet been attempted and is a reasonable next step, not
+a confirmed fix.
+
+### Sensory-driven mode (`--freeze-bs-rg`, now just freezing BS since Ia→RG is always on — WMAX_IA=10)
 
 Learning shifted from descending (BS) to sensory (muscle-Ia) pathway: BS→RG frozen at
 weak init, plastic homonymous Ia→RG added. **Validated to outperform the BS-plastic
