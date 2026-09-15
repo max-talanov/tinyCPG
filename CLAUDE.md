@@ -1123,6 +1123,47 @@ in isolation. New sensory-arm files:
 `results/sensory_slow_scaled13x_seed12345.h5`,
 `results/sensory_fast_tau200_off0.30_seed12345.h5`.
 
+**Correction: use the paper's own 5-locomotion-mode terminology, not
+ad hoc "slow/medium/fast" (2026-09-15).** The paper (§4.1, Fig. 3) already
+defines five locomotion modes as one set, not two separate axes: *slow
+walk* (6 cm/s), *medium walk / plantar / baseline* (13.5 cm/s), *fast walk*
+(21 cm/s) — all full weight-bearing — plus *toe stepping* (partial
+unloading, `--ia-feedback-gain`/`--cut-feedback-gain` 0.5) and *air
+stepping* (full unloading, gain 0.1), both at the baseline speed anchor.
+Everything under "Force-trigger speed axis" above used the first three
+correctly in spirit (their own force-trigger-mode timing analogues, not
+validated against the paper's 6/13.5/21 cm/s figures — that mapping doesn't
+exist for this mode, as documented above) but never exercised toe/air
+stepping at all — a different, loading axis, not a timing one, and
+distinct from the `--freeze-bs-rg` descending-vs-sensory *arm* split this
+file also calls "sensory," which is a different thing again (a learning-
+architecture choice, not a feedback-strength one). Ran the two missing
+conditions (`--ia-feedback-gain`/`--cut-feedback-gain` 0.5 and 0.1) at the
+confirmed medium timing point, crossed with both arms — completing the
+full 5-mode × 2-arm grid, 10 cells, force-trigger mode, for the first time.
+
+**Toe/air stepping reproduce the paper's documented unloading degradation,
+and the loading-dependent Ia→RG cap-relaxation mechanism is confirmed
+working in force-trigger mode.** Force profiles: the three walking speeds
+stay clean (r ≈ −0.6 to −0.85) in both arms; toe stepping visibly weakens
+(r ≈ −0.09 to −0.43) and air stepping becomes markedly irregular (r ≈ −0.09
+to −0.62, visibly ragged traces) — the same qualitative pattern §4.4 of the
+paper describes for timer mode ("the counter-phase is thus lost at the
+muscle level before it is lost at the rhythm-generator level"), now shown
+under force-triggered timing instead of a fixed clock. Weight trajectories
+(after fixing a real bug in `cpg_consolidate_weights_grid.py` — the Ia→RG
+axis was hardcoded to 0-12 pA and was silently clipping data that exceeds
+it, invisible rather than erroring) show `Ia→RG` climbing well past its
+usual ~4-5 pA set-point under both ablation conditions — to ~18-21 pA under
+toe stepping, ~23-25 pA under air stepping — while `CUT→RG-E` stays
+correspondingly weak (air stepping: ~35 pA by 60s vs. the normal ~63-67 pA
+plateau). This is `MOD_IA_RG_LOADING_GAIN`'s `--wmax-ia-unloaded` mechanism
+(cap relaxes as `--cut-feedback-gain` drops, letting Ia take over more
+excitatory drive when cutaneous input is genuinely reduced) engaging
+correctly — previously validated only in timer/paced-gait mode; this is its
+first confirmation under `--cut-trigger force`. New files:
+`results/{descending,sensory}_{toe,air}_seed12345.h5`.
+
 ### Sensory-driven mode (`--freeze-bs-rg`, now just freezing BS since Ia→RG is always on — WMAX_IA=10)
 
 Learning shifted from descending (BS) to sensory (muscle-Ia) pathway: BS→RG frozen at

@@ -58,16 +58,21 @@ def main():
                 if bkey in h:
                     ax.plot(t, np.asarray(h[bkey]), color=CUT[2], lw=1.6, ls=":",
                             label=CUT[1] + " baseline (captured)")
+            ia_max = 12.0  # default axis ceiling; expanded below if data exceeds it
             for key, name, col in IAS:
                 ikey = f"leg_{args.leg}/weights/{key}"
                 if ikey in h:
-                    axr.plot(t, np.asarray(h[ikey]), color=col, lw=1.4, ls="--", label=name + " weight")
+                    ia_vals = np.asarray(h[ikey])
+                    axr.plot(t, ia_vals, color=col, lw=1.4, ls="--", label=name + " weight")
+                    finite = ia_vals[np.isfinite(ia_vals)]
+                    if finite.size:
+                        ia_max = max(ia_max, float(finite.max()))
                 if consolidate_on:
                     bkey = f"leg_{args.leg}/consolidation/{key.replace('_mean', '')}_baseline_mean"
                     if bkey in h:
                         axr.plot(t, np.asarray(h[bkey]), color=col, lw=1.2, ls=":",
                                  label=name + " baseline (captured)")
-        ax.set_xlim(0, args.sim_s); ax.set_ylim(0, 72); axr.set_ylim(0, 12)
+        ax.set_xlim(0, args.sim_s); ax.set_ylim(0, 72); axr.set_ylim(0, ia_max * 1.1)
         ax.grid(alpha=0.2); ax.tick_params(labelsize=9); axr.tick_params(labelsize=9)
         ax.set_title(label, fontsize=13, fontweight="bold")
         ax.set_ylabel("CUT→RG-E weight (pA)", fontsize=10)
