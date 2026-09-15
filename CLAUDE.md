@@ -481,6 +481,62 @@ time vs. ~50% without, at 60s debug-small) from the added per-tick
 `GetStatus`/`SetStatus` round trips — fine at debug scale, but worth
 profiling before any production-scale use.
 
+**Round 1 tuning (2026-09-15) — gain ratio, not threshold or `tau_tag`, is the
+lever.** All runs at the round-5 operating point (τ=260/off=0.35/cap=450,
+60s, new circuit), varying `--consolidate-prp-gain-genuine`/`-forced`/
+`-prp-threshold` against the no-consolidate baseline (`frac_at_cap`
+0.01/0.00, corr(F-E,F-F) −0.655/−0.661, corr(F-E_L,F-E_R) −0.263) and the
+shipped defaults (0.15/0.30/1.0 — confirmed above to never capture):
+
+| genuine/forced/threshold | captures L/R | `cut→rge` gap (weight−baseline) L/R | `frac_at_cap` L/R | corr(F-E,F-F) L/R | corr(F-E_L,F-E_R) |
+|---|---|---|---|---|---|
+| 0.15/0.30/1.0 (shipped default) | 0 / 0 | +12.1 / +12.3 | 0.12 / 0.10 | −0.540 / −0.703 | −0.491 |
+| 0.15/0.15/1.0 (symmetric) | 0 / 0 | +12.2 / +12.7 | **0.32** / 0.12 | −0.522 / −0.609 | **+0.009** |
+| **0.20/0.15/1.0** | 3 / 4 | +4.9 / +1.1 | 0.10 / 0.13 | −0.541 / −0.606 | **−0.724** |
+| 0.25/0.15/1.0 | 7 / 7 | +0.5 / +0.0 | 0.07 / 0.03 | −0.583 / −0.688 | **+0.273** |
+| 0.20/0.10/1.0 | 7 / 7 | +1.0 / +0.0 | 0.06 / 0.06 | −0.548 / −0.660 | −0.462 |
+| 0.20/0.15/0.5 | 9 / 9 | +0.1 / −0.2 | 0.07 / 0.03 | −0.476 / −0.674 | **+0.242** |
+
+Three findings, none of them "just raise the gain":
+
+1. **Symmetric gain (1:1) does not fix the never-captures problem** and makes
+   `frac_at_cap` *worse* (0.32) than the 2:1-suppressive shipped default —
+   at this operating point's roughly-even genuine/forced mix (~68 genuine /
+   71 forced events over 60s), even-money gain still nets slightly negative
+   most of the time, so this isn't a knob that can be nudged gently; it needs
+   to cross into genuine-favoring territory before anything changes.
+2. **A mildly genuine-favoring ratio (0.20/0.15, i.e. ~1.3:1) is the best
+   single point found**: captures actually happen (3-4, not 0), `cut→rge`'s
+   baseline moves to ~55-57 pA (up from stuck at its ~22 pA init — real
+   consolidation, not a rounding artifact), and `frac_at_cap` stays
+   comparable to the shipped default (no worse). It also gives by far the
+   best L/R desynchronization of everything tested (corr(F-E_L,F-E_R)
+   −0.724, vs. −0.263 with no consolidation at all).
+3. **Pushing further in the same direction (more genuine bias, or a lower
+   threshold) is not monotonically better — it actively synchronizes the
+   legs.** 7-9 captures converges `cut→rge`'s baseline to ~63 pA (matching
+   this pathway's known natural STDP plateau almost exactly — the mechanism
+   is doing something coherent, not just drifting), but corr(F-E_L,F-E_R)
+   flips **positive** at every more-aggressive setting tried (+0.273, +0.242)
+   except 0.20/0.10 (−0.462, still worse than 0.20/0.15's −0.724). The
+   likely mechanism: capturing too easily and too often lets both legs'
+   `cut→rge` converge to the *same* stable plateau independently, removing
+   the run-to-run asymmetry that keeps the two legs desynchronized — a
+   genuine over-consolidation failure mode, not a tuning artifact to shrug
+   off.
+
+**Status: promising lead, not a confirmed replacement default.** 0.20/0.15/1.0
+is the best point from this single round, at a single operating point and
+seed — it has not been bracketed (nearby values not yet tested to confirm
+it's a real optimum vs. noise) or re-checked at a second operating point/seed,
+the same standard every other constant in this file was held to before being
+called "confirmed" (cf. Phase 3 rounds 1-6). The shipped CLI defaults
+(`--consolidate-prp-gain-genuine 0.15`/`-forced 0.30`) are deliberately **not**
+changed based on this one round. Next step: a confirmation round bracketing
+0.15-0.25/0.10-0.20 gain pairs with `tau_tag_ms` also swept (untested this
+round — held at its default 2000ms throughout), across at least one more
+operating point and seed.
+
 ### Sensory-driven mode (`--freeze-bs-rg`, now just freezing BS since Ia→RG is always on — WMAX_IA=10)
 
 Learning shifted from descending (BS) to sensory (muscle-Ia) pathway: BS→RG frozen at
