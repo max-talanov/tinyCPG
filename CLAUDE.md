@@ -837,7 +837,57 @@ symmetric case) or a different threshold entirely; bistable configs are the
 most dangerous of the three to mistake for progress, since a single-seed run
 can make one look like either a clean win or a clean failure at random.
 
-### Sensory-driven mode (`--freeze-bs-rg`, now just freezing BS since Ia→RG is always on — WMAX_IA=10)
+### Force-trigger speed axis (Stage 1, 2026-09-15) — partial progress, fast side only
+
+Prompted by the question of whether the project is ready for a production
+MN5 run across "all speeds" with `--consolidate`: force-trigger mode has no
+existing speed concept at all. `--step-period-ms` (the timer-mode speed
+knob) only paces the within-bout Ia-E heel→toe ramp here, not cycle length;
+bout duration is emergent from `--fatigue-tau-onset-ms` × `--cut-force-off-
+frac`, and rounds 1-6 only ever searched for **one** good point (τ=260/
+off=0.35/cap=450, re-confirmed above), never a speed family. This is Stage 1
+of `~/.claude/plans/resilient-soaring-flamingo.md`'s staged roadmap:
+establish 2-4 more (τ, off-frac) points bracketing the confirmed one,
+descending arm, 2 seeds, steady-state metrics.
+
+**Fast direction — one clean point found, but the achievable range looks
+narrow.** τ=200/off=0.30 is genuine and reproducible in both seeds
+(`frac_at_cap` 0.00/0.00 and 0.01/0.00; stance duration tight at 350±0-12ms,
+tighter than the confirmed point's own ±27ms; corr(F-E_L,F-E_R) −0.399 and
+−0.619, both anti-phase). But measuring **full gait-cycle period**
+(stance-onset to stance-onset, not just stance duration) shows it's only
+modestly faster than the confirmed point: **800ms vs. 850ms, ≈6%** — not the
+kind of spread timer mode's 1200/520/350ms (3.4×) speed grid covers. Two
+intermediate attempts on the way there failed outright: τ=200/off=0.35 gave
+genuine bouts (`frac_at_cap`=0.00) but wildly variable duration (±135-159ms,
+~60% relative) and inconsistent corrLR across seeds (+0.165, −0.017) — not
+usable despite passing the cap-domination check.
+
+**Slow direction — two attempts, both failed, harder than the fast side.**
+τ=280/off=0.35 (a modest +20ms step from the confirmed τ=260) **collapsed to
+100% cap-domination in both seeds** (`frac_at_cap` 1.00/1.00, duration
+exactly 450±0ms — a disguised clock). τ=300/off=0.40 (loosening off-frac
+further, per round 4's old-circuit finding that off must loosen alongside
+higher τ) didn't fix it either — **~50% cap-domination in both seeds**
+(0.50/0.51, 0.49/0.48), a reproducible bimodal mix of genuine and
+failsafe-capped bouts, not an improvement. The medium operating point
+appears to sit much closer to its slow-side failure boundary than its
+fast-side one on the current circuit — a real, currently unexplained
+asymmetry, not yet root-caused.
+
+**Status: Stage 1 not complete.** One additional confirmed point (fast,
+modest speedup) plus two failed slow attempts. Before a 3+-point speed axis
+can be called established: (a) the slow direction needs a different lever
+than "more of the same" — candidates not yet tried: loosening `--cut-force-
+on-frac` (never swept, fixed at 0.80 through every round including this
+one), or accepting that a genuinely slower bout may require raising
+`--cut-max-stance-ms` itself (currently untouched by design, since a moving
+cap was previously how "disguised clock" results were diagnosed — raising it
+deliberately as part of defining "slow" is a different, defensible use, but
+changes what `frac_at_cap` even means for that point and should be flagged
+explicitly if done); (b) even the fast side's ~6% spread needs a second,
+more distinct fast point before "fast" is a meaningfully different speed
+rather than a slightly-tighter version of medium. (`--freeze-bs-rg`, now just freezing BS since Ia→RG is always on — WMAX_IA=10)
 
 Learning shifted from descending (BS) to sensory (muscle-Ia) pathway: BS→RG frozen at
 weak init, plastic homonymous Ia→RG added. **Validated to outperform the BS-plastic
