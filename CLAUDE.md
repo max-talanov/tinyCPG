@@ -574,9 +574,65 @@ Two findings, one confirming round 1 and one qualifying it:
 replacing the original guessed 2:1 ratio of 0.15/0.30, which is now confirmed
 across two seeds to never capture at all at this operating point). Still
 open for a future round: `tau_tag_ms` was never varied (held at 2000ms
-throughout both rounds), and everything so far is at one operating point
-(τ=260/off=0.35/cap=450) — generalization to other force-trigger configs or
-to the sensory/descending-arm modes is untested.
+throughout both rounds).
+
+**Sensory-arm generalization check (2026-09-15) — the confirmed default does
+NOT transfer; this is a real, arm-specific negative result, not noise.**
+Re-ran the identical 9-point bracket (genuine 0.15-0.25 × forced 0.10-0.20,
+seed 12345) at the same round-5 timing config (τ=260/off=0.35/cap=450) but
+with `--freeze-bs-rg` added (BS→RG frozen at weak init instead of plastic —
+see "Sensory-driven mode" below):
+
+| genuine/forced | captures L/R | `frac_at_cap` L/R | corr(F-E,F-F) L/R | corr(F-E_L,F-E_R) |
+|---|---|---|---|---|
+| no-consolidate (reference) | n/a | 0.04 / 0.03 | −0.676 / −0.785 | −0.267 |
+| 0.15/0.10 | 0 / 3 | **0.89** / 0.28 | −0.402 / −0.711 | **+0.035** |
+| 0.15/0.15 | 0 / 0 | **0.89** / 0.52 | −0.466 / −0.687 | +0.137 |
+| 0.15/0.20 | 0 / 0 | **1.00** / 0.89 | −0.472 / −0.593 | **+0.564** |
+| 0.20/0.10 | 7 / 7 | 0.22 / 0.13 | −0.585 / −0.748 | **+0.754** |
+| **0.20/0.15 (descending-arm-confirmed default)** | 3 / 3 | 0.40 / 0.32 | −0.448 / −0.711 | **+0.522** |
+| 0.20/0.20 | 0 / 0 | 0.91 / 0.60 | −0.453 / −0.700 | +0.129 |
+| 0.25/0.10 | 11 / 11 | 0.23 / 0.07 | −0.683 / −0.725 | −0.147 |
+| 0.25/0.15 | 6 / 7 | 0.38 / 0.17 | −0.631 / −0.731 | −0.440 |
+| 0.25/0.20 | 4 / 4 | 0.30 / 0.22 | −0.534 / −0.655 | +0.655 |
+
+Every single point in the bracket makes `frac_at_cap` **worse than the
+no-consolidate reference**, several catastrophically (0.15/0.20: 1.00/0.89 —
+essentially fully cap-dominated), and most give a **positive**
+corr(F-E_L,F-E_R) — synchronized legs, the failure mode flagged as a risk
+back in the original design. The descending-arm-confirmed default (0.20/0.15)
+is squarely in the bad range here (0.40/0.32 `frac_at_cap`, +0.522 corrLR).
+Only 0.25/0.10 and 0.25/0.15 (both high-genuine, low-forced) come out
+directionally reasonable (negative corrLR, `frac_at_cap` still elevated but
+not collapsed) — a different corner of the grid than the descending arm's
+best point, not the same one holding up more weakly.
+
+**This is not a mechanism bug** — the weight-trajectory plots
+(`scripts/cpg_consolidate_weights_grid.py` output) show the identical, clean
+capture staircase in the sensory arm as in the descending arm; `baseline`
+correctly freezes at `weight` on each capture event in both. Per-leg
+force traces (`scripts/cpg_consolidate_force_stages.py`) also look
+qualitatively fine throughout (corr(F-E,F-F) −0.47 to −0.84) — this
+generalization failure is invisible to eyeballing single-leg force plots,
+which is exactly why `frac_at_cap` and corr(F-E_L,F-E_R) exist as the
+decision metrics rather than a visual check. The likely reason it differs
+from the descending arm: with `BS→RG` frozen at a weak init instead of
+growing toward its own ~18 pA STDP plateau, the sensory arm has less tonic
+excitatory buffering, so consolidating (permanently locking in) `CUT→RG-E`'s
+weight growth pushes the loop into the same positive-feedback
+force-saturation regime the failsafe timeout exists to catch (see "Force-
+triggered CUT" above) more readily than when BS is also plastic and sharing
+the excitatory load.
+
+**Consequence: `--consolidate`'s shipped defaults are validated for the
+descending arm only.** Do not use `--consolidate` on `--freeze-bs-rg` runs
+with the current defaults without its own tuning round — this bracket found
+a *different* promising corner (high-genuine/low-forced, e.g. 0.25/0.10-0.15)
+but has not bracketed *around* that corner or confirmed it at a second seed,
+so nothing here is being promoted to a sensory-arm default the way 0.20/0.15
+was for the descending arm. This also means `--consolidate` cannot yet be
+treated as arm-agnostic — a real, non-obvious asymmetry worth remembering
+before it's used in any sensory-arm sweep script.
 
 ### Sensory-driven mode (`--freeze-bs-rg`, now just freezing BS since Ia→RG is always on — WMAX_IA=10)
 
