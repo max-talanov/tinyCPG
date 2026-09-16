@@ -1506,6 +1506,76 @@ epidural section) rather than a "fixed" natural-air-stepping timing.
 Flagging this reframing rather than continuing to brute-force it — worth
 discussing before spending more rounds on it.
 
+### Consolidate transfers to fast and toe once `tau_tag_ms` is scaled up (2026-09-16)
+
+With the fast and toe base-timing points now genuine (previous section),
+tested whether `--consolidate` transfers to them — the same question
+Stage 2/3 asked and failed for slow/toe. **It does, and the lever this
+time was `--consolidate-tau-tag-ms` (default 2000, never varied in any
+prior round), not the gain ratio.**
+
+**Root cause found by inspection**: at the fast point, every gain
+combination tried — even ones that never capture at all (0 capture
+events) — showed suppressed `CUT→RG-E` growth (~13-17 pA final, vs. the
+natural ~63-65 pA plateau every genuine operating point in this file
+otherwise reaches). Consolidate's continuous tag→baseline leak runs
+*regardless of captures* — it isn't gated on them — so at a shorter cycle
+period, more leak-decay happens per unit of learning progress than at
+medium/slow, and a fixed 2000ms time constant that was fine at ~850ms
+cycles becomes actively suppressive at ~700-750ms ones. This also
+explains why the earlier fast/slow consolidate failures always showed a
+duration shift toward the cap even when captures never fired: it wasn't
+a phase-locking problem at all, it was leaked-away excitation slowing
+each stride's own force rise.
+
+**Fast, descending arm, gain 0.20/0.15 (unchanged from medium) +
+`tau_tag_ms=5000`**: fully genuine both seeds (steady atCap 0.00/0.00),
+tight cross-seed corrLR (−0.008, −0.009 — nearly identical), `CUT→RG-E`
+converges to ~62-65 pA with real captures (4 each), duration identical to
+the no-consolidate reference (350/300ms). `tau_tag_ms=10000` works
+equally well (−0.020). Sensory arm (gain 0.25/0.10, same `tau_tag_ms`)
+checked at one seed: also genuine (atCap 0.00/0.00), healthy convergence.
+
+**Toe, descending arm, gain 0.20/0.15 + `tau_tag_ms=20000`** (a much
+longer constant than fast needed — toe's slower base dynamics, τ=100,
+need the leak proportionally slower still): both seeds mostly genuine
+(steady atCap 0.17-0.19 / 0.00-0.02 — the L leg carries a residual, not
+fully clean, cap fraction, consistent with L already sitting closer to
+its cap margin at this operating point even without consolidate) and
+tight cross-seed corrLR (−0.067, −0.072). `tau_tag_ms=5000` (the value
+that worked for fast) was tried first and did **not** work at toe
+(atCap 0.82/0.73, corrLR bistable +0.395/−0.159) — confirming the right
+`tau_tag_ms` scales with the *base* operating point's own time constants,
+not a single universal replacement for 2000. Sensory arm (gain 0.25/0.10,
+`tau_tag_ms=20000`) checked at one seed: slightly cleaner than descending
+(atCap 0.06/0.00, corrLR −0.045).
+
+**Slow + consolidate: improved, not resolved — a genuinely different,
+harder case.** Applying the same lever (gain 0.20/0.15, `tau_tag_ms=5000`
+or `10000`) at the slow point gives one seed an excellent result
+(corrLR −0.711 / −0.595, closely matching the −0.822 no-consolidate
+reference) but the other seed synchronizes (+0.800) — still bistable, just
+with `tau_tag_ms` fixing the cap-domination/degenerate-chatter failure
+modes Stage 2 originally found and leaving a cleaner phase-locking
+bistability behind. Adding `--leg-fatigue-asym-frac` on top (0.06, 0.10,
+both leading-leg directions tried) shrank the bistable spread from
+±0.6-0.8 down to ±0.08-0.12 but did not pin a consistent sign — one more
+lever than fast/toe needed, not yet found. **Not shipped**: figures and
+any future MN5 submission should run slow *without* `--consolidate`
+(already excellent on its own, steady corrLR −0.822/−0.839) rather than a
+config confirmed bistable.
+
+**Net effect: 4 of 5 locomotion modes now have a genuine, reasonably
+confirmed force-trigger-plus-consolidate story** (slow runs consolidate-free
+by choice, not failure) — only air stepping remains unaddressed, per the
+reframing above. Generated the full updated 5-mode × 2-arm force-stage and
+weight-trajectory figures (`scripts/cpg_consolidate_force_stages.py`/
+`cpg_consolidate_weights_grid.py`, single seed 12345 throughout for
+comparability with the earlier 5-mode figure) —
+`plots/final_locomotion_modes_force_stages.png` /
+`final_locomotion_modes_weights_grid.png`. New result files:
+`results/final_{desc,sens}_{slow,medium,fast,toe,air}.h5`.
+
 ### Sensory-driven mode (`--freeze-bs-rg`, now just freezing BS since Ia→RG is always on — WMAX_IA=10)
 
 Learning shifted from descending (BS) to sensory (muscle-Ia) pathway: BS→RG frozen at
