@@ -96,6 +96,67 @@ homeostasis) than the tag-and-capture story in §2.
 
 *Fig. 2 — Bidirectional homeostatic scaling. **(2a) Healthy** (left): the upscaling response to deafferentation — a single, reliably-reported trajectory; there is no "blocked" condition in the cited literature, so only one trace is shown. **(2b) Pathological** (right): KCC2 loss (downscaling failure) after SCI, training vs. none — both traces take the identical acute post-injury drop; they diverge only in whether locomotor training is applied afterward, which is the direct spinal analog of "capture" rescuing an otherwise-lost trace, the same normal-vs-blocked contrast the hippocampal document's Fig. 2 uses for capture. Curve shapes are illustrative (exponential fits to the qualitative time course each citation reports), not digitized data.*
 
+### 1.4 Which of Fig. 1a's rows are motor-skill-formation mechanisms specifically
+
+Table 1a's scope statement is "baseline physiology plus every mechanism whose
+documented outcome is functional preservation or recovery" — deliberately
+broader than "motor skill formation." Checking the nine rows against the
+narrower, spinal-specific definition of that term (a lasting,
+practice-/contingency-dependent change in spinal circuit output that
+persists without cortical involvement — distinct from cortical motor-skill
+learning's own mechanism, new dendritic spines and map-level LTP/LTD in
+motor cortex) sorts them into four groups, not one:
+
+| Process | Category | Why |
+|---|---|---|
+| Spinal instrumental learning — contingent (Grau) | **Core skill-formation mechanism** | A trained, lasting, contingency-gated change in spinal reflex output — the literal definition. |
+| H-reflex conditioning, Phase I | **Core skill-formation mechanism** | A trained, lasting change in a spinal reflex, by construction. |
+| H-reflex conditioning, Phase II | **Core skill-formation mechanism** | The consolidated, multi-site version of the same trained change. |
+| Homeostatic AMPAR upscaling | Enabling/compensatory | Restores lost excitability after deafferentation; carries no information about *which* pattern was learned. |
+| Serotonergic gating, chronic (training-restored) | Enabling/compensatory | Gates whether the CPG can burst at all; same reasoning as its acute counterpart. |
+| Step-training neurotrophin upregulation (Côté) | Molecular correlate, not the mechanism itself | Row is framed as a BDNF/NT-3/NT-4 readout; the actual skill-refinement outcome — multisegmental network reorganization and reduced muscle co-contraction with training — isn't named. Flagged as a content gap here, not corrected in Table 1a itself. |
+| NMDAR/AMPAR-dependent induction | Basic substrate | Generic coincidence-detection floor every mechanism above (skill-forming or not) runs on top of. |
+| Short-term plasticity | Basic substrate | Same — a physics constraint, not a learning mechanism. |
+| Serotonergic gating, acute | Basic substrate | Gates *whether* bursting can occur, not *which* pattern is learned. |
+
+Net: **3 of the 9 rows are motor-skill-formation mechanisms in the strict
+spinal-specific sense; the other 6 are the enabling or basic-substrate
+processes those 3 mechanisms operate within.** This doesn't make Fig. 1a
+wrong — its stated scope already includes prerequisites, not just the
+skill-encoding step — but a reader treating "healthy spinal plasticity
+processes" as synonymous with "how the spinal cord forms a motor skill"
+would overcount by 2:1.
+
+**Caveat — a tempting addition, checked and left out.** Bizzi & Giszter's
+spinal motor primitives / muscle synergies (force-field modules the spinal
+cord combines to build movements, structurally close to this model's own
+extensor/flexor half-center split) look like a natural missing row. Checked
+directly before proposing it: the primitives themselves are reported as
+largely fixed and conserved from early development rather than something
+training forms anew — "motor primitives are determined in early
+development and are then robustly conserved into adulthood"
+([PNAS](https://www.pnas.org/doi/10.1073/pnas.1821455116)) — with
+training/injury changing the excitatory/inhibitory *recruitment weighting*
+of primitives, not the primitives' own structure
+([Giszter 2013](https://nyaspubs.onlinelibrary.wiley.com/doi/abs/10.1111/nyas.12065)).
+That reweighting is arguably already covered by the homeostatic-scaling and
+serotonergic-gating rows already in the table. **Not added as a 10th row**
+— it would misrepresent something conserved/fixed as a plasticity process
+with its own induction timescale, the same category error this document
+already treats carefully elsewhere (e.g. §2.2's careful separation of
+"borrowed molecular substrate" from "the substrate's own primary framing").
+It remains a useful *structural* analogy for the model's RG-E/RG-F
+architecture, not a literature-grounded addition to Table 1a.
+
+*(Broader locomotor-training review consulted for this check, beyond the
+Côté citation already in Table 1a:
+[A Review on Locomotor Training after SCI](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4879237/),
+which documents the multisegmental-reorganization/reduced-co-contraction
+outcome flagged as the Côté-row gap above; also
+[Cortical circuit dynamics underlying motor skill learning](https://pmc.ncbi.nlm.nih.gov/articles/PMC10641381/)
+for the cortical-vs-spinal skill-formation contrast this section's opening
+definition draws on.)*
+
 ## 2. Tag-and-capture and contingency-gated consolidation in spinal circuits
 
 Three independent rat literatures converge on the same two-stage structure
@@ -285,4 +346,8 @@ picked adaptive or maladaptive.
 - Homeostatic/AMPAR-mediated plasticity after SCI: [AMPA receptor phosphorylation and synaptic colocalization on motor neurons drive maladaptive plasticity below complete SCI](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4677690/); [Synaptic up-scaling preserves motor circuit output after chronic, natural inactivity](https://elifesciences.org/articles/30005).
 - Turrigiano, G.G. (2008). The self-tuning neuron: synaptic scaling of excitatory synapses. *Cell* 135(3):422-435 (bidirectional AMPAR up-/downscaling, the general framework §1.3 specializes to the rat spinal cord).
 - Boulenguez, P. et al. (2010). [Down-regulation of the potassium-chloride cotransporter KCC2 contributes to spasticity after spinal cord injury](https://www.nature.com/articles/nm.2107), *Nature Medicine* (KCC2 loss as a homeostatic-downscaling failure; exercise/training partially restores KCC2 — the closest spinal-specific evidence that a homeostatic failure is training-reversible).
+- [Cortical circuit dynamics underlying motor skill learning](https://pmc.ncbi.nlm.nih.gov/articles/PMC10641381/) (§1.4: cortical motor-skill learning's own mechanism — dendritic spine formation and map-level LTP/LTD — used as the contrast that defines the narrower, spinal-specific sense of "motor skill formation" §1.4 checks Table 1a's rows against).
+- [Motor primitives are determined in early development and are then robustly conserved into adulthood](https://www.pnas.org/doi/10.1073/pnas.1821455116), *PNAS* (§1.4 caveat: the finding that ruled out adding Bizzi/Giszter spinal motor primitives as a 10th Table 1a row — primitives are largely fixed substrate, not something training forms).
+- Giszter, S.F. (2013). [Motor primitives — new data and future questions](https://nyaspubs.onlinelibrary.wiley.com/doi/abs/10.1111/nyas.12065), *Ann. N.Y. Acad. Sci.* (§1.4 caveat: training/injury changes primitive *recruitment weighting*, not primitive structure itself).
+- [A Review on Locomotor Training after SCI](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4879237/) (§1.4: documents the multisegmental network reorganization and reduced muscle co-contraction outcome of step-training, flagged as missing from Table 1a's Côté row, which currently states only its BDNF/NT-3/NT-4 molecular correlate).
 - For context, the hippocampal-side analogy this document mirrors: [Hippocampal Timescales as a Circuit Specification](https://github.com/max-talanov/tinyHippo/blob/main/hippocampal_timescales_as_circuit_spec.md).
