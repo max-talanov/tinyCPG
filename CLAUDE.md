@@ -1225,12 +1225,14 @@ run (not just at priming) — which is a different, not-yet-attempted class
 of intervention, not a further parameter nudge. New files:
 `results/stage1_fast_substance_{scaled,off040,off035,cap420,cap450}_seed*.h5`.
 
-**Stage 1 final status: 2 of 3 speed points confirmed (medium, slow); fast
-excluded from the production scope below.** Medium (τ=260/off=0.35/
-cap=450) and slow (τ=340/recovery=780/caps=585, 1.3× scale) are both
-genuine and tightly cross-seed-confirmed. Fast has no confirmed point after
-six attempts and should not be included in an MN5 submission until solved
-in its own future pass.
+**Stage 1 status at the time (2026-09-15): 2 of 3 speed points confirmed
+(medium, slow); fast excluded from the production scope below.** Medium
+(τ=260/off=0.35/cap=450) and slow (τ=340/recovery=780/caps=585, 1.3× scale)
+are both genuine and tightly cross-seed-confirmed. Fast has no confirmed
+point after six attempts and should not be included in an MN5 submission
+until solved in its own future pass. **Superseded 2026-09-16**: the
+`--leg-fatigue-asym-frac` fix below resolves the bistability — see
+"Persistent leg asymmetry breaks the fast/toe bistability."
 
 **Production-scale (full N, BS=60Hz) sanity check, medium point, descending
 arm, no `--consolidate` (2026-09-15).** Before scoping an MN5 run, checked
@@ -1425,6 +1427,85 @@ too, depending on its IFS/login-shell configuration — worth remembering as
 a general pattern for any future script using this style of conditional
 flag-building.
 
+### Persistent leg asymmetry breaks the fast/toe bistability (`--leg-fatigue-asym-frac`, 2026-09-16)
+
+Both open blockers left over from the previous session — Stage 1's fast
+direction (bistable after 6 attempts) and Stage 3's toe-loading failure —
+share the same signature: a genuine (non-cap-dominated), often
+near-deterministic rhythm whose L/R phase relationship is decided by
+run-to-run noise rather than any parameter tried. `--leading-leg`/
+`--lead-offset-ms` only break L/R symmetry *at t=0* (the priming window);
+by steady state, in these short/weak-bout regimes, nothing distinguishes
+the two legs anymore and whichever phase relationship noise happens to
+lock in persists for the rest of the run.
+
+**Fix: a small, persistent (not just at-priming) L/R asymmetry.** Added
+`--leg-fatigue-asym-frac` (`MOD_LEG_ASYM`, default 0.0 = exact no-op,
+confirmed by regression check): the leading leg's `--fatigue-tau-onset-ms`
+is scaled by `(1-frac)` (fatigues faster) and the other leg's by `(1+frac)`
+(fatigues slower), for the whole run — a standing, bio-plausible asymmetry
+(real limbs are not identical) rather than a one-time nudge.
+
+**Both blockers respond to this fix, at different magnitudes:**
+
+- **Toe stepping** (loading axis, medium timing anchor τ=100/off=0.35/
+  cap=330/step-period=730, scaled down from the confirmed medium point for
+  toe's reduced force ceiling — see below): `frac=0.10-0.12` converts a
+  seed-flipping corrLR (+0.316 to −0.442 across earlier attempts) into a
+  tight, reproducible small-negative value in both seeds
+  (`frac=0.12`: steady corrLR −0.063 / −0.058, atCap 0.00/0.04, per-leg
+  corr(F-E,F-F) −0.55 to −0.70). `frac=0.15` overcorrects (leg durations
+  diverge too far, 259ms vs 130ms); `frac=0.05` is too weak (still flips
+  sign, +0.497 at one seed).
+- **Fast speed** (the SUB_STANCE_MS-scaled config from the previous
+  session, cap=420/450, off=0.30, τ=195, step-period=750): `frac=0.06`
+  converts the same seed-flipping pattern (−0.54 to +0.999 depending on
+  seed) into tight, consistent small-negative corrLR (steady −0.088 /
+  −0.104, both seeds fully genuine, atCap 0.00/0.00-0.04). `frac=0.12` at
+  this same config over-corrects into cap-domination on one leg (the
+  slower-fatiguing leg needs more time than the cap allows) — the working
+  magnitude is config-dependent, not a universal constant.
+- **A more aggressive fast point, only reachable with this fix**:
+  step-period=600 (0.6× vs. the original 1000), τ=156/recovery=360/
+  cap=380, off=0.30, lead-offset=90, `frac=0.04`. Fully genuine in both
+  seeds (atCap 0.00/0.00 and 0.00/0.05) with tight, consistent corrLR
+  (−0.010 / −0.015) — the magnitude is small (durations settle to two
+  distinct deterministic values, R=700ms/L=750ms full cycle, rather than a
+  strongly negative correlation), but it is stable and reproducible, not
+  bistable. Full gait cycle ≈700-750ms vs. the medium point's 850ms — a
+  genuine **≈13-18% speedup**, more distinct than the previous best fast
+  point (τ=200/off=0.30, only ≈6% faster) and the first fast point found
+  via structural scaling rather than a plateau at "barely faster."
+
+**This is now the recommended lever for any future bistable force-trigger
+operating point** — try it before concluding a config is fundamentally
+unfixable. It does not (and is not expected to) fully restore the strongly
+negative corrLR (−0.7 to −0.85) seen at the well-margined medium/slow
+points; what it reliably does is convert an unusable bistable/seed-flipping
+result into a small-but-stable, reproducible one. Not yet re-run at a third
+seed or swept finely — the specific `frac` values above are single
+2-seed-confirmed points, following this file's standard bar, not a
+finished tuning round.
+
+**Air stepping not attempted with this fix.** Steady-state force_e at air
+loading (full unload, `--ia-feedback-gain`/`--cut-feedback-gain 0.1`) peaks
+at only ≈0.84 a.u. at the medium timing anchor (vs. toe's ≈6.9 and full
+loading's ≈17) — over an order of magnitude smaller than full loading, and
+the Schmitt trigger's relative on/off thresholds (65%/29% of that tiny
+peak, a ≈0.4 a.u. window) sit well within single-tick noise, which is the
+likely reason air stepping chatters at the rate-update-ms tick floor
+regardless of gain settings (Stage 3). This may not be a parameter-tuning
+problem at all: the paper's own existing epidural-stimulation section
+already frames *natural* air stepping as expected to collapse into
+irregular, poorly-timed contact (corr −0.41, matching timer-mode data) —
+a force-trigger analogue of that same natural condition may legitimately
+be expected to fail to produce a clean closed loop, with the interesting
+comparison being a force-trigger *epidural-stim analogue* (rhythmic CUT
+drive held on independent of force, mirroring the existing timer-mode
+epidural section) rather than a "fixed" natural-air-stepping timing.
+Flagging this reframing rather than continuing to brute-force it — worth
+discussing before spending more rounds on it.
+
 ### Sensory-driven mode (`--freeze-bs-rg`, now just freezing BS since Ia→RG is always on — WMAX_IA=10)
 
 Learning shifted from descending (BS) to sensory (muscle-Ia) pathway: BS→RG frozen at
@@ -1506,6 +1587,7 @@ Cross-leg: L↔R commissural inhibition on RG-F (strong) and RG-E (weak).
 | `MOD_FREEZE_BS` | `--freeze-bs-rg`: BS→RG-E/RG-F static (no STDP), held at weak lognormal init (W_INIT_BS). BS becomes fixed tonic drive; Ia→RG and CUT→RG keep training regardless (see MOD_IA_RG_STDP). |
 | `MOD_IA_RG_STDP` | **Always wired, always plastic homonymous Ia→RG** (Ia-E→RG-E, Ia-F→RG-F, Wmax=WMAX_IA=10, density P_IA2RG_STDP=0.5) — matches the reference architecture diagram's direct excitatory Ia→RG projection (distinct from the Ia→InE/InF reciprocal-inhibition loop, MOD_IA_LOOP). A third standing plastic pathway alongside BS→RG and CUT→RG in every mode (2026-09-14 — previously gated behind `--stdp-ia-rg`, opt-in only for the sensory-learning arm; see "Core architecture fix" below for why). `--wmax-ia`/`--p-ia2rg` still override the cap/density. |
 | `MOD_CONSOLIDATE` | `--consolidate`: opt-in (OFF by default), requires `--cut-trigger force`. Replaces vanilla STDP's "every potentiation kept forever, up to Wmax" retention with tag-and-capture consolidation on `CUT→RG-E` and `Ia→RG-E/F`: `weight` still evolves via native `stdp_synapse` (unchanged, the fast/local tag-setting process); a new per-connection `baseline` is the captured/stable component, and the live tag (`weight − baseline`) decays toward it with time constant `--consolidate-tau-tag-ms` unless a shared per-leg PRP-pool-like accumulator crosses `--consolidate-prp-threshold` first (genuine force-threshold bout endings push it up via `--consolidate-prp-gain-genuine`, failsafe-forced endings push it down via `--consolidate-prp-gain-forced`, matching Grau's finding that non-contingent outcomes actively suppress rather than merely fail to reinforce). `Wmax` is untouched — this governs retention *within* the existing ceiling, not the ceiling itself. `BS→RG` (when not frozen) gets identical bookkeeping logged for measurement symmetry only and is never written back to NEST — literature support for touching `WMAX_BS`'s documented anti-runaway role is weak (see [`spinal_plasticity_as_learning_spec.md`](spinal_plasticity_as_learning_spec.md) §3). See "Tag-and-capture consolidation" below for the literature basis and first-pass verification results. |
+| `MOD_LEG_ASYM` | `--leg-fatigue-asym-frac`: opt-in (default 0.0, exact no-op — regression-checked), requires `--muscle-fatigue`. Scales `--fatigue-tau-onset-ms` by `(1∓frac)` per leg (leading leg fatigues faster), a *persistent* L/R asymmetry rather than the one-time priming `--lead-offset-ms` already provides. Fixes the bistable-L/R-phase-locking failure mode seen at several short/weak-bout force-trigger operating points (fast speed, toe loading) — see "Persistent leg asymmetry" below. |
 | `--ia-feedback-gain` | Multiplicative gain on closed-loop Ia rate. 1.0 baseline / 0.5 toe stepping / 0.1 air stepping (Courtine/Lavrov SCI paradigm). |
 | `--cut-feedback-gain` | Multiplicative gain on cutaneous CUT stance drive (loading-dependent paw contact). Scaled with loading alongside `--ia-feedback-gain`; the external Ia-E heel→toe ramp (stim pacing) stays at full. |
 | `--ia-ext-f-hz` | MOD_FLEXOR_AFFERENT: rate (Hz) of the external flexor swing-afferent (hip/flexor-stretch signal; Grillner & Rossignol 1978). Drives RG-F directly + InF during swing, clocking the flexor symmetrically to the stance Ia-E ramp. 0 = off (intrinsic-only flexor); 80 = on. Un-gated by loading (joint-position, not load-based). |
