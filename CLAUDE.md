@@ -1534,7 +1534,10 @@ tight cross-seed corrLR (−0.008, −0.009 — nearly identical), `CUT→RG-E`
 converges to ~62-65 pA with real captures (4 each), duration identical to
 the no-consolidate reference (350/300ms). `tau_tag_ms=10000` works
 equally well (−0.020). Sensory arm (gain 0.25/0.10, same `tau_tag_ms`)
-checked at one seed: also genuine (atCap 0.00/0.00), healthy convergence.
+**now confirmed at two seeds (2026-09-16)**: both genuine (atCap 0.00/0.00
+both seeds), tight corrLR (+0.015, −0.040 — small magnitude, same as the
+descending arm's own steady-state result, consistent not bistable),
+healthy convergence to ~64 pA with 12-13 captures each seed.
 
 **Toe, descending arm, gain 0.20/0.15 + `tau_tag_ms=20000`** (a much
 longer constant than fast needed — toe's slower base dynamics, τ=100,
@@ -1547,8 +1550,9 @@ that worked for fast) was tried first and did **not** work at toe
 (atCap 0.82/0.73, corrLR bistable +0.395/−0.159) — confirming the right
 `tau_tag_ms` scales with the *base* operating point's own time constants,
 not a single universal replacement for 2000. Sensory arm (gain 0.25/0.10,
-`tau_tag_ms=20000`) checked at one seed: slightly cleaner than descending
-(atCap 0.06/0.00, corrLR −0.045).
+`tau_tag_ms=20000`) **now confirmed at two seeds (2026-09-16)**: slightly
+cleaner than descending in both (atCap 0.06/0.00 and 0.02/0.00), tight
+cross-seed corrLR (−0.045, −0.033 — nearly identical).
 
 **Slow + consolidate: improved, not resolved — a genuinely different,
 harder case.** Applying the same lever (gain 0.20/0.15, `tau_tag_ms=5000`
@@ -1574,7 +1578,12 @@ weight-trajectory figures (`scripts/cpg_consolidate_force_stages.py`/
 comparability with the earlier 5-mode figure) —
 `plots/final_locomotion_modes_force_stages.png` /
 `final_locomotion_modes_weights_grid.png`. New result files:
-`results/final_{desc,sens}_{slow,medium,fast,toe,air}.h5`.
+`results/final_{desc,sens}_{slow,medium,fast,toe,air}.h5`. Copied into
+`paper/figures/` as `fig_forcetrigger_all_modes_{force_stages,
+weights_grid}.png`, replacing the superseded 3-speed-only figures, and
+`paper/sections/results.tex`'s consolidate subsection rewritten to match
+(see "Five locomotion modes, two learning architectures" and "The same
+gain settings extend..." there).
 
 ### Sensory-driven mode (`--freeze-bs-rg`, now just freezing BS since Ia→RG is always on — WMAX_IA=10)
 
