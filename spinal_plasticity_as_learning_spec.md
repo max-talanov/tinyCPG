@@ -2,12 +2,18 @@
 
 Companion document to [`CLAUDE.md`](CLAUDE.md). It asks what a bio-plausible
 learning rule in `cpg_2legs_fast.py` should look like if the specification
-comes from **published rat spinal-cord plasticity data** rather than from
-generic machine-learning practice, in service of the current debug goal —
+comes from **published spinal-cord plasticity data** rather than from generic
+machine-learning practice, in service of the current debug goal —
 "keep alternating when BS drops from 60 to 20 Hz, relying on Ia closed-loop
 feedback instead of the brainstem."
 
-Scope is deliberately narrow: **spinal cord only**. Where a term from the
+Scope is deliberately narrow: **spinal cord only**. The evidence is
+predominantly rat; where a claim rests on another species — cat for the
+task-specific locomotor training results, mouse for the acquisition/recall
+interneuron dissociation, human for the intermittent-hypoxia walking trials,
+bullfrog for one homeostatic-upscaling result — the reference list says so,
+because the transfer to rat is an assumption rather than a finding. Where a
+term from the
 hippocampal synaptic-tagging-and-capture (STC) literature is used — "tag",
 "capture", "plasticity-related proteins" — it is used as familiar shorthand
 for a shape that the *spinal* literature documents independently, not as a
@@ -57,9 +63,9 @@ columns, axis and scale so the two are directly comparable.
 | H-reflex operant conditioning, Phase II | [[8]](#ref-8)[[9]](#ref-9) | The slow, large, multi-site component of H-reflex conditioning — altered motoneuron firing threshold, GABAergic terminal density, and interneuron properties — that consolidates over weeks of continued training. | 6–7 weeks; large, stable; **multi-site** | Same pathway | Demonstrated to correct locomotor asymmetry after spinal cord injury when combined with training — the closest published result to the model's own stated rehab goal. |
 | Task-specific spinal locomotor learning (train-to-stand vs. train-to-step) | [[11]](#ref-11)[[12]](#ref-12); contested by [[13]](#ref-13) | Complete-transection cats trained daily to either stand or step relearn specifically the trained task — stand-trained cats stand well but step poorly, and step-trained cats step well but stand poorly — the clearest behavioral demonstration that the isolated lumbar CPG itself, not just a single reflex pathway, can be shaped by training [[11]](#ref-11), framed explicitly as spinal motor learning by [[12]](#ref-12). **Contested**: a later study found both standing and locomotion recover under non-task-specific stimulation, or with no training at all, attributing recovery to a general return of spinal circuit excitability rather than task-specific activity-dependent encoding [[13]](#ref-13) — an open controversy, not resolved here. | Daily training, ~8–12 weeks to a stable task-specific outcome | Lumbar locomotor CPG circuitry below a complete thoracic spinal transection (cat) | The strongest available evidence that a CPG core like this model's `RG-E`/`RG-F` — not just an afferent pathway — is a legitimate target for a "trained skill" framing. But the Harnie et al. 2019 contestation means this row shouldn't be read as an uncontested green light for CPG-level consolidation the way Wolpaw's Ia→motoneuron pathway is (§3's `Ia→RG` mapping stands on Wolpaw's result specifically, not on this one). |
 
-*Table 1a — The twelve rows plotted in Fig. 1a above: baseline physiology plus every mechanism whose documented outcome in the cited literature is functional preservation or recovery. Two rows (spinal instrumental learning, the serotonergic chronic axis) are one half of a bidirectional mechanism whose maladaptive counterpart is Table 1b. The two LTP rows and the instrumental-learning row describe the **same experiments at different levels**: instrumental learning is the behavioral phenomenon, the LTP rows are its synaptic substrate. They are listed separately because §4 maps onto the synaptic level, not the behavioral one — not because they are independent findings.*
+*Table 1a — The twelve rows plotted in Fig. 1a above: baseline physiology plus every mechanism whose documented outcome in the cited literature is functional preservation or recovery. Three rows (spinal instrumental learning, homeostatic AMPAR upscaling, the serotonergic chronic axis) are one half of a bidirectional mechanism whose maladaptive counterpart is in Table 1b. The two LTP rows and the instrumental-learning row describe the **same experiments at different levels**: instrumental learning is the behavioral phenomenon, the LTP rows are its synaptic substrate. They are listed separately because §4 maps onto the synaptic level, not the behavioral one — not because they are independent findings.*
 
-### 1.2 Pathological processes (e.g., after spinal cord injury)
+### 1.2 Pathological motor-circuit processes (after spinal cord injury)
 
 ![Three pathological motor-circuit plasticity processes on the same logarithmic time axis as Fig. 1a, one bar per Table 1b row with its reference numbers, hatched to distinguish them from the healthy set and colored by the same mechanism-family scheme — orange for Grau's non-contingent maladaptive suppression, gray for KCC2-loss-driven homeostatic downscaling failure, and teal for untreated chronic serotonergic dysregulation.](spinal_timescale_pathological.png)
 
@@ -68,7 +74,7 @@ columns, axis and scale so the two are directly comparable.
 | Process | Refs | What it is | Time constant | Site / pathway | What it constrains for a spiking-network model |
 |---|---|---|---|---|---|
 | Spinal instrumental learning — **non-contingent** (maladaptive) | [[1]](#ref-1)[[3]](#ref-3)[[5]](#ref-5) | The same training paradigm as §1.1's contingent case, but with the shock uncontrollable instead of response-produced. | Same acquisition/consolidation window as the contingent case — the outcome, not the timing, differs | Same circuits (Grau et al.) | An active, protein-synthesis-dependent **suppression** of future learning capacity, not merely an absence of learning — a bidirectional gate, not a one-way accumulator. |
-| Homeostatic **downscaling failure** (KCC2 loss, spasticity) | [[25]](#ref-25)[[26]](#ref-26) | Instead of excitation scaling down to compensate for hyperactivity, motoneuron KCC2 (which sets the Cl⁻ gradient underlying GABA/glycine inhibition) is chronically **downregulated** after SCI, producing spasticity. | Onset within hours of injury; partial training-driven recovery over weeks | Motoneuron membrane Cl⁻ transporters, below a spinal cord injury | The spinal-specific evidence that "homeostatic compensation" is not automatically adaptive — it can fail in the *opposite* direction from §1.1's upscaling row, and, critically, that failure is training-reversible [[25]](#ref-25); see Fig. 2b, not fixed. |
+| Homeostatic **downscaling failure** (KCC2 loss, spasticity) | [[25]](#ref-25)[[26]](#ref-26) | Instead of excitation scaling down to compensate for hyperactivity, motoneuron KCC2 (which sets the Cl⁻ gradient underlying GABA/glycine inhibition) is chronically **downregulated** after SCI, producing spasticity. | Onset within hours of injury; partial training-driven recovery over weeks | Motoneuron membrane Cl⁻ transporters, below a spinal cord injury | The spinal-specific evidence that "homeostatic compensation" is not automatically adaptive — it can fail in the *opposite* direction from §1.1's upscaling row, and, critically, that failure is training-reversible [[25]](#ref-25) (see Fig. 2b), not fixed. |
 | Serotonergic gating — chronic, **untreated** | [[22]](#ref-22)[[23]](#ref-23) | The same injury-driven change in CPG serotonin sensitivity as §1.1's training-restored case, left to persist. | Days–weeks, and beyond without intervention | Brainstem-to-spinal monoaminergic projections | The pathological anchor for the same axis §1.1 shows can be treated — the two rows differ only in whether training happened, exactly like the KCC2 row above. |
 
 *Table 1b — The three rows plotted in Fig. 1b above: the motor-circuit processes whose documented outcome after injury is degraded function. **Every one pairs with a Table 1a row** (instrumental learning directly; homeostatic scaling via §1.3; the serotonergic axis via its training-restored counterpart) — there is no mechanism here that the healthy cord does not also run; only the gating signal and the outcome differ (§2.4). Chronic/neuropathic pain is deliberately absent: it belongs to the nociceptive pathway, which is §3.*
@@ -102,7 +108,7 @@ homeostasis) than the tag-and-capture story in §2.
 
 *Fig. 2 — Bidirectional homeostatic scaling. **(2a) Healthy** (left): the upscaling response to deafferentation — a single, reliably-reported trajectory; there is no "blocked" condition in the cited literature, so only one trace is shown. **(2b) Pathological** (right): KCC2 loss (downscaling failure) after SCI, training vs. none — both traces take the identical acute post-injury drop; they diverge only in whether locomotor training is applied afterward, which is the spinal analog of "capture" rescuing an otherwise-lost trace. Curve shapes are illustrative (exponential fits to the qualitative time course each citation reports), not digitized data.*
 
-### 1.4 Which of Fig. 1a's rows are motor-skill-formation mechanisms specifically
+### 1.4 Which of Table 1a's rows are motor-skill-formation mechanisms specifically
 
 Table 1a's scope statement is "baseline physiology plus every mechanism whose
 documented outcome is functional preservation or recovery" — deliberately
@@ -138,10 +144,11 @@ two motor-circuit LTP rows are the *substrate* of the Grau and Wolpaw
 mechanisms rather than additional skills — they raise the denominator
 without raising the numerator, by design.
 
-**Caveat — a tempting addition, checked and left out.** Bizzi & Giszter's
-spinal motor primitives / muscle synergies (force-field modules the spinal
-cord combines to build movements, structurally close to this model's own
-extensor/flexor half-center split) look like a natural missing row. Checked
+**Caveat — a tempting addition, checked and left out.** The spinal motor
+primitives / muscle synergies framework (force-field modules the spinal cord
+combines to build movements — Bizzi, Giszter and colleagues; structurally
+close to this model's own extensor/flexor half-center split) looks like a
+natural missing row. Checked
 directly before proposing it: the primitives themselves are reported as
 largely fixed and conserved from early development rather than something
 training forms anew — "motor primitives are determined in early
@@ -258,11 +265,11 @@ as "reinforced" and "not reinforced."
 
 ### 2.3 Structural consolidation: what a kept trace becomes
 
-H-reflex operant conditioning in
-rats — training the monosynaptic Ia-afferent-to-motoneuron reflex directly —
-shows a fast, small Phase I (1–2 days) and a slow, large, multi-site Phase II
-(6–7 weeks: motoneuron firing threshold, GABAergic terminal density,
-interneuron changes) [[8]](#ref-8). Up-conditioning
+H-reflex operant conditioning in rats — training the monosynaptic
+Ia-afferent-to-motoneuron reflex directly — shows a fast, small Phase I
+(1–2 days) and a slow, large, multi-site Phase II (6–7 weeks: motoneuron
+firing threshold, GABAergic terminal density, interneuron changes)
+[[8]](#ref-8). Up-conditioning
 **corrects locomotor asymmetry after spinal cord injury in rats** — the
 closest published result to this model's own debug goal, achieved by
 consolidating exactly the `Ia→RG` pathway this model represents.
@@ -275,8 +282,9 @@ makes function *worse*, which §2.4 lists.
 
 ### 2.4 Adaptive and maladaptive settings of each gate
 
-Every mechanism in §1-2 is two-directional. The two tables below list the
-same mechanisms twice, by outcome.
+Every mechanism in §1-2 is two-directional except H-reflex conditioning,
+for which the cited literature documents no maladaptive counterpart. The two
+tables below list the same mechanisms twice, by outcome.
 
 #### Healthy / adaptive directions
 
@@ -295,7 +303,7 @@ same mechanisms twice, by outcome.
 | Mechanism | Refs | What the maladaptive direction looks like |
 |---|---|---|
 | Homeostatic scaling (§1.2) | [[25]](#ref-25)[[26]](#ref-26) | **Downscaling failure**: KCC2 loss after SCI leaves inhibition too weak, producing spasticity [[25]](#ref-25) — training partially reverses it |
-| Spinal instrumental learning (Grau, §1.2) | [[3]](#ref-3)[[5]](#ref-5) | Non-contingent (uncontrollable) outcome at the *identical* intensity → active, protein-synthesis-dependent **suppression** of future learning capacity (Ferguson et al. 2008) [[3]](#ref-3) |
+| Spinal instrumental learning (Grau, §1.2) | [[3]](#ref-3)[[5]](#ref-5) | Non-contingent (uncontrollable) outcome at the *identical* intensity → active, protein-synthesis-dependent **suppression** of future learning capacity [[3]](#ref-3) |
 | Two-phase LTP: E-LTP → L-LTP | [[28]](#ref-28)[[29]](#ref-29)[[30]](#ref-30)[[31]](#ref-31)[[32]](#ref-32) | The *same* two-phase cascade run on the nociceptive pathway instead, where its consolidated outcome is chronic pain — treated separately in §3, and shown there to compete with motor learning for the same resource |
 | Serotonergic gating (§1.2, §2.1) | [[22]](#ref-22)[[23]](#ref-23) | Persistently altered CPG sensitivity to 5-HT if left untreated after injury; and, on the supply side, a resource delivered without paired training consolidates whatever is active rather than what was trained |
 | H-reflex conditioning | — | *No entry* — no specific pathological counterpart in the literature cited here (also why Table 1b has no H-reflex row) |
@@ -308,15 +316,14 @@ Table 2b's rows are not independent side effects — in rat SCI models
 they are commonly reported together, a pattern the literature calls
 **maladaptive plasticity**: retention rules that persist but now degrade
 function because injury changed the gating signal or target synapse, not
-because plasticity itself changed kind (Ferguson et al. 2012: *"maladaptive
-spinal plasticity opposes spinal learning and recovery in spinal cord
-injury"* — the same mechanism this document borrows from Grau to explain
-adaptive learning, in its own field's account of why recovery sometimes
-fails).
+because plasticity itself changed kind — *"maladaptive spinal plasticity
+opposes spinal learning and recovery in spinal cord injury"* [[5]](#ref-5),
+i.e. the same machinery that §2 credits with adaptive learning, in its own
+field's account of why recovery sometimes fails.
 
 1. **Spasticity** via KCC2 loss [[25]](#ref-25).
 2. **Impaired further learning** under uncontrollable training [[3]](#ref-3)[[5]](#ref-5).
-3. **Altered serotonergic sensitivity** if left untreated.
+3. **Altered serotonergic sensitivity** if left untreated [[22]](#ref-22)[[23]](#ref-23).
 4. **Central/neuropathic pain** — the one item on this list that is not a
    motor-circuit process. It belongs to the nociceptive pathway (§3), and is
    listed here only because the SCI literature reports it alongside the other
@@ -408,8 +415,8 @@ second, slower component:
   paw-contact afferent, not a nociceptor: the mapping is to the contingency
   gate, not to §3's nociceptive consolidation, even though a cutaneous
   afferent is anatomically the nearer neighbour of the two.
-- **`BS→RG`** remains the weakest fit, but less weak than this document
-  previously stated. The closest evidence is corticospinal-tract LTP — a
+- **`BS→RG`** remains the weakest fit of the three. The closest supporting
+  evidence is corticospinal-tract LTP — a
   descending projection onto spinal interneurons and motor pools that does
   undergo LTP (§1.1's motor E-LTP row) — which is a genuine descending-drive
   precedent, though the model's `BS` is a reticulospinal tonic proxy rather
@@ -425,12 +432,12 @@ Implementation (state variables, update equations, where in
 `cpg_2legs_fast.py`'s sim loop this would live) is intentionally left to the
 separate implementation plan, not this document.
 
-**§2.1/§2.2's healthy/pathological duality is not just biological framing — it
+**§2.4's healthy/pathological duality is not just biological framing — it
 recurs as literal, measured failure modes once `--consolidate` was actually
 built and tuned** (see [CLAUDE.md](CLAUDE.md), "Tag-and-capture
-consolidation"). Two of that section's four confirmed pathological
-directions have a direct model-level counterpart, found empirically, not
-predicted in advance by this document:
+consolidation"). Two of Table 2b's four documented maladaptive directions
+have a direct model-level counterpart, found empirically, not predicted in
+advance by this document:
 
 - **Cap-domination** (`frac_at_cap` near 1.0 — the failsafe timer, not
   genuine sensory feedback, driving every stance/swing transition) is the
@@ -480,10 +487,10 @@ here.
 
 **Spinal sensorimotor adaptation and locomotor training**
 
-10. <a id="ref-10"></a>Lavaud, S., Bichara, C., D'Andola, M., Yeh, S.-H. & Takeoka, A. (2024). [Two inhibitory neuronal classes govern acquisition and recall of spinal sensorimotor adaptation](https://pubmed.ncbi.nlm.nih.gov/38603479/). *Science* 384(6692):194-201. PMID 38603479.
-11. <a id="ref-11"></a>de Leon, R.D., Hodgson, J.A., Roy, R.R. & Edgerton, V.R. (1998). [Full weight-bearing hindlimb standing following stand training in the adult spinal cat](https://pubmed.ncbi.nlm.nih.gov/9658030/). *J. Neurophysiol.* 80(1):83-91. PMID 9658030.
+10. <a id="ref-10"></a>(mouse) Lavaud, S., Bichara, C., D'Andola, M., Yeh, S.-H. & Takeoka, A. (2024). [Two inhibitory neuronal classes govern acquisition and recall of spinal sensorimotor adaptation](https://pubmed.ncbi.nlm.nih.gov/38603479/). *Science* 384(6692):194-201. PMID 38603479.
+11. <a id="ref-11"></a>(cat) de Leon, R.D., Hodgson, J.A., Roy, R.R. & Edgerton, V.R. (1998). [Full weight-bearing hindlimb standing following stand training in the adult spinal cat](https://pubmed.ncbi.nlm.nih.gov/9658030/). *J. Neurophysiol.* 80(1):83-91. PMID 9658030.
 12. <a id="ref-12"></a>Edgerton, V.R., Roy, R.R., de Leon, R., Tillakaratne, N. & Hodgson, J.A. (1997). [Does motor learning occur in the spinal cord?](https://journals.sagepub.com/doi/10.1177/107385849700300510) *The Neuroscientist* 3(5):287-294. (Not indexed in PubMed; verified via publisher DOI.)
-13. <a id="ref-13"></a>Harnie, J., Doelman, A., de Vette, E., Audet, J., Desrochers, E., Gaudreault, N. & Frigon, A. (2019). [The recovery of standing and locomotion after spinal cord injury does not require task-specific training](https://pubmed.ncbi.nlm.nih.gov/31825306/). *eLife* 8:e50134. PMID 31825306.
+13. <a id="ref-13"></a>(cat) Harnie, J., Doelman, A., de Vette, E., Audet, J., Desrochers, E., Gaudreault, N. & Frigon, A. (2019). [The recovery of standing and locomotion after spinal cord injury does not require task-specific training](https://pubmed.ncbi.nlm.nih.gov/31825306/). *eLife* 8:e50134. PMID 31825306.
 14. <a id="ref-14"></a>Côté, M.-P., Azzam, G.A., Lemay, M.A., Zhukareva, V. & Houlé, J.D. (2011). [Activity-dependent increase in neurotrophic factors is associated with an enhanced modulation of spinal reflexes after spinal cord injury](https://pubmed.ncbi.nlm.nih.gov/21083432/). *J. Neurotrauma* 28(2):299-309. PMID 21083432.
 15. <a id="ref-15"></a>Smith, A.C. & Knikou, M. (2016). [A review on locomotor training after spinal cord injury: reorganization of spinal neuronal circuits and recovery of motor function](https://pubmed.ncbi.nlm.nih.gov/27293901/). *Neural Plast.* 2016:1216258. PMID 27293901.
 
@@ -493,8 +500,8 @@ here.
 17. <a id="ref-17"></a>Tadjalli, A. & Mitchell, G.S. (2019). [Cervical spinal 5-HT2A and 5-HT2B receptors are both necessary for moderate acute intermittent hypoxia-induced phrenic long-term facilitation](https://pubmed.ncbi.nlm.nih.gov/31219768/). *J. Appl. Physiol.* 127(2):432-443. PMID 31219768.
 18. <a id="ref-18"></a>Hoffman, M.S. & Mitchell, G.S. (2011). [Spinal 5-HT7 receptor activation induces long-lasting phrenic motor facilitation](https://pubmed.ncbi.nlm.nih.gov/21242254/). *J. Physiol.* 589(6):1397-1407. PMID 21242254.
 19. <a id="ref-19"></a>Hoffman, M.S. & Mitchell, G.S. (2013). [Spinal 5-HT7 receptors and protein kinase A constrain intermittent hypoxia-induced phrenic long-term facilitation](https://pubmed.ncbi.nlm.nih.gov/23850591/). *Neuroscience* 250:632-643. PMID 23850591.
-20. <a id="ref-20"></a>Hayes, H.B., Jayaraman, A., Herrmann, M., Mitchell, G.S., Rymer, W.Z. & Trumbower, R.D. (2014). [Daily intermittent hypoxia enhances walking after chronic spinal cord injury: a randomized trial](https://pubmed.ncbi.nlm.nih.gov/24285617/). *Neurology* 82(2):104-113. PMID 24285617.
-21. <a id="ref-21"></a>Tan, A.Q., Barth, S. & Trumbower, R.D. (2020). [Acute intermittent hypoxia as a potential adjuvant to improve walking following spinal cord injury: evidence, challenges, and future directions](https://pubmed.ncbi.nlm.nih.gov/33738145/). *Curr. Phys. Med. Rehabil. Rep.* 8(3):188-198. PMID 33738145.
+20. <a id="ref-20"></a>(human) Hayes, H.B., Jayaraman, A., Herrmann, M., Mitchell, G.S., Rymer, W.Z. & Trumbower, R.D. (2014). [Daily intermittent hypoxia enhances walking after chronic spinal cord injury: a randomized trial](https://pubmed.ncbi.nlm.nih.gov/24285617/). *Neurology* 82(2):104-113. PMID 24285617.
+21. <a id="ref-21"></a>(human/rat review) Tan, A.Q., Barth, S. & Trumbower, R.D. (2020). [Acute intermittent hypoxia as a potential adjuvant to improve walking following spinal cord injury: evidence, challenges, and future directions](https://pubmed.ncbi.nlm.nih.gov/33738145/). *Curr. Phys. Med. Rehabil. Rep.* 8(3):188-198. PMID 33738145.
 22. <a id="ref-22"></a>Ghosh, M. & Pearse, D.D. (2014). [The role of the serotonergic system in locomotor recovery after spinal cord injury](https://pubmed.ncbi.nlm.nih.gov/25709569/). *Front. Neural Circuits* 8:151. PMID 25709569.
 23. <a id="ref-23"></a>Sławińska, U., Miazga, K. & Jordan, L.M. (2014). [The role of serotonin in the control of locomotor movements and strategies for restoring locomotion after spinal cord injury](https://pubmed.ncbi.nlm.nih.gov/24993627/). *Acta Neurobiol. Exp.* 74(2):172-187. PMID 24993627.
 
@@ -503,7 +510,7 @@ here.
 24. <a id="ref-24"></a>Turrigiano, G.G. (2008). [The self-tuning neuron: synaptic scaling of excitatory synapses](https://pubmed.ncbi.nlm.nih.gov/18984155/). *Cell* 135(3):422-435. PMID 18984155. (General framework; the only non-spinal primary source retained, and used only where §1.3 specializes it to spinal cord.)
 25. <a id="ref-25"></a>Boulenguez, P., Liabeuf, S., Bos, R., Bras, H., Jean-Xavier, C., Brocard, C., Stil, A., Darbon, P., Cattaert, D., Delpire, E., Marsala, M. & Vinay, L. (2010). [Down-regulation of the potassium-chloride cotransporter KCC2 contributes to spasticity after spinal cord injury](https://pubmed.ncbi.nlm.nih.gov/20190766/). *Nat. Med.* 16(3):302-307. PMID 20190766.
 26. <a id="ref-26"></a>Huie, J.R., Stuck, E.D., Lee, K.H., Irvine, K.A., Beattie, M.S., Bresnahan, J.C., Grau, J.W. & Ferguson, A.R. (2015). [AMPA receptor phosphorylation and synaptic colocalization on motor neurons drive maladaptive plasticity below complete spinal cord injury](https://pubmed.ncbi.nlm.nih.gov/26668821/). *eNeuro* 2(5). PMID 26668821.
-27. <a id="ref-27"></a>Santin, J.M., Vallejo, M. & Hartzler, L.K. (2017). [Synaptic up-scaling preserves motor circuit output after chronic, natural inactivity](https://pubmed.ncbi.nlm.nih.gov/28914603/). *eLife* 6:e30005. PMID 28914603.
+27. <a id="ref-27"></a>(bullfrog) Santin, J.M., Vallejo, M. & Hartzler, L.K. (2017). [Synaptic up-scaling preserves motor circuit output after chronic, natural inactivity](https://pubmed.ncbi.nlm.nih.gov/28914603/). *eLife* 6:e30005. PMID 28914603.
 
 **Nociceptive (dorsal-horn) plasticity — §3 only**
 
