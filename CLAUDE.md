@@ -1702,6 +1702,40 @@ architectures" framing in `paper/sections/results.tex` needs revising:
 medium no longer demonstrates `--consolidate` at all (joining slow as a
 no-consolidate speed) — only fast and toe currently do.
 
+**Update (2026-09-17, later the same day): the leading-leg problem above is
+superseded, not by more parameter search on it directly, but by the
+`BS→RG` write-back fix landing at the same time (see the top of "Tag-and-
+capture consolidation" below) — a re-run of the descending-arm gain search
+on the de-aligned base, now with `BS→RG` actually participating in
+consolidation, found a new working point.** `0.25`/`0.10` (single-seed
+screen: atCap 0.00/0.00, corrLR −0.773; confirmed second seed: atCap
+0.00/0.00, corrLR −0.796 — a tight cross-seed match) is genuine on both
+legs in both seeds, with `bs→rge` meaningfully and reproducibly suppressed
+(~10–12 pA both seeds, vs. its natural ~18 pA plateau) — real, working
+consolidation on all three pathways simultaneously, not just two. The old
+default (`0.20`/`0.15`) is now confirmed *inert* on this fixed landscape
+(0/1 captures, `bs→rge` untouched at ~4.2 pA, mostly cap-dominated) — a
+different landscape than before, not merely a re-confirmation of the same
+point. **`0.25`/`0.10` is the new descending-arm default for medium.**
+`results/bsfix_gainsearch_g0.25_f0.10_seed{12345,54321}.h5` are the
+confirming files; medium's row in the "Five locomotion modes" figures now
+uses the seed-12345 file instead of the no-consolidate `final_desc_medium.h5`.
+
+**This does not (yet) change `run_consolidate_speed_arm_loading.sh` or the
+"ship without consolidate" MN5 scope decision above.** Everything in this
+update was found at `--debug-small` scale (small N, BS=20Hz, 50ms tick) —
+the same scale every other finding in this session was made at, and this
+project has repeatedly documented debug/production divergence (see "Force-
+triggered CUT"). Before re-enabling `--consolidate` for medium in the
+production script: (1) re-verify the de-aligned base timing constants are
+even meaningful at the production script's own 100ms tick and full N (the
+tick-alignment mechanism itself doesn't obviously transfer — see the caveat
+in the "Decision" paragraph above); (2) re-run this exact gain confirmation
+at production scale, not just debug-small. **Fast and toe's own
+descending-arm consolidate configs (`0.20`/`0.15` at each) also predate the
+`BS→RG` write-back fix and are stale in the same way medium's was** — not
+yet re-confirmed under the fix, flagged but not yet acted on.
+
 ### Sensory-driven mode (`--freeze-bs-rg`, now just freezing BS since Ia→RG is always on — WMAX_IA=10)
 
 Learning shifted from descending (BS) to sensory (muscle-Ia) pathway: BS→RG frozen at
