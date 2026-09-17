@@ -55,7 +55,7 @@ sbatch run.sh
 | `run_cutforce_sweep5.sh` | CONFIRMATION refinement (9 tasks, not a new exploration): brackets round 4's τ=250/off=0.35 optimum — fatigue-onset-τ {240,250,260} × `--cut-force-off-frac` {0.35,0.375,0.40}, cap still fixed at 450ms. **Confirmed: frac_at_cap=0.00 on all 9 configs** — best point τ=260/off=0.35, see "Force-triggered CUT" below. |
 | `run_cutforce_sweep6.sh` | PHASE 3 — seed/init robustness (10 tasks, 120s each): holds round 5's winning config fixed (τ=260, off=0.35, cap=450ms), sweeps the same 10-point (μ,CV) STDP-init grid as `run.sh`/paper Algorithm 1. Tests whether the operating point found in rounds 1-5 holds away from μ=3.5. |
 | `run_cutforce_sensory_unload.sh` | EXPLORATORY, round 1 (9 tasks, 120s each): production-scale test of the unloading-rescue mechanism (Ia→RG-E/F now loading-dependent, see "Core architecture fix" below) — sensory arm (`--freeze-bs-rg`), 3×3 grid of `--cut-feedback-gain` (loading) × `--ia-feedback-gain` (compensation). Local debug-scale tuning plateaued at weak counter-phase across a wide search; suspected debug-scale population-size ceiling (N_IA_E/F=30 vs 100 production), not a broken mechanism — see "Force-triggered CUT" below. |
-| `run_consolidate_speed_arm_loading.sh` | Stage 4 MN5 array (12 tasks): production sweep, force-trigger mode — 2 confirmed speeds (medium/slow, fast excluded — unresolved, see "Force-trigger speed axis" below) × 2 arms (descending/sensory), full weight-bearing only. `--consolidate` runs at medium only (each arm's own confirmed gain pair); the two slow cells are no-consolidate controls — Stage 2 found the medium-confirmed gain pair actively harmful at slow (see "Stage 2" below). Toe/air loading is excluded entirely — Stage 3 found the medium timing config fails even without `--consolidate` at reduced loading (cap-domination at toe, tick-floor chattering at air, see "Stage 3" below). Seed/init-robustness (μ:CV grid) is explicitly NOT part of this sweep — see "MN5 readiness verdict" below. |
+| `run_consolidate_speed_arm_loading.sh` | Stage 4 MN5 array (12 tasks): production sweep, force-trigger mode — 2 confirmed speeds (medium/slow, fast excluded — unresolved, see "Force-trigger speed axis" below) × 2 arms (descending/sensory), full weight-bearing only. **`--consolidate` is OFF for all 4 cells as of 2026-09-17** (revised — see "Medium's tick-alignment fragility and the consolidate leading-leg problem" below): medium+consolidate turned out to have its own unresolved leading-leg asymmetry issue (14 configs tried, none passed), joining slow+consolidate's already-documented failure (Stage 2). Also fixed medium's stale `step-period=520` → `1000` (never the actually-tested value). Toe/air loading is excluded entirely — Stage 3 found the medium timing config fails even without `--consolidate` at reduced loading (cap-domination at toe, tick-floor chattering at air, see "Stage 3" below). Seed/init-robustness (μ:CV grid) is explicitly NOT part of this sweep — see "MN5 readiness verdict" below. |
 | `CLAUDE.md` | This file. |
 | `spinal_plasticity_as_learning_spec.md` | Literature-grounded spec for the `--consolidate` tag-and-capture mechanism (see "Tag-and-capture consolidation" below). Spinal-cord-only scope: §1 motor-circuit plasticity timescales, §2 the gating signals (serotonergic, contingency, structural), §3 nociceptive plasticity kept separate, §4 the mapping onto this model's three plastic pathways. All references verified against PubMed and cited by number. |
 
@@ -408,6 +408,25 @@ this section). `run_cutforce_sensory_unload.sh` tests this directly: production 
 the confirmed operating point unchanged. Not yet submitted.
 
 ### Tag-and-capture consolidation (`--consolidate`, 2026-09-15)
+
+**BS→RG write-back fix (2026-09-17) — read this before trusting any
+descending-arm number below.** Every result in this section (gain searches,
+Stage 2/3, the fast/toe `tau_tag_ms` extension, the medium tick-alignment
+investigation) was generated when `BS→RG`'s consolidation bookkeeping was
+tracked but never written back to NEST — `BS→RG` was vanilla-STDP-only in
+practice the entire time, regardless of `--consolidate`. Fixed at explicit
+user request: `consolidate_behavioral_keys` (the set that actually gets the
+tag-leak write-back) now includes `bs->rge`/`bs->rgf` whenever they're
+plastic, exactly like `cut->rge`/`ia->rge`/`ia->rgf` always did. Confirmed
+live by direct test: `bs→rge` now converges to ~4.4\,pA under consolidation
+(descending arm, medium timing, gain 0.20/0.15) instead of its natural
+~18\,pA plateau — a real, substantial behavioral change, not a no-op.
+**Consequence: every descending-arm (non-`--freeze-bs-rg`) `--consolidate`
+number in this entire section — gain confirmations, `tau_tag_ms` values,
+the medium/fast/toe operating points, all of it — predates this fix and
+needs re-confirmation.** The sensory arm (`--freeze-bs-rg`) is unaffected,
+since `BS→RG` isn't plastic there regardless. Do not treat any
+descending-arm `--consolidate` claim below as current until re-checked.
 
 Motivated by the unloading-rescue plateau immediately above and the round 1-6
 tuning history: every search so far looked for a **static** fixed point of
@@ -1585,6 +1604,104 @@ weights_grid}.png`, replacing the superseded 3-speed-only figures, and
 (see "Five locomotion modes, two learning architectures" and "The same
 gain settings extend..." there).
 
+### Medium's tick-alignment fragility and the consolidate leading-leg problem (2026-09-17)
+
+While locally testing `MOD_WMAX_GROWTH` (below) against the medium+consolidate
+operating point, the "baseline" (growth=0, i.e. should be an exact
+reproduction of the already-shipped default) came back cap-dominated —
+prompting a re-diagnosis of the actual shipped `results/final_desc_medium.h5`/
+`final_sens_medium.h5` files with `--steady-from-ms 30000`. Both showed
+`frac_at_cap=1.00` on both legs at steady state, contradicting this file's
+own "confirmed, both seeds, steady corrLR −0.839" claim for medium. Fresh
+seeds made this worse, not better: **13 of 13 local medium+consolidate
+reproduction attempts** (6 seeds × baseline/growth, plus 1 thread-count
+variant) landed 100% cap-dominated. Re-checking fast/toe the same way
+(4 fresh seeds each, `--leg-fatigue-asym-frac` in place) found the opposite —
+**genuine and tightly consistent in every single draw** (fast: atCap 0.00/0.00
+all 4; toe: mild single-leg residual 0.13–0.28/0.00–0.05 all 4, matching
+their own shipped numbers closely). Medium was uniquely broken; the other
+three modes were not.
+
+**Root cause 1 (base mechanism): exact tick-alignment.** Comparing each
+mode's timing constants against the local `--debug-small` 50ms
+rate-update/simulate-chunk tick: medium has **4 of 5** core constants
+(`cut-max-stance-ms`=450=9×50, `lead-offset-ms`=150=3×50,
+`step-period-ms`=1000=20×50, `fatigue-tau-recovery-ms`=600=12×50) landing
+*exactly* on tick multiples, vs. only 1–2 of 5 for slow/fast/toe. This
+matched a visible signature already in hand: medium's steady-state bout
+durations were perfectly zero-variance and exact tick multiples (450±0ms,
+400±0ms), unlike the genuinely jittery durations (±20–50ms) documented for
+every other confirmed mode. Exact alignment appears to let the stance/swing
+Schmitt trigger collapse onto razor-edge discrete states that flip
+unpredictably depending on which side of a tick boundary NEST's
+thread-order nondeterminism lands a spike on — plausible given this
+project's own prior documentation of same-seed/same-config nondeterminism
+(Stage 1's "Also surfaced during this work" note).
+
+De-aligning by ~1% — `cut-max-stance-ms`/`cut-max-swing-ms` 450→453,
+`fatigue-tau-onset-ms` 260→257, everything else unchanged — **cleanly fixed
+the no-consolidate base mechanism**: steady corrLR −0.814/−0.799 (seeds
+12345/54321, a tight cross-seed match, same quality bar as fast/toe's own
+confirmations), atCap 0.00/0.00 both seeds, and genuine ±25ms bout-duration
+jitter replacing the exact-tick zero-variance durations. A control sweep on
+slow (4 fresh seeds, its own already-confirmed no-consolidate config) found
+it is **not fully immune either** — 1 of 4 draws flipped to strongly
+synchronized (corrLR +0.994) — but far less exposed than medium was (1 of 4
+bad vs. medium's ~11 of 13), consistent with slow having only 2 of 5
+constants tick-aligned vs. medium's 4 of 5. This reads as a graded,
+dose-dependent relationship (more tick-aligned constants → more exposure to
+a bistability that exists at every force-trigger operating point to some
+degree), not a binary medium-only bug.
+
+**Root cause 2 (consolidate-specific, separate from root cause 1):
+`--consolidate` is still broken on top of the de-aligned base.** 14 configs
+tried on the de-aligned config — 4 gain ratios (0.15/0.10, 0.20/0.10,
+0.25/0.10, 0.25/0.15) × 2 seeds at the default `prp-threshold=1.0`, plus 3
+threshold values (1.5/2.0/3.0) × 2 seeds at the best-looking gain pair
+(0.20/0.10) — never got both legs genuine with a consistent-sign corrLR
+across seeds. A clean, non-random pattern ran through every attempt: **leg L
+(the non-leading leg, since `--leading-leg R`) was disproportionately the
+one that locked up** — atCap ≥0.97 in most runs across every gain ratio,
+every threshold, *and* the earlier `--leg-fatigue-asym-frac` test (both
+directions — see "Persistent leg asymmetry" above), while leg R reached
+atCap=0.00 cleanly in both seeds at 0.20/0.10 and 0.25/0.10 specifically.
+Raising the capture threshold (to make captures rarer/later, hoping to miss
+L's early-transient elevated weight) made things worse across the board,
+including on the previously-clean leg R — ruling out "just needs fewer
+captures" as the fix. This points at the priming/lead-offset asymmetry
+itself interacting badly with `--consolidate`'s capture mechanism (the
+lagging leg's `CUT→RG-E` synapse starts weaker and potentiates later per
+"Force-triggered CUT" above, and a capture can freeze that leg's baseline at
+an unluckily-elevated moment — `cut→rge` baseline jumping to ~19-60 pA from
+a ~3.5 pA init was seen repeatedly on whichever leg got stuck) rather than a
+gain/threshold tuning problem solvable by more parameter search.
+
+**Decision: ship medium's base timing de-aligned, without `--consolidate`,
+matching how slow already ships.** `run_consolidate_speed_arm_loading.sh`
+updated 2026-09-17: `--consolidate` removed from all 4 cells (medium was the
+only one that had it on); medium's stale `step-period=520` (never the
+actually-tested value — every local confirmation, including this file's own
+history, used 1000) fixed to `1000`. The debug-small-derived de-alignment
+fix (453/257) was **not** applied to this production script's own
+100ms-tick, full-N configuration — at 100ms, `cut-max-stance-ms`/
+`fatigue-tau-onset-ms` are *already* not exact tick multiples (4.5/2.6
+ticks), so the specific failure mode found at 50ms-tick debug-small may not
+even apply at this discretization, and copying untested numbers across the
+documented debug/production divergence would be guessing, not fixing.
+Medium+consolidate needs its own dedicated pass into the leading-leg
+asymmetry (e.g. a longer/differently-shaped priming window for the lagging
+leg, checked at production scale) before being reconsidered — not another
+blind gain sweep.
+
+**Consequence for the paper's medium-mode figures**: `final_desc_medium.h5`/
+`final_sens_medium.h5` (consolidate-on, tick-aligned) are superseded by
+`final_desc_medium_v2.h5`/`final_sens_medium_v2.h5` (de-aligned,
+no-consolidate, seed 12345, 2-seed-confirmed) — see "Five locomotion modes"
+figures below for the updated set. The "Five locomotion modes, two learning
+architectures" framing in `paper/sections/results.tex` needs revising:
+medium no longer demonstrates `--consolidate` at all (joining slow as a
+no-consolidate speed) — only fast and toe currently do.
+
 ### Sensory-driven mode (`--freeze-bs-rg`, now just freezing BS since Ia→RG is always on — WMAX_IA=10)
 
 Learning shifted from descending (BS) to sensory (muscle-Ia) pathway: BS→RG frozen at
@@ -1665,8 +1782,9 @@ Cross-leg: L↔R commissural inhibition on RG-F (strong) and RG-E (weak).
 | `MOD_MUSCLE_FATIGUE` | `--muscle-fatigue`: opt-in (OFF by default) slow activity-dependent force attenuation (`--fatigue-tau-onset-ms`/`--fatigue-tau-recovery-ms`/`--fatigue-max-frac`), so `force_e` can decay on its own during sustained activation instead of relying entirely on the `--cut-trigger force` failsafe cap. Only affects the force proxy, not the neural circuit. |
 | `MOD_FREEZE_BS` | `--freeze-bs-rg`: BS→RG-E/RG-F static (no STDP), held at weak lognormal init (W_INIT_BS). BS becomes fixed tonic drive; Ia→RG and CUT→RG keep training regardless (see MOD_IA_RG_STDP). |
 | `MOD_IA_RG_STDP` | **Always wired, always plastic homonymous Ia→RG** (Ia-E→RG-E, Ia-F→RG-F, Wmax=WMAX_IA=10, density P_IA2RG_STDP=0.5) — matches the reference architecture diagram's direct excitatory Ia→RG projection (distinct from the Ia→InE/InF reciprocal-inhibition loop, MOD_IA_LOOP). A third standing plastic pathway alongside BS→RG and CUT→RG in every mode (2026-09-14 — previously gated behind `--stdp-ia-rg`, opt-in only for the sensory-learning arm; see "Core architecture fix" below for why). `--wmax-ia`/`--p-ia2rg` still override the cap/density. |
-| `MOD_CONSOLIDATE` | `--consolidate`: opt-in (OFF by default), requires `--cut-trigger force`. Replaces vanilla STDP's "every potentiation kept forever, up to Wmax" retention with tag-and-capture consolidation on `CUT→RG-E` and `Ia→RG-E/F`: `weight` still evolves via native `stdp_synapse` (unchanged, the fast/local tag-setting process); a new per-connection `baseline` is the captured/stable component, and the live tag (`weight − baseline`) decays toward it with time constant `--consolidate-tau-tag-ms` unless a shared per-leg PRP-pool-like accumulator crosses `--consolidate-prp-threshold` first (genuine force-threshold bout endings push it up via `--consolidate-prp-gain-genuine`, failsafe-forced endings push it down via `--consolidate-prp-gain-forced`, matching Grau's finding that non-contingent outcomes actively suppress rather than merely fail to reinforce). `Wmax` is untouched — this governs retention *within* the existing ceiling, not the ceiling itself. `BS→RG` (when not frozen) gets identical bookkeeping logged for measurement symmetry only and is never written back to NEST — literature support for touching `WMAX_BS`'s documented anti-runaway role is weak (see [`spinal_plasticity_as_learning_spec.md`](spinal_plasticity_as_learning_spec.md) §4). See "Tag-and-capture consolidation" below for the literature basis and first-pass verification results. |
-| `MOD_LEG_ASYM` | `--leg-fatigue-asym-frac`: opt-in (default 0.0, exact no-op — regression-checked), requires `--muscle-fatigue`. Scales `--fatigue-tau-onset-ms` by `(1∓frac)` per leg (leading leg fatigues faster), a *persistent* L/R asymmetry rather than the one-time priming `--lead-offset-ms` already provides. Fixes the bistable-L/R-phase-locking failure mode seen at several short/weak-bout force-trigger operating points (fast speed, toe loading) — see "Persistent leg asymmetry" below. |
+| `MOD_CONSOLIDATE` | `--consolidate`: opt-in (OFF by default), requires `--cut-trigger force`. Replaces vanilla STDP's "every potentiation kept forever, up to Wmax" retention with tag-and-capture consolidation on **all plastic pathways** — `CUT→RG-E`, `Ia→RG-E/F`, and `BS→RG-E/F` when not frozen: `weight` still evolves via native `stdp_synapse` (unchanged, the fast/local tag-setting process); a new per-connection `baseline` is the captured/stable component, and the live tag (`weight − baseline`) decays toward it with time constant `--consolidate-tau-tag-ms` unless a shared per-leg PRP-pool-like accumulator crosses `--consolidate-prp-threshold` first (genuine force-threshold bout endings push it up via `--consolidate-prp-gain-genuine`, failsafe-forced endings push it down via `--consolidate-prp-gain-forced`, matching Grau's finding that non-contingent outcomes actively suppress rather than merely fail to reinforce). `Wmax` is untouched on every pathway, including `BS→RG` — this governs retention *within* the existing ceiling (including `WMAX_BS`'s anti-runaway role), not the ceiling itself. **Changed 2026-09-17** (explicit user request): `BS→RG` previously got identical bookkeeping but was never written back to NEST (vanilla-STDP-only in practice); confirmed by direct test that the fix is live — `bs→rge` now converges to ~4.4 pA under consolidation instead of its natural ~18 pA plateau. **This changes the dynamics of every existing descending-arm (non-frozen-BS) `--consolidate` result generated before this fix** — see the note under "Tag-and-capture consolidation" below. See that section for the literature basis and first-pass verification results. |
+| `MOD_LEG_ASYM` | `--leg-fatigue-asym-frac`: opt-in (default 0.0, exact no-op — regression-checked), requires `--muscle-fatigue`. Scales `--fatigue-tau-onset-ms` by `(1∓frac)` per leg (leading leg fatigues faster), a *persistent* L/R asymmetry rather than the one-time priming `--lead-offset-ms` already provides. Fixes the bistable-L/R-phase-locking failure mode seen at several short/weak-bout force-trigger operating points (fast speed, toe loading) — see "Persistent leg asymmetry" below. Does **not** fix medium+consolidate's own leading-leg problem (tried both directions — see "Medium's tick-alignment fragility" below). |
+| `MOD_WMAX_GROWTH` | `--consolidate-wmax-ia-growth-per-capture`: opt-in (default 0.0, exact no-op — regression-checked), requires `--consolidate`. Each capture event on `Ia→RG-E`/`Ia→RG-F` (only — not `CUT→RG-E`, not `BS→RG`) raises that connection's own `Wmax` by the given amount, capped at `--consolidate-wmax-ia-ceiling` (default 60). Structural consolidation of the ceiling itself (Wolpaw Phase I→II), not just retention beneath a fixed cap — addresses a gap `spinal_plasticity_as_learning_spec.md` §4 names explicitly for `Ia→RG`. Verified correct by direct HDF5 inspection (2026-09-17): flat when off or when a run captures zero times, steps by exactly the configured amount on each real capture. **No observable effect yet at full loading** — `Ia→RG` weights sit at ~3.5-4 pA there, nowhere near even the base `Wmax=10`, so raising an already-slack ceiling changes nothing. Only meaningful where Ia→RG is actually cap-constrained, i.e. toe/air loading (`wmax_ia_effective` already relaxed to 35 via `--wmax-ia-unloaded` there) — not yet tested in that regime. |
 | `--ia-feedback-gain` | Multiplicative gain on closed-loop Ia rate. 1.0 baseline / 0.5 toe stepping / 0.1 air stepping (Courtine/Lavrov SCI paradigm). |
 | `--cut-feedback-gain` | Multiplicative gain on cutaneous CUT stance drive (loading-dependent paw contact). Scaled with loading alongside `--ia-feedback-gain`; the external Ia-E heel→toe ramp (stim pacing) stays at full. |
 | `--ia-ext-f-hz` | MOD_FLEXOR_AFFERENT: rate (Hz) of the external flexor swing-afferent (hip/flexor-stretch signal; Grillner & Rossignol 1978). Drives RG-F directly + InF during swing, clocking the flexor symmetrically to the stance Ia-E ramp. 0 = off (intrinsic-only flexor); 80 = on. Un-gated by loading (joint-position, not load-based). |

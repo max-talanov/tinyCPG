@@ -424,8 +424,9 @@ this mechanism.
   \caption{\textbf{The learned set-point is the same across speeds and
     loading levels, except where force never develops.} CUT$\to$RG-E
     weight (solid, left axis; dotted = captured baseline where
-    consolidation, below, is active) and Ia-E/F$\to$RG weights (dashed,
-    right axis) versus time, one panel per condition from
+    consolidation, below, is active --- fast and toe rows only; slow and
+    medium run without consolidation, see text) and Ia-E/F$\to$RG weights
+    (dashed, right axis) versus time, one panel per condition from
     Figure~\ref{fig:ct_all_modes_force}. Toe stepping's Ia$\to$RG weights
     climb further than at full loading (a loading-dependent relaxation of
     the Ia$\to$RG weight ceiling lets proprioceptive feedback take over
@@ -454,7 +455,19 @@ Two gain settings (how strongly a genuine vs.\ a forced stride moves the
 pool) were identified by grid search and confirmed across two random seeds
 at the medium-speed timing point: $0.20$/$0.15$ for the descending arm and
 $0.25$/$0.10$ for the sensory arm --- the two architectures do not share a
-working setting. Figure~\ref{fig:consolidate_desc} shows the descending arm:
+working setting. \todo{This gain search's illustrative operating point
+(medium speed) was subsequently found to be itself fragile: 4 of its 5
+timing constants land exactly on the simulation's discretization step,
+which let its stance/swing timing collapse onto seed- and thread-sensitive
+discrete states independently of consolidation. A small (\textasciitilde
+1\%) de-alignment of two constants restores this fragility-free for the
+base (non-consolidated) mechanism, but consolidation on top of the
+de-aligned point has not yet been re-confirmed at the two-seed bar used
+elsewhere in this section --- see the production sweep note at the end of
+this subsection. The gain values below and the figures illustrating them
+should be read as a demonstration that the mechanism can be tuned to work
+at a given operating point, not as evidence for medium speed specifically.}
+Figure~\ref{fig:consolidate_desc} shows the descending arm:
 without consolidation the weight is retained unconditionally regardless of
 how it was earned; at a symmetric (2:1 forced-favoring) gain the pool never
 crosses threshold and the mechanism is an inert no-op; at the confirmed
@@ -579,14 +592,22 @@ misbehave.
 \paragraph{Scope of this preliminary result.} This subsection now covers
 four of the five locomotion modes under closed-loop timing (slow, medium,
 fast walking and toe stepping), both learning architectures, and
-tag-and-capture consolidation confirmed at three of those four (medium,
-fast, toe; slow runs consolidation-free by choice, not failure). Air
-stepping is deliberately excluded from the closed-loop-timing and
-consolidation results, not because the mechanism fails to fit it, but
-because a genuinely unloaded limb should not produce a clean closed-loop
-rhythm at all --- see the discussion above and
+tag-and-capture consolidation confirmed at two of those four (fast, toe).
+Slow and medium both run consolidation-free: slow by choice (the base
+mechanism is already excellent there on its own, and consolidation was
+found actively harmful across a wide gain/threshold search); medium because
+consolidation was found to interact badly, specifically, with the
+non-leading leg's weaker initial potentiation (see \todo{cite the
+tick-alignment/leading-leg finding} for the full account) --- an open
+problem, not a settled choice, that a future pass should revisit rather
+than a further parameter sweep. Air stepping is deliberately excluded from
+the closed-loop-timing and consolidation results, not because the mechanism
+fails to fit it, but because a genuinely unloaded limb should not produce a
+clean closed-loop rhythm at all --- see the discussion above and
 Section~\ref{sec:results:epidural}. The production-scale confirmatory
-sweep referenced at the top of this subsection is scoped to match:
-slow and medium speeds, both architectures, full weight-bearing only
-(pre-dating the fast/toe extension above); a follow-on submission
-extending it to the fast and toe points is planned but not yet run.
+sweep referenced at the top of this subsection covers slow and medium
+speeds, both architectures, full weight-bearing only, and --- following the
+finding above --- runs \emph{without} consolidation at both speeds; a
+follow-on submission extending closed-loop confirmation to the fast and toe
+points, and revisiting consolidation at medium once the leading-leg
+interaction is understood, is planned but not yet run.

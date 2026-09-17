@@ -697,16 +697,21 @@ def main():
     ap.add_argument("--consolidate", action="store_true",
                     help="MOD_CONSOLIDATE: replace vanilla unconditional STDP "
                          "retention with tag-and-capture consolidation on "
-                         "CUT->RG-E and Ia->RG-E/F. A per-connection 'tag' "
-                         "(weight above its captured baseline) decays with "
+                         "CUT->RG-E, Ia->RG-E/F, and BS->RG-E/F (when not "
+                         "frozen -- applied uniformly across all plastic "
+                         "pathways as of 2026-09-17, previously BS->RG only "
+                         "got measurement-only bookkeeping with no actual "
+                         "write-back). A per-connection 'tag' (weight above "
+                         "its captured baseline) decays with "
                          "--consolidate-tau-tag-ms unless a shared per-leg "
                          "PRP-pool-like accumulator crosses "
                          "--consolidate-prp-threshold first, in which case the "
                          "baseline is frozen at the current weight. Genuine "
                          "(real force-threshold) bout endings push the pool up; "
-                         "failsafe-forced ones push it down. BS->RG gets the "
-                         "same bookkeeping for measurement only -- WMAX_BS's "
-                         "documented anti-runaway role is never touched. "
+                         "failsafe-forced ones push it down. WMAX_BS's "
+                         "documented anti-runaway role is unaffected -- Wmax "
+                         "itself is never touched by consolidation on any "
+                         "pathway, only retention within the existing ceiling. "
                          "Requires --cut-trigger force. OFF by default.")
     ap.add_argument("--consolidate-tau-tag-ms", type=float, default=2000.0,
                     help="MOD_CONSOLIDATE: time constant (ms) for a synapse's "
@@ -741,6 +746,31 @@ def main():
                          "mildly asymmetric (~1.3:1), not the originally-"
                          "guessed 2:1, which was confirmed to never capture "
                          "at all at this operating point.")
+    # ---- MOD_WMAX_GROWTH: structural consolidation of the Ia->RG ceiling itself ----
+    # spinal_plasticity_as_learning_spec.md Sec 4's Ia->RG mapping flags a real gap:
+    # WMAX_IA is a fixed, hand-tuned cap; a genuine consolidation mechanism (Wolpaw's
+    # Phase I -> Phase II) would let the ceiling itself rise only after demonstrated,
+    # repeated stable capture, not stay static forever. --consolidate's baseline/tag
+    # split above governs retention *within* Wmax; this governs Wmax itself, and is
+    # a separate opt-in on top of --consolidate (requires it -- growth is driven by
+    # the same capture events).
+    ap.add_argument("--consolidate-wmax-ia-growth-per-capture", type=float, default=0.0,
+                    help="MOD_WMAX_GROWTH: opt-in (0.0 default = exact no-op, every "
+                         "existing --consolidate run is unaffected). Amount added to "
+                         "a connection's own Wmax on Ia->RG-E/F ONLY (not CUT->RG-E, "
+                         "not BS->RG-E/F -- this flag never touches their Wmax, "
+                         "regardless of whether their weight retention is itself "
+                         "consolidated) each time a capture event fires on "
+                         "that pathway/leg. Capped at "
+                         "--consolidate-wmax-ia-ceiling. Requires --consolidate.")
+    ap.add_argument("--consolidate-wmax-ia-ceiling", type=float, default=60.0,
+                    help="MOD_WMAX_GROWTH: hard ceiling for the per-capture Wmax "
+                         "growth above, applied per-connection on top of whatever "
+                         "the loading-dependent --wmax-ia/--wmax-ia-unloaded "
+                         "interpolation already set as the starting point. Default "
+                         "60 matches --wmax-ia-unloaded's own default so it is a "
+                         "familiar number, not a new regime -- not yet validated "
+                         "for correctness at this value, this is a first local test.")
     # ---- ablation flags (paper Figure: necessity of each component) ----
     ap.add_argument("--ablate-ia-loop", action="store_true",
                     help="ABLATION: zero Ia→InE/InF closed-loop (W_IA2IN=0). Tests "
@@ -848,6 +878,10 @@ def main():
     CONSOLIDATE_PRP_THRESHOLD = float(getattr(args, "consolidate_prp_threshold", 1.0))
     CONSOLIDATE_PRP_GAIN_GENUINE = float(getattr(args, "consolidate_prp_gain_genuine", 0.20))
     CONSOLIDATE_PRP_GAIN_FORCED = float(getattr(args, "consolidate_prp_gain_forced", 0.15))
+    # MOD_WMAX_GROWTH: 0.0 default = exact no-op (Wmax never changes after init, same
+    # as every prior --consolidate run).
+    CONSOLIDATE_WMAX_IA_GROWTH = float(getattr(args, "consolidate_wmax_ia_growth_per_capture", 0.0))
+    CONSOLIDATE_WMAX_IA_CEILING = float(getattr(args, "consolidate_wmax_ia_ceiling", 60.0))
     # ---- sweep mode (Option C): run one (mu, CV) pair per Slurm array task ----
     def _parse_pairs(s: str):
         s = (s or "").strip()
@@ -1747,14 +1781,27 @@ def main():
     # gate -- PRP synthesis is cell-wide in the biology while the tag is
     # synapse-local, so this mirrors that split rather than tracking a pool
     # per synapse. Initialized post-downsampling so array lengths always match
-    # conns_cache[side][key] exactly. cut->rge/ia->rge/ia->rgf actually get
-    # weight writes; bs->rge/bs->rgf (when not frozen) get identical
-    # bookkeeping for measurement symmetry only and are never written back.
+    # conns_cache[side][key] exactly. All three pathways (cut->rge, ia->rge,
+    # ia->rgf, and bs->rge/bs->rgf when not frozen) get real weight writes --
+    # BS->RG previously got identical bookkeeping but was never written back
+    # (weak literature support for touching WMAX_BS's anti-runaway role was
+    # the original reasoning); fixed 2026-09-17 at explicit user request to
+    # apply consolidation uniformly across every plastic pathway rather than
+    # leaving BS->RG as vanilla-STDP-only. Wmax itself remains untouched for
+    # BS (WMAX_BS's anti-runaway cap still applies) -- only retention within
+    # that ceiling is now gated the same way as the other two pathways.
     consolidate_keys = list(plastic_keys)
-    consolidate_behavioral_keys = {"cut->rge", "ia->rge", "ia->rgf"}
+    consolidate_behavioral_keys = set(consolidate_keys)
     baseline = {side: {} for side in LEGS}
     prp_pool = {side: {k: 0.0 for k in consolidate_keys} for side in LEGS}
     pending_consolidation_event = {side: 0 for side in LEGS}
+    # MOD_WMAX_GROWTH: current per-connection Wmax for ia->rge/ia->rgf only (the
+    # pathway the spec's own mapping section names as the candidate for a rising
+    # ceiling -- not cut->rge/bs->rge/bs->rgf). Starts at the already-loading-
+    # adjusted EFFECTIVE_WMAX_IA and only ever moves if
+    # --consolidate-wmax-ia-growth-per-capture > 0 (default 0.0 = no-op).
+    wmax_ia_growth_keys = tuple(k for k in ("ia->rge", "ia->rgf") if k in consolidate_keys)
+    wmax_ia_current = {side: {k: float(EFFECTIVE_WMAX_IA) for k in wmax_ia_growth_keys} for side in LEGS}
     if CONSOLIDATE:
         for side in LEGS:
             for key in consolidate_keys:
@@ -1785,6 +1832,17 @@ def main():
                     baseline[side][key] = np.asarray(nest.GetStatus(conns, "weight"), dtype=float)
                 prp_pool[side][key] -= CONSOLIDATE_PRP_THRESHOLD
                 captured_any = True
+                # MOD_WMAX_GROWTH: structural consolidation -- a genuine, repeated
+                # capture raises the ceiling itself (Wolpaw Phase I -> Phase II),
+                # not just what's retained beneath it. No-op unless the growth
+                # flag is set (default 0.0).
+                if (CONSOLIDATE_WMAX_IA_GROWTH > 0.0) and (key in wmax_ia_current[side]):
+                    new_wmax = min(CONSOLIDATE_WMAX_IA_CEILING,
+                                   wmax_ia_current[side][key] + CONSOLIDATE_WMAX_IA_GROWTH)
+                    if new_wmax != wmax_ia_current[side][key]:
+                        wmax_ia_current[side][key] = new_wmax
+                        if conns is not None and len(conns) > 0:
+                            nest.SetStatus(conns, [{"Wmax": float(new_wmax)}] * len(conns))
         return captured_any
 
     def consolidation_leak(side: str):
@@ -1811,6 +1869,9 @@ def main():
     # and the shared prp_pool trace, alongside the existing weight stats.
     consolidate_stats = {side: {k: ([], []) for k in consolidate_keys} for side in LEGS}
     prp_log = {side: {k: [] for k in consolidate_keys} for side in LEGS}
+    # MOD_WMAX_GROWTH: current-Wmax trace for ia->rge/ia->rgf, flat at
+    # EFFECTIVE_WMAX_IA unless --consolidate-wmax-ia-growth-per-capture > 0.
+    wmax_ia_log = {side: {k: [] for k in wmax_ia_growth_keys} for side in LEGS}
     logs = {side: dict(bs_e=[], bs_f=[], mus_e=[], mus_f=[],
                        rge=[], rgf=[],
                        ine=[], inf=[], iaint_e=[], iaint_f=[],  # MOD_NET_RECORD
@@ -2036,6 +2097,8 @@ def main():
                     consolidate_stats[side][key][0].append(bmval)
                     consolidate_stats[side][key][1].append(bsval)
                     prp_log[side][key].append(float(prp_pool[side][key]))
+                for key in wmax_ia_growth_keys:  # MOD_WMAX_GROWTH
+                    wmax_ia_log[side][key].append(float(wmax_ia_current[side][key]))
 
         # Full weight storage (snapshots at sampling ticks)
         if args.save_weights == "snapshots" and do_sample:
@@ -2457,6 +2520,8 @@ def main():
             h5.attrs["consolidate_prp_threshold"] = float(CONSOLIDATE_PRP_THRESHOLD)
             h5.attrs["consolidate_prp_gain_genuine"] = float(CONSOLIDATE_PRP_GAIN_GENUINE)
             h5.attrs["consolidate_prp_gain_forced"] = float(CONSOLIDATE_PRP_GAIN_FORCED)
+            h5.attrs["consolidate_wmax_ia_growth_per_capture"] = float(CONSOLIDATE_WMAX_IA_GROWTH)  # MOD_WMAX_GROWTH
+            h5.attrs["consolidate_wmax_ia_ceiling"] = float(CONSOLIDATE_WMAX_IA_CEILING)
         h5.attrs["muscle_fatigue"] = bool(MUSCLE_FATIGUE)
         if MUSCLE_FATIGUE:
             h5.attrs["fatigue_tau_onset_ms"] = float(FATIGUE_TAU_ONSET_MS)
@@ -2538,6 +2603,10 @@ def main():
                                       compression="gzip")
                     gc.create_dataset(f"{key}_prp_pool",
                                       data=np.asarray(prp_log[side][key], dtype=np.float32),
+                                      compression="gzip")
+                for key in wmax_ia_growth_keys:  # MOD_WMAX_GROWTH
+                    gc.create_dataset(f"{key}_wmax",
+                                      data=np.asarray(wmax_ia_log[side][key], dtype=np.float32),
                                       compression="gzip")
 
             # Optional: full weight vectors (shape: [T_samples, N_connections])
