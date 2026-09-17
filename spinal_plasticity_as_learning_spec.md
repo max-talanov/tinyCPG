@@ -14,9 +14,13 @@ The short version: the spinal cord does not need to *borrow* hippocampal STC.
 It has its own, independently-documented version of the same computational
 problem — a fast, decaying change that only becomes permanent if a separate,
 slower gating signal arrives in time — worked out across four largely
-non-overlapping literatures (dorsal-horn nociceptive LTP, isolated-spinal-cord
+non-overlapping literatures (two-phase spinal LTP, isolated-spinal-cord
 instrumental learning, H-reflex operant conditioning, and activity-dependent
-step-training). §1 lays out the timescales each literature reports. §2
+step-training). Crucially, that two-phase LTP is **not** a pain-pathway
+curiosity: the same NMDAR-dependent induction and protein-synthesis-dependent
+capture is documented in spinal motor circuits in the adaptive direction, and
+the two directions are experimentally shown to compete for the same
+substrate (§2). §1 lays out the timescales each literature reports. §2
 extracts the shared tag/gate structure and the falsification logic each
 literature already used to prove it. §3 maps that structure onto the three
 plastic pathways already in this model. Implementation is deliberately out of
@@ -32,9 +36,9 @@ but never mixed in one chart or one table.
 
 ### 1.1 Healthy / adaptive processes
 
-![Ten healthy spinal plasticity processes on one logarithmic time axis from 1ms to twelve weeks, sorted fastest-onset-first top to bottom and colored by literature source — blue for NMDAR/AMPAR induction and short-term plasticity, orange for Grau's contingent spinal instrumental learning, green for Wolpaw's two-phase H-reflex conditioning, purple for Côté's activity-dependent step-training, teal for serotonergic CPG gating, gray for homeostatic AMPAR upscaling, and red for de Leon/Roy/Edgerton's contested task-specific spinal locomotor learning — bar position marks onset, length marks characteristic duration.](spinal_timescale_healthy.png)
+![Twelve healthy spinal plasticity processes on one logarithmic time axis from 1ms to twelve weeks, sorted fastest-onset-first top to bottom and colored by mechanism family — blue for NMDAR/AMPAR induction and short-term plasticity, brown for the two-phase E-LTP/L-LTP cascade in motor circuits, orange for Grau's contingent spinal instrumental learning, green for Wolpaw's two-phase H-reflex conditioning, purple for Côté's activity-dependent step-training, teal for serotonergic CPG gating, gray for homeostatic AMPAR upscaling, and red for de Leon/Roy/Edgerton's contested task-specific spinal locomotor learning — bar position marks onset, length marks characteristic duration.](spinal_timescale_healthy.png)
 
-*Fig. 1a — The healthy/adaptive half of the timescale table below, sorted by onset. These are baseline physiology (induction, short-term plasticity, acute serotonergic gating) plus every mechanism whose documented outcome in the cited literature is functional preservation or recovery.*
+*Fig. 1a — The healthy/adaptive half of the timescale table below, sorted by onset. These are baseline physiology (induction, short-term plasticity, acute serotonergic gating) plus every mechanism whose documented outcome in the cited literature is functional preservation or recovery. The two brown LTP bars are the **same mechanism family** as the brown bars in Fig. 1b — colors are shared across the two figures on purpose, so a mechanism that appears in both states is visibly the same mechanism.*
 
 | Process | What it is | Time constant | Site / pathway | What it constrains for a spiking-network model |
 |---|---|---|---|---|
@@ -42,6 +46,8 @@ but never mixed in one chart or one table.
 | Short-term plasticity (facilitation/depression) | Transient, non-associative changes in synaptic efficacy that decay within a single behavioral episode, leaving no lasting trace. | ~10 ms–1 s | Ubiquitous (same NMDAR deactivation kinetics as the hippocampal case) | Not spinal-specific either, but still a real constraint: this is why a millisecond-scale coincidence window exists at all, underneath every pathway-specific mechanism below. |
 | Serotonergic (5-HT) neuromodulatory gating of CPG excitability — acute | Moment-to-moment 5-HT release from descending brainstem projections that sets whether the CPG's rhythm-generating interneurons can burst at all, independent of any lasting weight change. | Seconds (state-dependent gating of whether rhythmic bursting can occur at all) | Brainstem-to-spinal monoaminergic projections onto CPG interneurons and motoneurons | The model's tonic `BS_REGULAR_HZ` drive is a generic reticulospinal proxy; the literature's actual candidate for "descending drive that gates whether the spinal rhythm-generator can run" is specifically serotonergic/noradrenergic. |
 | Spinal instrumental learning — **contingent** (adaptive) | Response-contingent training (e.g., a limb flexion that terminates shock) that changes spinal reflex output for hours to days, entirely below a complete spinal transection. | Acquisition within a single session (tens of minutes); consolidation requires new protein synthesis over the following hours | Interneuron + motoneuron circuits caudal to a complete spinal transection — no brain involvement (Grau et al.) | The adaptive half of a bidirectional gate — see §1.2 for what the identical training produces when the outcome is uncontrollable instead. |
+| Early-phase LTP in spinal **motor** circuits (E-LTP, adaptive instantiation) | The same NMDAR-dependent, protein-synthesis-independent early potentiation as Table 1b's dorsal-horn row — but induced in motor/interneuron circuits by contingent training rather than by noxious afferent drive. In transected rats, intrathecal MK-801 blocks *induction of the learning* while leaving the shock-elicited motor response intact, i.e. the NMDAR-dependence belongs to the plasticity, not the reflex (Grau et al.; Ferguson, Huie, Crown & Grau 2012). Independently documented in intact motor pathways as corticospinal-tract LTP onto spinal interneurons and motor pools (PNAS 2021). | Minutes to induce; decays within hours unless stabilized — same kinetics as the nociceptive instantiation | Interneuron/motoneuron circuits caudal to a transection; corticospinal-tract terminations onto spinal interneurons | **This is the row that makes the model's "tag" bio-plausible in a motor circuit instead of by analogy from a pain pathway.** Same molecular tag, different pathway, opposite functional outcome — Table 1b holds the nociceptive instantiation. |
+| Late-phase LTP in spinal **motor** circuits (L-LTP, adaptive instantiation) | Protein-synthesis-dependent stabilization of the row above into a lasting change in spinal reflex output. Instrumental learning elevates BDNF, CaMKII, CREB and synapsin I in the lumbar cord, with the BDNF/CREB/CaMKII increases **proportional to learning performance** — the canonical late-phase consolidation cascade, running in the adaptive direction. | Onset within hours; persists ≥24 h (metaplastic effects still measurable a day post-training) | Same circuits caudal to the transection (Grau et al.) | The direct motor-circuit counterpart of "capture." Note BDNF appears as the gating signal here *and* in Table 1b's L-LTP row: it is a **shared resource, not a direction-specific signal**, which is the strongest single justification for the model's per-leg shared `prp_pool` rather than per-synapse gating. |
 | H-reflex operant conditioning, Phase I | The first, small, rapidly-developing component of operant conditioning of the monosynaptic stretch reflex, visible within 1-2 days of daily training. | 1–2 days; small magnitude | Ia-afferent → motoneuron monosynaptic pathway + interneurons (Wolpaw) | The fast, labile component of a two-phase learning process running entirely on the pathway this model calls `Ia→RG`. |
 | Homeostatic AMPAR **upscaling** after deafferentation / chronic inactivity | A compensatory, cell-wide increase in motoneuron AMPAR-mediated synaptic strength that partly offsets a chronic loss of afferent drive. | Hours–days; mediated by synaptic insertion of GluA2-lacking, Ca²⁺-permeable AMPA receptors | Motoneurons below an injury or period of inactivity | The literature's own mechanism for "what happens when descending/afferent drive is chronically reduced" is an active receptor-composition change with its own kinetics — not a static gain multiplier. Directly relevant to why the model's `--wmax-ia-unloaded` gain-based unloading-rescue attempts plateaued (see [CLAUDE.md](CLAUDE.md), "Core architecture fix" section). |
 | Activity-dependent step-training neurotrophin upregulation | Repeated, task-specific locomotor training that raises BDNF/NT-3/NT-4 in the lumbar cord below an injury, with the training *type*, not just its amount, determining the outcome. | Daily training over days–weeks; **task-specific** (step-training and cycle-training produce different BDNF/NT-3/NT-4 profiles and different dorsal-horn/intermediate-gray neuron counts) | Lumbar spinal cord below a lesion (Côté, Azzam, Lemay, Zhukareva & Houlé 2011) | Argues against a single generic "activity level" gate — the training *modality*, not just its amount, sets what gets reinforced. Directly relevant to this model's distinction between `--cut-trigger force` (stance-loading-driven) and the paced-clock modes. |
@@ -49,23 +55,23 @@ but never mixed in one chart or one table.
 | H-reflex operant conditioning, Phase II | The slow, large, multi-site component of H-reflex conditioning — altered motoneuron firing threshold, GABAergic terminal density, and interneuron properties — that consolidates over weeks of continued training. | 6–7 weeks; large, stable; **multi-site** | Same pathway | Demonstrated to correct locomotor asymmetry after spinal cord injury when combined with training — the closest published result to the model's own stated rehab goal. |
 | Task-specific spinal locomotor learning (train-to-stand vs. train-to-step) | Complete-transection cats trained daily to either stand or step relearn specifically the trained task — stand-trained cats stand well but step poorly, and step-trained cats step well but stand poorly — the clearest behavioral demonstration that the isolated lumbar CPG itself, not just a single reflex pathway, can be shaped by training (de Leon, Hodgson, Roy & Edgerton 1998; framed explicitly as spinal motor learning by Edgerton, Roy, de Leon, Tillakaratne & Hodgson 1997). **Contested**: a later study found both standing and locomotion recover under non-task-specific stimulation, or with no training at all, attributing recovery to a general return of spinal circuit excitability rather than task-specific activity-dependent encoding (Harnie, Doelman, de Vette, Audet, Desrochers, Gaudreault & Frigon 2019) — an open controversy, not resolved here. | Daily training, ~8–12 weeks to a stable task-specific outcome | Lumbar locomotor CPG circuitry below a complete thoracic spinal transection (cat) | The strongest available evidence that a CPG core like this model's `RG-E`/`RG-F` — not just an afferent pathway — is a legitimate target for a "trained skill" framing. But the Harnie et al. 2019 contestation means this row shouldn't be read as an uncontested green light for CPG-level consolidation the way Wolpaw's Ia→motoneuron pathway is (§3's `Ia→RG` mapping stands on Wolpaw's result specifically, not on this one). |
 
-*Table 1a — The ten rows plotted in Fig. 1a above: baseline physiology plus every mechanism whose documented outcome in the cited literature is functional preservation or recovery. Two rows (spinal instrumental learning, serotonergic chronic axis) are one half of a bidirectional mechanism — their pathological counterpart is Table 1b, not absent, just not adaptive.*
+*Table 1a — The twelve rows plotted in Fig. 1a above: baseline physiology plus every mechanism whose documented outcome in the cited literature is functional preservation or recovery. Four rows (spinal instrumental learning, both LTP phases, the serotonergic chronic axis) are one half of a bidirectional mechanism — their pathological counterpart is Table 1b, not absent, just not adaptive. The two LTP rows and the instrumental-learning row describe the **same experiments at different levels**: instrumental learning is the behavioral phenomenon, the LTP rows are its synaptic/molecular substrate. They are listed separately because §3 maps onto the synaptic level, not the behavioral one — not because they are independent findings.*
 
 ### 1.2 Pathological processes (e.g., after spinal cord injury)
 
-![Five pathological spinal plasticity processes on the same logarithmic time axis, hatched to distinguish them from the healthy set, colored by literature source — blue for Sandkühler's dorsal-horn E-/L-LTP now shown as a chronic-pain model, orange for Grau's non-contingent maladaptive suppression, teal for untreated chronic serotonergic dysregulation, and gray for KCC2-loss-driven homeostatic downscaling failure.](spinal_timescale_pathological.png)
+![Five pathological spinal plasticity processes on the same logarithmic time axis, hatched to distinguish them from the healthy set, colored by the same mechanism-family scheme as Fig. 1a — brown for Sandkühler's dorsal-horn E-/L-LTP as a chronic-pain model, orange for Grau's non-contingent maladaptive suppression, teal for untreated chronic serotonergic dysregulation, and gray for KCC2-loss-driven homeostatic downscaling failure.](spinal_timescale_pathological.png)
 
-*Fig. 1b — The pathological half, same axis and scale as Fig. 1a, so the two are directly comparable but never rendered as one mixed chart. Every row here has a same-timescale counterpart process in Fig. 1a (e.g. spinal instrumental learning, or the serotonergic chronic axis) — the pathology is a different *outcome* of the same paradigm or mechanism family, not a different timescale.*
+*Fig. 1b — The pathological half, same axis, scale and color scheme as Fig. 1a, so the two are directly comparable but never rendered as one mixed chart. Every row here has a counterpart in Fig. 1a at the **same timescale and in the same color** — most visibly the two brown LTP bars, which sit at identical positions in both figures because they are the same mechanism running on a different pathway. The pathology is a different *outcome* of the same machinery, not a different or extra mechanism.*
 
 | Process | What it is | Time constant | Site / pathway | What it constrains for a spiking-network model |
 |---|---|---|---|---|
-| Early-phase spinal LTP (E-LTP) | An NMDA-receptor-dependent potentiation of dorsal-horn transmission that forms within minutes of patterned afferent input and spontaneously decays within a few hours if nothing stabilizes it — in its own primary literature, the onset of central sensitization. | 1–3 h; NMDA-receptor-dependent; **protein-synthesis-independent** | Dorsal-horn C-fiber synapses, induced by afferent tetanic stimulation (Sandkühler & Liu 1998) | A transient, spontaneously-decaying potentiation that exists *before* any stabilizing signal arrives — the direct spinal analog of the hippocampal "tag," borrowed here as this document's molecular substrate even though its own field studies it to *block* it (see §2.2). |
+| Early-phase spinal LTP (E-LTP, **nociceptive** instantiation) | The same NMDAR-dependent early potentiation as Table 1a's motor-circuit row, induced instead at dorsal-horn C-fiber synapses by noxious afferent drive: forms within minutes, spontaneously decays within a few hours if nothing stabilizes it — here, the onset of central sensitization. | 1–3 h; NMDA-receptor-dependent; **protein-synthesis-independent** | Dorsal-horn C-fiber synapses, induced by afferent tetanic stimulation (Sandkühler & Liu 1998) | A transient, spontaneously-decaying potentiation that exists *before* any stabilizing signal arrives — the spinal analog of the hippocampal "tag." **Pathway and gating signal, not the tag mechanism itself, decide which of these two rows you get** (§2). |
 | Spinal instrumental learning — **non-contingent** (maladaptive) | The same training paradigm as §1.1's contingent case, but with the shock uncontrollable instead of response-produced. | Same acquisition/consolidation window as the contingent case — the outcome, not the timing, differs | Same circuits (Grau et al.) | An active, protein-synthesis-dependent **suppression** of future learning capacity, not merely an absence of learning — a bidirectional gate, not a one-way accumulator. |
-| Late-phase spinal LTP (L-LTP) | The protein-synthesis-dependent stabilization of E-LTP into a non-decaying potentiation — in its own primary literature, the cellular consolidation step for chronic pain. | Onset by ~3 h; **requires ongoing protein synthesis**; selectively induced/occluded by BDNF and spinal D1/D5 dopamine-receptor activation | Same dorsal-horn synapses | A discrete regime change from decaying to non-decaying — structurally identical to hippocampal "capture," but consolidating a pain state rather than a motor trace in the literature this mechanism is actually drawn from. |
+| Late-phase spinal LTP (L-LTP, **nociceptive** instantiation) | The protein-synthesis-dependent stabilization of E-LTP into a non-decaying potentiation — the cellular consolidation step for chronic pain, and the direct counterpart of Table 1a's motor L-LTP row. | Onset by ~3 h; **requires ongoing protein synthesis**; selectively induced/occluded by BDNF and spinal D1/D5 dopamine-receptor activation | Same dorsal-horn synapses | A discrete regime change from decaying to non-decaying — structurally identical to hippocampal "capture," consolidating a pain state here and a motor trace in Table 1a. **The same BDNF gate serves both**, which is why over-permissive capture is a real failure mode in the model too (§3). |
 | Homeostatic **downscaling failure** (KCC2 loss, spasticity) | Instead of excitation scaling down to compensate for hyperactivity, motoneuron KCC2 (which sets the Cl⁻ gradient underlying GABA/glycine inhibition) is chronically **downregulated** after SCI, producing spasticity. | Onset within hours of injury; partial training-driven recovery over weeks | Motoneuron membrane Cl⁻ transporters, below a spinal cord injury | The spinal-specific evidence that "homeostatic compensation" is not automatically adaptive — it can fail in the *opposite* direction from §1.1's upscaling row, and, critically, that failure is training-reversible (Boulenguez et al. 2010; see Fig. 2b), not fixed. |
 | Serotonergic gating — chronic, **untreated** | The same injury-driven change in CPG serotonin sensitivity as §1.1's training-restored case, left to persist. | Days–weeks, and beyond without intervention | Brainstem-to-spinal monoaminergic projections | The pathological anchor for the same axis §1.1 shows can be treated — the two rows differ only in whether training happened, exactly like the KCC2 row above. |
 
-*Table 1b — The five rows plotted in Fig. 1b above. Every row is a maladaptive outcome documented in the cited literature, not a hypothetical worst case — and three of the five (E-/L-LTP, instrumental learning, serotonergic axis) share a mechanism family with a Table 1a row; only the outcome differs, per §2.1/§2.2 below.*
+*Table 1b — The five rows plotted in Fig. 1b above. Every row is a maladaptive outcome documented in the cited literature, not a hypothetical worst case — and **every one of them now pairs with a Table 1a row** (E-LTP, L-LTP and instrumental learning directly; homeostatic scaling via §1.3; the serotonergic axis via its training-restored counterpart). Only the outcome differs, per §2.1/§2.2 below — there is no mechanism in this table that the healthy cord does not also run.*
 
 ### 1.3 Bidirectional homeostatic scaling: upscaling and downscaling
 
@@ -101,7 +107,7 @@ homeostasis) than the tag-and-capture story in §2.
 
 Table 1a's scope statement is "baseline physiology plus every mechanism whose
 documented outcome is functional preservation or recovery" — deliberately
-broader than "motor skill formation." Checking the ten rows against the
+broader than "motor skill formation." Checking the twelve rows against the
 narrower, spinal-specific definition of that term (a lasting,
 practice-/contingency-dependent change in spinal circuit output that
 persists without cortical involvement — distinct from cortical motor-skill
@@ -114,6 +120,7 @@ motor cortex) sorts them into four groups, not one:
 | H-reflex conditioning, Phase I | **Core skill-formation mechanism** | A trained, lasting change in a spinal reflex, by construction. |
 | H-reflex conditioning, Phase II | **Core skill-formation mechanism** | The consolidated, multi-site version of the same trained change. |
 | Task-specific spinal locomotor learning (de Leon/Roy/Edgerton) | **Core skill-formation mechanism — contested** | The only row directly about the CPG's own output pattern, not an afferent pathway or a withdrawal reflex; but its task-specificity claim is itself disputed (Harnie et al. 2019, see Table 1a) — counted here as core, flagged as unsettled, not a second confirmed Wolpaw-grade result. |
+| E-LTP / L-LTP in motor circuits (adaptive instantiation) | **Substrate of skill formation, not a separate skill** | These two rows are the synaptic machinery the Grau and Wolpaw rows above run on, not an independent behavioral phenomenon — counted here once, as substrate, to avoid double-counting the same experiments at two levels of description. Distinct from the generic NMDAR/AMPAR row below in that this is the *two-phase, consolidation-gated* form specifically, which is what §3 maps onto. |
 | Homeostatic AMPAR upscaling | Enabling/compensatory | Restores lost excitability after deafferentation; carries no information about *which* pattern was learned. |
 | Serotonergic gating, chronic (training-restored) | Enabling/compensatory | Gates whether the CPG can burst at all; same reasoning as its acute counterpart. |
 | Step-training neurotrophin upregulation (Côté) | Molecular correlate, not the mechanism itself | Row is framed as a BDNF/NT-3/NT-4 readout; the actual skill-refinement outcome — multisegmental network reorganization and reduced muscle co-contraction with training — isn't named. Flagged as a content gap here, not corrected in Table 1a itself. |
@@ -121,14 +128,17 @@ motor cortex) sorts them into four groups, not one:
 | Short-term plasticity | Basic substrate | Same — a physics constraint, not a learning mechanism. |
 | Serotonergic gating, acute | Basic substrate | Gates *whether* bursting can occur, not *which* pattern is learned. |
 
-Net: **4 of the 10 rows are motor-skill-formation mechanisms in the strict
-spinal-specific sense (one of them contested); the other 6 are the enabling
-or basic-substrate processes those mechanisms operate within.** This
-doesn't make Fig. 1a wrong — its stated scope already includes
-prerequisites, not just the skill-encoding step — but a reader treating
-"healthy spinal plasticity processes" as synonymous with "how the spinal
-cord forms a motor skill" would still overcount, and one of the four core
-rows shouldn't be leaned on as settled evidence either way.
+Net: **4 of the 12 rows are motor-skill-formation mechanisms in the strict
+spinal-specific sense (one of them contested); the other 8 are the
+substrate, enabling or compensatory processes those mechanisms operate
+within.** This doesn't make Fig. 1a wrong — its stated scope already
+includes prerequisites, not just the skill-encoding step — but a reader
+treating "healthy spinal plasticity processes" as synonymous with "how the
+spinal cord forms a motor skill" would still overcount, and one of the four
+core rows shouldn't be leaned on as settled evidence either way. Note the
+two motor-circuit LTP rows are the *substrate* of the Grau and Wolpaw
+mechanisms rather than additional skills — they raise the denominator
+without raising the numerator, by design.
 
 **Caveat — a tempting addition, checked and left out.** Bizzi & Giszter's
 spinal motor primitives / muscle synergies (force-field modules the spinal
@@ -143,13 +153,15 @@ training/injury changing the excitatory/inhibitory *recruitment weighting*
 of primitives, not the primitives' own structure
 ([Giszter 2013](https://nyaspubs.onlinelibrary.wiley.com/doi/abs/10.1111/nyas.12065)).
 That reweighting is arguably already covered by the homeostatic-scaling and
-serotonergic-gating rows already in the table. **Not added as a 10th row**
-— it would misrepresent something conserved/fixed as a plasticity process
-with its own induction timescale, the same category error this document
-already treats carefully elsewhere (e.g. §2.2's careful separation of
-"borrowed molecular substrate" from "the substrate's own primary framing").
-It remains a useful *structural* analogy for the model's RG-E/RG-F
-architecture, not a literature-grounded addition to Table 1a.
+serotonergic-gating rows already in the table. **Not added as a row** — it
+would misrepresent something conserved/fixed as a plasticity process with
+its own induction timescale. Note the contrast with the two LTP rows added
+above: those earned a place because the *mechanism* is documented running in
+spinal motor circuits with its own induction and consolidation kinetics,
+whereas motor primitives are reported as a fixed developmental substrate
+that training recruits rather than forms. It remains a useful *structural*
+analogy for the model's RG-E/RG-F architecture, not a literature-grounded
+addition to Table 1a.
 
 *(Broader locomotor-training review consulted for this check, beyond the
 Côté citation already in Table 1a:
@@ -171,28 +183,37 @@ other or the hippocampal work:
 like a decaying tag: NMDA-receptor-dependent, present within minutes, gone
 within hours unless converted to L-LTP — a discrete regime change blocked by
 protein-synthesis inhibitors and gated by spinal D1/D5 dopamine receptors or
-exogenous BDNF (Yang et al. 2004; Zhang & Sandkühler 2008). **Neither phase
-has a documented adaptive instantiation in its own primary literature** —
-Sandkühler, Ruscheweyh and colleagues study both E-LTP and L-LTP exclusively
-as models of pathological hyperalgesia and chronic pain (Ruscheweyh et al.
-2011), never as a healthy or protective process; a targeted check of that
-literature found no case where either phase specifically (as opposed to
-nociceptive sensitization in general) is reported with a non-pathological
-outcome. That's a narrower claim than "sensitization is always pathological":
-the broader pain-physiology literature is explicit that sensitization
-proportionate to real, ongoing tissue injury is protective, and it is only
-sensitization that *outlasts or exceeds* that injury which "has lost its
-physiological function" and is called maladaptive (the proportionality
-criterion, not a fixed-duration one). Extending that general framework down
-to E-LTP's spontaneous decay (keeping transient sensitization proportionate)
-versus L-LTP's capture (what happens when it doesn't decay) is a plausible
-bridge this document draws between two literatures that don't cite each
-other — it is not something the Sandkühler/Ruscheweyh papers themselves
-claim. That distinction matters for §2.1/§2.2 below: this mechanism is
-borrowed here as *structurally* neutral machinery for a motor-consolidation
-analogy (the retention rule itself isn't "good" or "bad"), not cited as
-literature evidence of an empirically-documented adaptive direction the way
-Grau's or Wolpaw's mechanisms are.
+exogenous BDNF (Yang et al. 2004; Zhang & Sandkühler 2008). That
+best-characterized preparation is nociceptive, and in it the consolidated
+outcome is chronic pain (Ruscheweyh et al. 2011) — but **the two-phase
+mechanism itself is not confined to the pain pathway, and is not
+intrinsically pathological.** The identical cascade is documented running in
+the adaptive direction in spinal *motor* circuits: Grau's instrumental
+learning has its induction blocked by intrathecal MK-801 while the
+shock-elicited motor response survives intact (so the NMDAR-dependence
+belongs to the learning, not the reflex), is protein-synthesis-dependent,
+and elevates BDNF, CaMKII, CREB and synapsin I in the lumbar cord *in
+proportion to how well the animal learned*. Corticospinal-tract LTP onto
+spinal interneurons and motor pools is documented separately in intact
+animals, and motor training adds excitatory synapses onto spinal
+motoneurons. Early-phase induction and late-phase, protein-synthesis-gated
+capture are therefore general spinal machinery — Table 1a and Table 1b now
+each carry both phases, differing in pathway and outcome, not in mechanism.
+
+**The two directions are not merely analogous — they compete for the same
+substrate.** Ferguson, Huie, Crown & Grau (2012) tested cross-talk directly
+in transected rats and found it in both directions: prior instrumental
+training changes how much central sensitization a later formalin injection
+produces, and prior formalin sensitization impairs spinal learning measured
+a day later. They frame this explicitly as metaplasticity — controllable
+stimulation produces adaptive plasticity that *both* promotes future
+learning *and* limits nociceptive sensitization, with BDNF implicated in the
+protective effect, while uncontrollable stimulation does the reverse. A
+limited consolidation resource that two competing processes draw from, with
+BDNF as the shared currency, is precisely the PRP-pool structure the
+hippocampal STC account posits — here demonstrated behaviorally in spinal
+cord, and the closest biological warrant for the model's **shared per-leg
+`prp_pool`** (rather than independent per-synapse gating).
 
 **Behavioral gate.** In transected rats, response-contingent training (a
 limb flexion that terminates shock) produces NMDAR/BDNF/protein-synthesis-
@@ -219,17 +240,18 @@ to reinforce. This is the spinal cord's own version of the STC problem, a
 better match for a locomotor CPG than the hippocampal case, since two of the
 three literatures were generated in this kind of circuit.
 
-**Two of these three are genuinely two-directional in their own
-literature**: Grau's contingency gate and Wolpaw's two-phase consolidation
-each have identical stimulation producing opposite, both-documented outcomes
-depending on contingency or training. **The third — Sandkühler's E-/L-LTP
-substrate — is not**: as the molecular-substrate paragraph above found, its
-own literature documents only the pathological direction. The "adaptive
-direction" §2.1 lists for it below is this document's own structural
-borrowing, not a second empirical finding of the kind that exists for the
-other two. §2.1/§2.2 still list all mechanisms side by side for comparability
-with §1.1/§1.2's split, but this asymmetry is real and shouldn't be read as
-three equally-documented dualities.
+**Every mechanism above is two-directional, including the molecular
+substrate** — that last point was gotten wrong in an earlier revision of this
+document, which placed E-LTP and L-LTP only in the pathological table on the
+grounds that Sandkühler's own preparation is nociceptive. That reasoning
+confused *the best-studied instantiation* of a mechanism with *the mechanism
+class*. The correction matters for the model: if two-phase LTP were
+genuinely pain-specific, §3's tag-and-capture mapping onto `CUT→RG-E` and
+`Ia→RG` would rest on analogy alone; because it is general spinal machinery
+with a documented adaptive instantiation in motor circuits, the mapping rests
+on the mechanism actually being present in the circuit being modeled. §2.1/
+§2.2 list the two directions as separate tables, matching the §1.1/§1.2
+split.
 
 ### 2.1 Healthy / adaptive directions
 
@@ -237,11 +259,11 @@ three equally-documented dualities.
 |---|---|
 | Homeostatic scaling (§1.1) | Upscaling after deafferentation restores excitability lost to reduced afferent drive |
 | Spinal instrumental learning (Grau, §1.1) | Contingent (response-produced) outcome → NMDAR/BDNF/protein-synthesis-dependent potentiation that outlasts the session |
-| Dorsal-horn E-/L-LTP (Sandkühler, §1.2) | *No entry* — its own literature documents only the pathological direction (Table 2b). This document still borrows its tag/capture *structure* as a motor-consolidation analogy (§2), but that borrowing isn't evidence of a second, adaptive empirical outcome the way it is for the other rows here. |
+| Two-phase LTP: E-LTP → L-LTP (§1.1 motor rows) | NMDAR-dependent induction in motor/interneuron circuits, consolidated by a protein-synthesis- and BDNF-dependent late phase, producing a lasting adaptive change in spinal reflex output — BDNF/CREB/CaMKII rising in proportion to how well the animal learned (Grau et al.); corticospinal-tract LTP documented separately in intact motor pathways |
 | Serotonergic gating, chronic axis (§1.1) | Partly restored by locomotor training and serotonergic agonists post-injury |
 | H-reflex conditioning (§1.1) | Up-conditioning corrects locomotor asymmetry after SCI in rats |
 
-*Table 2a — The adaptive direction of each two-directional mechanism from §1-2, where the cited literature documents one. Pairs row-for-row with Table 2b except two: H-reflex conditioning (Table 2b has no entry, §2.2) and dorsal-horn E-/L-LTP (Table 2a has no entry here, per the asymmetry note above) — each table leaves a gap rather than inventing a counterpart the literature doesn't document.*
+*Table 2a — The adaptive direction of each two-directional mechanism from §1-2. Pairs row-for-row with Table 2b except the last, H-reflex conditioning, where Table 2b leaves a gap rather than inventing a counterpart the cited literature doesn't document.*
 
 ### 2.2 Pathological / maladaptive directions
 
@@ -249,7 +271,7 @@ three equally-documented dualities.
 |---|---|
 | Homeostatic scaling (§1.2) | **Downscaling failure**: KCC2 loss after SCI leaves inhibition too weak, producing spasticity (Boulenguez et al. 2010) — training partially reverses it |
 | Spinal instrumental learning (Grau, §1.2) | Non-contingent (uncontrollable) outcome at the *identical* intensity → active, protein-synthesis-dependent **suppression** of future learning capacity (Ferguson, Crown & Grau 2006) |
-| Dorsal-horn E-/L-LTP (Sandkühler, §1.2) | **Its own primary literature framing**: the standard cellular model of central sensitization underlying hyperalgesia and chronic pain (Ruscheweyh et al. 2011) |
+| Two-phase LTP: E-LTP → L-LTP (§1.2 nociceptive rows) | The *same* two-phase cascade running at dorsal-horn C-fiber synapses instead: the standard cellular model of central sensitization underlying hyperalgesia and chronic pain (Sandkühler & Liu 1998; Ruscheweyh et al. 2011). Not a separate mechanism from the Table 2a row — a different pathway and gating signal, and the two demonstrably compete (Ferguson, Huie, Crown & Grau 2012) |
 | Serotonergic gating, chronic axis (§1.2) | Persistently altered CPG sensitivity to 5-HT if left untreated after injury |
 | H-reflex conditioning | *No entry* — no specific pathological counterpart in the literature cited here (also why Table 1b has no H-reflex row) |
 
@@ -315,14 +337,18 @@ second, slower component:
   the force-triggered-CUT tuning rounds to flag disguised-clock results — as a
   candidate for the literal biological gate signal, not just a
   post-hoc correctness check.
-- **`BS→RG`** is the weakest fit: none of the four literatures describe
-  descending drive itself as undergoing this kind of tag/capture-style
-  plasticity in the same sense (the closest analog, the serotonergic
-  acute/chronic receptor-sensitivity change after injury, is a separate,
-  slower axis — see §1's table, not addressed further here). Applying the
-  same mechanism to `BS→RG` for architectural uniformity is a modeling choice
-  this document does not find direct literature support for, one way or the
-  other — worth flagging explicitly before the plan commits to it.
+- **`BS→RG`** remains the weakest fit, but less weak than this document
+  previously stated. The closest evidence is corticospinal-tract LTP — a
+  descending projection onto spinal interneurons and motor pools that does
+  undergo LTP (§1.1's motor E-LTP row) — which is a genuine descending-drive
+  precedent, though the model's `BS` is a reticulospinal tonic proxy rather
+  than a corticospinal one, so the mapping is by analogy across two different
+  descending systems. The serotonergic acute/chronic receptor-sensitivity
+  axis is a separate, slower mechanism and not a tag/capture story at all.
+  Applying consolidation to `BS→RG` for architectural uniformity is still a
+  modeling choice rather than a literature-mandated one — which is why the
+  implementation logs `BS→RG` bookkeeping for measurement symmetry but never
+  writes it back.
 
 Implementation (state variables, update equations, where in
 `cpg_2legs_fast.py`'s sim loop this would live) is intentionally left to the
@@ -368,6 +394,10 @@ picked adaptive or maladaptive.
 - Crown, E.D. & Grau, J.W. (2001). [Preserving and restoring behavioral potential within the spinal cord using an instrumental training paradigm](https://pubmed.ncbi.nlm.nih.gov/11495955/).
 - Ferguson, Crown & Grau (2006). [Group I metabotropic glutamate receptors control metaplasticity of spinal cord learning through a PKC-dependent mechanism](https://pmc.ncbi.nlm.nih.gov/articles/PMC2628285/).
 - Ferguson, A.R., Huie, J.R., Crown, E.D., Baumbauer, K.M., Hook, M.A., Garraway, S.M., Lee, K.H., Hoy, K.C. & Grau, J.W. (2012). [Maladaptive spinal plasticity opposes spinal learning and recovery in spinal cord injury](https://pmc.ncbi.nlm.nih.gov/articles/PMC3468083/), *Front. Physiol.* (§2.3's synthesis reference: the same borrowed mechanism explaining adaptive spinal learning, in its own field's framing of why recovery sometimes fails).
+- Ferguson, A.R., Huie, J.R., Crown, E.D. & Grau, J.W. (2012). [Central nociceptive sensitization vs. spinal cord training: opposing forms of plasticity that dictate function after complete spinal cord injury](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3463829/), *Front. Physiol.* (**§2's key evidence that the two directions compete for a shared substrate**: prior training changes later formalin-induced sensitization and prior sensitization impairs later learning, framed as bidirectional metaplasticity with BDNF implicated — the closest biological warrant for the model's shared per-leg `prp_pool`).
+- [Spinal cord representation of motor cortex plasticity reflects corticospinal tract LTP](https://www.pnas.org/doi/10.1073/pnas.2113192118), *PNAS* (2021) (§1.1/§2: LTP documented in intact motor pathways — corticospinal monosynaptic excitation of spinal interneurons and motor pools — independent of any nociceptive preparation).
+- [Motor training induces experience-specific patterns of plasticity across motor cortex and spinal cord](https://journals.physiology.org/doi/full/10.1152/japplphysiol.00515.2006), *J. Appl. Physiol.* (strength training increases excitatory, but not inhibitory, synapses onto spinal motoneurons — training-driven structural plasticity in the healthy ventral cord).
+- [Two inhibitory neuronal classes govern acquisition and recall of spinal sensorimotor adaptation](https://www.science.org/doi/10.1126/science.adf6801), *Science* (dorsal-horn interneurons required for acquiring a spinal sensorimotor adaptation, Renshaw cells for retaining and recalling it — an acquisition/retention division of labor in healthy motor circuits, structurally parallel to the tag/capture split in §2).
 - Chen, Y., Chen, X.Y., Liu, Z. & Wolpaw, J.R. (2006). H-reflex operant conditioning and its multi-site plasticity in the rat.
 - Wolpaw, J.R. — [Operant conditioning of H-reflex can correct a locomotor abnormality after spinal cord injury in rats](https://www.jneurosci.org/content/26/48/12537).
 - de Leon, R.D., Hodgson, J.A., Roy, R.R. & Edgerton, V.R. (1998). [Full weight-bearing hindlimb standing following stand training in the adult spinal cat](https://journals.physiology.org/doi/full/10.1152/jn.1998.80.1.83), *J. Neurophysiol.* (Table 1a/§1.4: the train-to-stand-vs-train-to-step task-specificity finding — the closest published evidence that the lumbar CPG itself, not just an afferent pathway, is trainable.)
