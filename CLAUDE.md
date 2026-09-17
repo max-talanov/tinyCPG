@@ -1604,6 +1604,49 @@ weights_grid}.png`, replacing the superseded 3-speed-only figures, and
 (see "Five locomotion modes, two learning architectures" and "The same
 gain settings extend..." there).
 
+### Fast/toe re-confirmed under the BS→RG write-back fix — one uniform gain across all three modes (2026-09-17)
+
+The `0.20`/`0.15` gain confirmed above for fast and toe predates the
+`BS→RG` write-back fix (see "Medium's tick-alignment fragility" below,
+which found the same staleness for medium and fixed it there first). Re-ran
+a single-seed gain screen (0.15/0.10, 0.20/0.10, 0.20/0.15, 0.25/0.10,
+0.25/0.15) at each mode's own confirmed timing/`tau_tag_ms` (fast: τ=156/
+off=0.30/cap=380, `tau_tag_ms`=5000; toe: τ=100/off=0.35/cap=330,
+`tau_tag_ms`=20000), then confirmed the winner at a second seed — same
+process just used for medium.
+
+**Fast is robust to gain choice entirely** — all 5 ratios gave genuine
+timing (`atCap`=0.00/0.00) and meaningful `bs→rge` suppression (12-15\,pA
+vs. its ~18\,pA natural plateau); differences between them are noise-level
+(`corrLR` −0.034 to +0.008). **Toe is more gain-sensitive**, with `0.25`/
+`0.10` the clear single-seed standout (`atCap`=0.00/0.00, most captures
+14/19, `corrLR`=−0.106 — the strongest anti-phase of the five, though still
+modest in absolute terms).
+
+**Two-seed confirmation, `0.25`/`0.10`** (the same gain just confirmed for
+medium):
+
+| mode | seed 1 (12345) | seed 2 (54321) | verdict |
+|---|---|---|---|
+| fast | atCap 0.00/0.00, corrLR +0.008, captures 12/13, bs→rge 14.9/14.8 | atCap 0.00/0.00, corrLR +0.009, captures 12/13, bs→rge 15.1/14.9 | **excellent — near-identical on every metric** |
+| toe | atCap 0.00/0.00, corrLR −0.106, captures 14/19, bs→rge 12.1/10.9 | atCap 0.08/0.00, corrLR −0.032, captures 14/19, bs→rge 11.9/11.3 | **passes — same-sign both seeds, consistent captures/suppression, but corrLR shrinks ~3x and leg L keeps a small residual cap fraction (0.08)** |
+
+Fast's confirmation is as tight a cross-seed match as anything in this
+project's history. Toe's is real (same-sign corrLR both seeds, unlike the
+sign-flipping failures documented elsewhere in this file, and captures/
+suppression essentially identical across seeds) but weaker — its anti-phase
+signal is modest and not fully clean on one leg.
+
+**`0.25`/`0.10` is now the confirmed descending-arm gain for medium, fast,
+AND toe — one uniform value instead of three separate per-mode tunings.**
+This replaces every earlier descending-arm gain confirmation in this file
+(the original `0.20`/`0.15` at medium, and its extension to fast/toe via
+`tau_tag_ms` rescaling) — all of those predate the `BS→RG` write-back fix
+and should not be treated as current. Not yet applied to
+`run_consolidate_speed_arm_loading.sh` or `paper/sections/results.tex` —
+same debug-small-only caveat as medium's own update above applies here too
+(not yet checked at production N / MN5 scale).
+
 ### Medium's tick-alignment fragility and the consolidate leading-leg problem (2026-09-17)
 
 While locally testing `MOD_WMAX_GROWTH` (below) against the medium+consolidate
