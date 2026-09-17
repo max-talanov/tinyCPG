@@ -47,8 +47,9 @@ but never mixed in one chart or one table.
 | Activity-dependent step-training neurotrophin upregulation | Repeated, task-specific locomotor training that raises BDNF/NT-3/NT-4 in the lumbar cord below an injury, with the training *type*, not just its amount, determining the outcome. | Daily training over days–weeks; **task-specific** (step-training and cycle-training produce different BDNF/NT-3/NT-4 profiles and different dorsal-horn/intermediate-gray neuron counts) | Lumbar spinal cord below a lesion (Côté, Azzam, Lemay, Zhukareva & Houlé 2011) | Argues against a single generic "activity level" gate — the training *modality*, not just its amount, sets what gets reinforced. Directly relevant to this model's distinction between `--cut-trigger force` (stance-loading-driven) and the paced-clock modes. |
 | Serotonergic gating — chronic, **training-restored** | The same slow, injury-driven change in CPG serotonin sensitivity as §1.2's untreated case, but partly reversed by locomotor training and serotonergic agonists. | Days–weeks | Brainstem-to-spinal monoaminergic projections | Its *sensitivity*, not just its rate, changes with training — a second, slower plasticity axis this model does not yet represent (flagged here, not addressed by the plan in §3). |
 | H-reflex operant conditioning, Phase II | The slow, large, multi-site component of H-reflex conditioning — altered motoneuron firing threshold, GABAergic terminal density, and interneuron properties — that consolidates over weeks of continued training. | 6–7 weeks; large, stable; **multi-site** | Same pathway | Demonstrated to correct locomotor asymmetry after spinal cord injury when combined with training — the closest published result to the model's own stated rehab goal. |
+| Task-specific spinal locomotor learning (train-to-stand vs. train-to-step) | Complete-transection cats trained daily to either stand or step relearn specifically the trained task — stand-trained cats stand well but step poorly, and step-trained cats step well but stand poorly — the clearest behavioral demonstration that the isolated lumbar CPG itself, not just a single reflex pathway, can be shaped by training (de Leon, Hodgson, Roy & Edgerton 1998; framed explicitly as spinal motor learning by Edgerton, Roy, de Leon, Tillakaratne & Hodgson 1997). **Contested**: a later study found both standing and locomotion recover under non-task-specific stimulation, or with no training at all, attributing recovery to a general return of spinal circuit excitability rather than task-specific activity-dependent encoding (Harnie, Doelman, de Vette, Audet, Desrochers, Gaudreault & Frigon 2019) — an open controversy, not resolved here. | Daily training, ~8–12 weeks to a stable task-specific outcome | Lumbar locomotor CPG circuitry below a complete thoracic spinal transection (cat) | The strongest available evidence that a CPG core like this model's `RG-E`/`RG-F` — not just an afferent pathway — is a legitimate target for a "trained skill" framing. But the Harnie et al. 2019 contestation means this row shouldn't be read as an uncontested green light for CPG-level consolidation the way Wolpaw's Ia→motoneuron pathway is (§3's `Ia→RG` mapping stands on Wolpaw's result specifically, not on this one). |
 
-*Table 1a — The nine rows plotted in Fig. 1a above: baseline physiology plus every mechanism whose documented outcome in the cited literature is functional preservation or recovery. Two rows (spinal instrumental learning, serotonergic chronic axis) are one half of a bidirectional mechanism — their pathological counterpart is Table 1b, not absent, just not adaptive.*
+*Table 1a — The ten rows plotted in Fig. 1a above: baseline physiology plus every mechanism whose documented outcome in the cited literature is functional preservation or recovery. Two rows (spinal instrumental learning, serotonergic chronic axis) are one half of a bidirectional mechanism — their pathological counterpart is Table 1b, not absent, just not adaptive. **Fig. 1a's image predates this row and does not yet depict it** — regenerating the figure is a small, not-yet-done follow-up, flagged here rather than left silently out of sync.*
 
 ### 1.2 Pathological processes (e.g., after spinal cord injury)
 
@@ -100,7 +101,7 @@ homeostasis) than the tag-and-capture story in §2.
 
 Table 1a's scope statement is "baseline physiology plus every mechanism whose
 documented outcome is functional preservation or recovery" — deliberately
-broader than "motor skill formation." Checking the nine rows against the
+broader than "motor skill formation." Checking the ten rows against the
 narrower, spinal-specific definition of that term (a lasting,
 practice-/contingency-dependent change in spinal circuit output that
 persists without cortical involvement — distinct from cortical motor-skill
@@ -112,6 +113,7 @@ motor cortex) sorts them into four groups, not one:
 | Spinal instrumental learning — contingent (Grau) | **Core skill-formation mechanism** | A trained, lasting, contingency-gated change in spinal reflex output — the literal definition. |
 | H-reflex conditioning, Phase I | **Core skill-formation mechanism** | A trained, lasting change in a spinal reflex, by construction. |
 | H-reflex conditioning, Phase II | **Core skill-formation mechanism** | The consolidated, multi-site version of the same trained change. |
+| Task-specific spinal locomotor learning (de Leon/Roy/Edgerton) | **Core skill-formation mechanism — contested** | The only row directly about the CPG's own output pattern, not an afferent pathway or a withdrawal reflex; but its task-specificity claim is itself disputed (Harnie et al. 2019, see Table 1a) — counted here as core, flagged as unsettled, not a second confirmed Wolpaw-grade result. |
 | Homeostatic AMPAR upscaling | Enabling/compensatory | Restores lost excitability after deafferentation; carries no information about *which* pattern was learned. |
 | Serotonergic gating, chronic (training-restored) | Enabling/compensatory | Gates whether the CPG can burst at all; same reasoning as its acute counterpart. |
 | Step-training neurotrophin upregulation (Côté) | Molecular correlate, not the mechanism itself | Row is framed as a BDNF/NT-3/NT-4 readout; the actual skill-refinement outcome — multisegmental network reorganization and reduced muscle co-contraction with training — isn't named. Flagged as a content gap here, not corrected in Table 1a itself. |
@@ -119,13 +121,14 @@ motor cortex) sorts them into four groups, not one:
 | Short-term plasticity | Basic substrate | Same — a physics constraint, not a learning mechanism. |
 | Serotonergic gating, acute | Basic substrate | Gates *whether* bursting can occur, not *which* pattern is learned. |
 
-Net: **3 of the 9 rows are motor-skill-formation mechanisms in the strict
-spinal-specific sense; the other 6 are the enabling or basic-substrate
-processes those 3 mechanisms operate within.** This doesn't make Fig. 1a
-wrong — its stated scope already includes prerequisites, not just the
-skill-encoding step — but a reader treating "healthy spinal plasticity
-processes" as synonymous with "how the spinal cord forms a motor skill"
-would overcount by 2:1.
+Net: **4 of the 10 rows are motor-skill-formation mechanisms in the strict
+spinal-specific sense (one of them contested); the other 6 are the enabling
+or basic-substrate processes those mechanisms operate within.** This
+doesn't make Fig. 1a wrong — its stated scope already includes
+prerequisites, not just the skill-encoding step — but a reader treating
+"healthy spinal plasticity processes" as synonymous with "how the spinal
+cord forms a motor skill" would still overcount, and one of the four core
+rows shouldn't be leaned on as settled evidence either way.
 
 **Caveat — a tempting addition, checked and left out.** Bizzi & Giszter's
 spinal motor primitives / muscle synergies (force-field modules the spinal
@@ -341,6 +344,9 @@ picked adaptive or maladaptive.
 - Ferguson, A.R., Huie, J.R., Crown, E.D., Baumbauer, K.M., Hook, M.A., Garraway, S.M., Lee, K.H., Hoy, K.C. & Grau, J.W. (2012). [Maladaptive spinal plasticity opposes spinal learning and recovery in spinal cord injury](https://pmc.ncbi.nlm.nih.gov/articles/PMC3468083/), *Front. Physiol.* (§2.3's synthesis reference: the same borrowed mechanism explaining adaptive spinal learning, in its own field's framing of why recovery sometimes fails).
 - Chen, Y., Chen, X.Y., Liu, Z. & Wolpaw, J.R. (2006). H-reflex operant conditioning and its multi-site plasticity in the rat.
 - Wolpaw, J.R. — [Operant conditioning of H-reflex can correct a locomotor abnormality after spinal cord injury in rats](https://www.jneurosci.org/content/26/48/12537).
+- de Leon, R.D., Hodgson, J.A., Roy, R.R. & Edgerton, V.R. (1998). [Full weight-bearing hindlimb standing following stand training in the adult spinal cat](https://journals.physiology.org/doi/full/10.1152/jn.1998.80.1.83), *J. Neurophysiol.* (Table 1a/§1.4: the train-to-stand-vs-train-to-step task-specificity finding — the closest published evidence that the lumbar CPG itself, not just an afferent pathway, is trainable.)
+- Edgerton, V.R., Roy, R.R., de Leon, R.D., Tillakaratne, N. & Hodgson, J.A. (1997). [Does motor learning occur in the spinal cord?](https://journals.sagepub.com/doi/10.1177/107385849700300510), *The Neuroscientist* (same group's own explicit framing of the above as spinal motor learning).
+- Harnie, J., Doelman, A., de Vette, E., Audet, J., Desrochers, E., Gaudreault, N. & Frigon, A. (2019). [The recovery of standing and locomotion after spinal cord injury does not require task-specific training](https://elifesciences.org/articles/50134), *eLife* (the contestation flagged alongside the de Leon/Roy/Edgerton row in Table 1a/§1.4 — recovery attributed to a general return of spinal excitability, not task-specific encoding).
 - Côté, M.-P., Azzam, G.A., Lemay, M.A., Zhukareva, V. & Houlé, J.D. (2011). [Activity-dependent increase in neurotrophic factors is associated with an enhanced modulation of spinal reflexes after spinal cord injury](https://pmc.ncbi.nlm.nih.gov/articles/PMC3037803/), *J. Neurotrauma*.
 - Role of serotonin in locomotor CPG control and recovery after SCI: [The role of serotonin in the control of locomotor movements and strategies for restoring locomotion after SCI](https://pubmed.ncbi.nlm.nih.gov/24993627/); [The role of the serotonergic system in locomotor recovery after SCI](https://pmc.ncbi.nlm.nih.gov/articles/PMC4321350/).
 - Homeostatic/AMPAR-mediated plasticity after SCI: [AMPA receptor phosphorylation and synaptic colocalization on motor neurons drive maladaptive plasticity below complete SCI](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4677690/); [Synaptic up-scaling preserves motor circuit output after chronic, natural inactivity](https://elifesciences.org/articles/30005).
