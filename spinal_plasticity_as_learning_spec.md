@@ -171,12 +171,28 @@ other or the hippocampal work:
 like a decaying tag: NMDA-receptor-dependent, present within minutes, gone
 within hours unless converted to L-LTP — a discrete regime change blocked by
 protein-synthesis inhibitors and gated by spinal D1/D5 dopamine receptors or
-exogenous BDNF (Yang et al. 2004; Zhang & Sandkühler 2008). **This
-substrate's own primary framing is pathological, not adaptive**: the same
-mechanism is the standard cellular model of central sensitization in chronic
-pain (Ruscheweyh et al. 2011). Borrowed here purely as a motor-consolidation
-analogy — the retention rule itself is neutral machinery, not "good" or
-"bad" (§2.1/§2.2 below).
+exogenous BDNF (Yang et al. 2004; Zhang & Sandkühler 2008). **Neither phase
+has a documented adaptive instantiation in its own primary literature** —
+Sandkühler, Ruscheweyh and colleagues study both E-LTP and L-LTP exclusively
+as models of pathological hyperalgesia and chronic pain (Ruscheweyh et al.
+2011), never as a healthy or protective process; a targeted check of that
+literature found no case where either phase specifically (as opposed to
+nociceptive sensitization in general) is reported with a non-pathological
+outcome. That's a narrower claim than "sensitization is always pathological":
+the broader pain-physiology literature is explicit that sensitization
+proportionate to real, ongoing tissue injury is protective, and it is only
+sensitization that *outlasts or exceeds* that injury which "has lost its
+physiological function" and is called maladaptive (the proportionality
+criterion, not a fixed-duration one). Extending that general framework down
+to E-LTP's spontaneous decay (keeping transient sensitization proportionate)
+versus L-LTP's capture (what happens when it doesn't decay) is a plausible
+bridge this document draws between two literatures that don't cite each
+other — it is not something the Sandkühler/Ruscheweyh papers themselves
+claim. That distinction matters for §2.1/§2.2 below: this mechanism is
+borrowed here as *structurally* neutral machinery for a motor-consolidation
+analogy (the retention rule itself isn't "good" or "bad"), not cited as
+literature evidence of an empirically-documented adaptive direction the way
+Grau's or Wolpaw's mechanisms are.
 
 **Behavioral gate.** In transected rats, response-contingent training (a
 limb flexion that terminates shock) produces NMDAR/BDNF/protein-synthesis-
@@ -203,8 +219,17 @@ to reinforce. This is the spinal cord's own version of the STC problem, a
 better match for a locomotor CPG than the hippocampal case, since two of the
 three literatures were generated in this kind of circuit.
 
-Every mechanism above is two-directional. §2.1/§2.2 list the two directions
-as separate tables, matching the §1.1/§1.2 split.
+**Two of these three are genuinely two-directional in their own
+literature**: Grau's contingency gate and Wolpaw's two-phase consolidation
+each have identical stimulation producing opposite, both-documented outcomes
+depending on contingency or training. **The third — Sandkühler's E-/L-LTP
+substrate — is not**: as the molecular-substrate paragraph above found, its
+own literature documents only the pathological direction. The "adaptive
+direction" §2.1 lists for it below is this document's own structural
+borrowing, not a second empirical finding of the kind that exists for the
+other two. §2.1/§2.2 still list all mechanisms side by side for comparability
+with §1.1/§1.2's split, but this asymmetry is real and shouldn't be read as
+three equally-documented dualities.
 
 ### 2.1 Healthy / adaptive directions
 
@@ -212,11 +237,11 @@ as separate tables, matching the §1.1/§1.2 split.
 |---|---|
 | Homeostatic scaling (§1.1) | Upscaling after deafferentation restores excitability lost to reduced afferent drive |
 | Spinal instrumental learning (Grau, §1.1) | Contingent (response-produced) outcome → NMDAR/BDNF/protein-synthesis-dependent potentiation that outlasts the session |
-| Dorsal-horn E-/L-LTP (Sandkühler, §1.2) | Borrowed as this document's molecular-substrate analogy for a motor-consolidation tag/capture rule — not this mechanism's own primary framing, see §2.2 |
+| Dorsal-horn E-/L-LTP (Sandkühler, §1.2) | *No entry* — its own literature documents only the pathological direction (Table 2b). This document still borrows its tag/capture *structure* as a motor-consolidation analogy (§2), but that borrowing isn't evidence of a second, adaptive empirical outcome the way it is for the other rows here. |
 | Serotonergic gating, chronic axis (§1.1) | Partly restored by locomotor training and serotonergic agonists post-injury |
 | H-reflex conditioning (§1.1) | Up-conditioning corrects locomotor asymmetry after SCI in rats |
 
-*Table 2a — The adaptive direction of each two-directional mechanism from §1-2. Pairs row-for-row with Table 2b except the last, which Table 2b leaves blank rather than inventing a counterpart.*
+*Table 2a — The adaptive direction of each two-directional mechanism from §1-2, where the cited literature documents one. Pairs row-for-row with Table 2b except two: H-reflex conditioning (Table 2b has no entry, §2.2) and dorsal-horn E-/L-LTP (Table 2a has no entry here, per the asymmetry note above) — each table leaves a gap rather than inventing a counterpart the literature doesn't document.*
 
 ### 2.2 Pathological / maladaptive directions
 
@@ -335,6 +360,7 @@ picked adaptive or maladaptive.
 
 - Sandkühler, J. & Liu, X. (1998). [Induction of long-term potentiation at spinal synapses by noxious stimulation or nerve injury](https://onlinelibrary.wiley.com/doi/10.1046/j.1460-9568.1998.00278.x), *Eur. J. Neurosci.*
 - Ruscheweyh, R., Wilder-Smith, O., Drdla, R., Liu, X.-G. & Sandkühler, J. (2011). [Long-term potentiation in spinal nociceptive pathways as a novel target for pain therapy](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3078873/), *Mol. Pain* (dorsal-horn LTP's primary literature framing: a cellular model of pathological hyperalgesia/chronic pain, cited in §2 and §2.2 as the pathological counterpart to this document's tag/capture analogy).
+- Woolf, C.J. (2011). [Central sensitization: implications for the diagnosis and treatment of pain](https://doi.org/10.1016/j.pain.2010.09.030), *Pain* 152(3 Suppl):S2-S15 (§2's molecular-substrate paragraph: the general pain-physiology framework distinguishing sensitization proportionate to real tissue injury, which is protective, from sensitization that outlasts or exceeds it, which is maladaptive — the proportionality criterion this document extends, as a plausible but not literature-documented bridge, to E-LTP/L-LTP specifically).
 - Zhang, H.-M. & Sandkühler, J. (2008) et al. — [Protein synthesis inhibition blocks the late-phase LTP of C-fiber evoked field potentials](https://journals.physiology.org/doi/full/10.1152/jn.01027.2002), *J. Neurophysiol.*
 - Yang, Chen, Zhang & Sandkühler (2004). [Activation of spinal D1/D5 receptors induces late-phase LTP of C-fiber–evoked field potentials](https://journals.physiology.org/doi/full/10.1152/jn.01324.2004), *J. Neurophysiol.*
 - [BDNF induces late-phase LTP of C-fiber evoked field potentials in rat spinal dorsal horn](https://sciencedirect.com/science/article/abs/pii/S0014488608002045), *Eur. J. Pain* / Neurosci. Lett.
