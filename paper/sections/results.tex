@@ -424,14 +424,16 @@ this mechanism.
   \caption{\textbf{The learned set-point is the same across speeds and
     loading levels, except where force never develops.} CUT$\to$RG-E
     weight (solid, left axis; dotted = captured baseline where
-    consolidation, below, is active --- fast and toe rows only; slow and
-    medium run without consolidation, see text) and Ia-E/F$\to$RG weights
-    (dashed, right axis) versus time, one panel per condition from
-    Figure~\ref{fig:ct_all_modes_force}. Toe stepping's Ia$\to$RG weights
-    climb further than at full loading (a loading-dependent relaxation of
-    the Ia$\to$RG weight ceiling lets proprioceptive feedback take over
-    more excitatory drive as cutaneous input is progressively removed);
-    air stepping's CUT$\to$RG-E never leaves its initial value.}
+    consolidation, below, is active --- medium, fast and toe rows, all at
+    the same confirmed gain; slow and air run without consolidation, see
+    text) and Ia-E/F$\to$RG weights (dashed, right axis) versus time, one
+    panel per condition from Figure~\ref{fig:ct_all_modes_force}. Toe
+    stepping's Ia$\to$RG weights climb further than at full loading (a
+    loading-dependent relaxation of the Ia$\to$RG weight ceiling lets
+    proprioceptive feedback take over more excitatory drive as cutaneous
+    input is progressively removed); air stepping's CUT$\to$RG-E rises only
+    slowly and by a small amount over the run, well short of the
+    $\approx60$--$67$\,pA plateau reached elsewhere.}
   \label{fig:ct_all_modes_weights}
 \end{figure}
 
@@ -451,88 +453,96 @@ continuously relaxes back toward the baseline. The weight ceiling itself is
 untouched --- this mechanism governs what is \emph{retained} within the
 existing ceiling, not the ceiling.
 
-Two gain settings (how strongly a genuine vs.\ a forced stride moves the
-pool) were identified by grid search and confirmed across two random seeds
-at the medium-speed timing point: $0.20$/$0.15$ for the descending arm and
-$0.25$/$0.10$ for the sensory arm --- the two architectures do not share a
-working setting. \todo{This gain search's illustrative operating point
-(medium speed) was subsequently found to be itself fragile: 4 of its 5
-timing constants land exactly on the simulation's discretization step,
-which let its stance/swing timing collapse onto seed- and thread-sensitive
-discrete states independently of consolidation. A small (\textasciitilde
-1\%) de-alignment of two constants restores this fragility-free for the
-base (non-consolidated) mechanism, but consolidation on top of the
-de-aligned point has not yet been re-confirmed at the two-seed bar used
-elsewhere in this section --- see the production sweep note at the end of
-this subsection. The gain values below and the figures illustrating them
-should be read as a demonstration that the mechanism can be tuned to work
-at a given operating point, not as evidence for medium speed specifically.}
+\todo{Revision note, to resolve before submission: the medium-speed
+timing point used to illustrate this mechanism was found to have 4 of its
+5 timing constants landing exactly on the simulation's discretization
+step, which let its stance/swing timing collapse onto seed- and
+thread-sensitive discrete states independently of consolidation. A small
+($\approx1\%$) de-alignment of two constants fixed this for the base
+(non-consolidated) mechanism. Separately, the bookkeeping for the
+brainstem-to-rhythm-generator pathway was tracked but never written back
+to the simulator, so that pathway ran unconsolidated (ordinary STDP)
+regardless of this mechanism being enabled, for every result reported
+below at the time this note was written. Both issues are now fixed, and
+the gain search below was re-run afterward; the numbers and figures in
+this subsection reflect the corrected code, but only at reduced network
+size (debug scale) --- a full-scale confirmatory run is in progress.
+Remove this note once that confirmation lands and the numbers below are
+verified to match at full scale.}
+
+One gain setting (how strongly a genuine vs.\ a forced stride moves the
+pool) was identified by grid search and confirmed across two random
+seeds, and applies uniformly across all three walking speeds and both
+learning architectures: $0.25$ for a genuine stride, $0.10$ for a
+failsafe-forced one. This supersedes an earlier finding of two
+architecture-specific settings, an artifact of the two issues noted above
+rather than a genuine property of the two learning architectures.
 Figure~\ref{fig:consolidate_desc} shows the descending arm:
 without consolidation the weight is retained unconditionally regardless of
-how it was earned; at a symmetric (2:1 forced-favoring) gain the pool never
-crosses threshold and the mechanism is an inert no-op; at the confirmed
-gain the baseline visibly steps upward each time enough genuine strides
-accumulate (Figure~\ref{fig:consolidate_desc_weights}), and left/right phase
-separation is the tightest of any configuration tested (corr$(F_{E,L},F_{E,R})
-=-0.84$ in both seeds).
+how it was earned; at a forced-favoring gain (the reverse ratio, forced
+outweighing genuine 3:1) the pool never crosses threshold and the
+mechanism is an inert no-op --- notably, the brainstem-to-rhythm-generator
+pathway is visibly suppressed here too (converging far below its
+unconsolidated plateau) even though it never captures, since the
+continuous tag-decay this mechanism applies runs whether or not a capture
+ever happens; at the confirmed gain the baseline visibly steps upward each
+time enough genuine strides accumulate
+(Figure~\ref{fig:consolidate_desc_weights}), and all three plastic
+pathways --- including the brainstem projection --- converge to a stable
+captured value.
 
 \begin{figure}[t]
   \centering
   \includegraphics[width=0.92\textwidth]{fig_consolidate_descending_force_stages.png}
   \caption{\textbf{Tag-and-capture consolidation, descending arm.} Rows:
-    no consolidation; an inert (never-captures) gain setting; the confirmed
-    working gain ($0.20$ genuine / $0.15$ forced). Columns as in
-    Figure~\ref{fig:ct_all_modes_force}. Panels (a)--(i).}
+    no consolidation; an inert (never-captures) gain setting ($0.15$
+    genuine / $0.30$ forced); the confirmed working gain ($0.25$ genuine /
+    $0.10$ forced). Columns as in Figure~\ref{fig:ct_all_modes_force}.
+    Panels (a)--(i).}
   \label{fig:consolidate_desc}
 \end{figure}
 
 \begin{figure}[t]
   \centering
   \includegraphics[width=0.95\textwidth]{fig_consolidate_descending_weights_grid.png}
-  \caption{\textbf{The capture staircase.} Solid/dashed = live STDP weight;
-    dotted = captured baseline (only present once consolidation is on).
-    Left: no consolidation (no baseline to show). Middle: inert setting ---
-    baseline frozen at initialization despite the live weight moving.
-    Right: confirmed working gain --- baseline steps upward at each capture
-    event and tracks the live weight's converged value by the end of the
-    run.}
+  \caption{\textbf{The capture staircase, now spanning all three plastic
+    pathways.} Solid/dashed = live STDP weight; dotted = captured baseline
+    (only present once consolidation is on). Left: no consolidation (no
+    baseline to show). Middle: inert setting --- baseline frozen at
+    initialization despite the live weight moving, on every pathway
+    including the brainstem projection. Right: confirmed working gain ---
+    baseline steps upward at each capture event and tracks the live
+    weight's converged value by the end of the run, again on all three
+    pathways.}
   \label{fig:consolidate_desc_weights}
 \end{figure}
 
-\paragraph{The sensory arm needs a different gain, and shows why gain
-tuning matters.} Figure~\ref{fig:consolidate_sens} repeats the comparison
-for the sensory arm, adding two settings that fail in different, informative
-ways, neither of them obvious from the weight trace alone: the descending
-arm's own confirmed setting (`$0.20$/$0.15$') captures readily here too, but
-drives both legs' cutaneous synapse to the \emph{same} converged value
-independently, removing the run-to-run asymmetry that keeps the legs out of
-phase and synchronizing them instead (Figure~\ref{fig:consolidate_sens_weights},
-bottom-left); a weaker, forced-favoring setting (`$0.15$/$0.20$') sits at the
-opposite extreme --- the shared pool essentially never crosses threshold, so
-the mechanism is inert (baseline frozen at initialization) and, independently,
-the underlying stride timing stays failsafe-dominated rather than genuinely
-force-triggered (bottom-right). Only the confirmed $0.25$/$0.10$ setting is
-genuine and anti-phase in both tested seeds
-(corr$(F_{E,L},F_{E,R})=-0.29$ and $-0.28$, nearly identical). A
-methodological note worth flagging explicitly:
-Figure~\ref{fig:consolidate_bouts} shows that an apparent
-failsafe-domination regression under consolidation, if measured over a
-whole run, is often just a longer --- but still finite and resolving ---
-early settling period, not a persistent problem; restricting the comparison
-to steady state (after the first $30$\,s) is what separates the genuinely
-working gain from the genuinely pathological ones in
-Figure~\ref{fig:consolidate_sens}, and we recommend the same windowed
-comparison for any future tuning of this mechanism.
+\paragraph{The same gain also works for the sensory arm.} Earlier testing,
+before the two fixes noted above, had found the descending arm's gain
+setting synchronized the legs when applied to the sensory arm instead, and
+concluded the two architectures needed different settings. That
+conclusion does not hold once the two fixes are applied: the confirmed
+gain (Figure~\ref{fig:consolidate_sens}) captures cleanly in the sensory
+arm too, converging both legs' cutaneous synapse to a captured baseline
+(Figure~\ref{fig:consolidate_sens_weights}) without reproducing the
+earlier synchronization failure. \todo{Revision note: a bout-timeline figure previously illustrated a
+settling-in transient at run start (an extended run of failsafe-forced
+strides early on that resolves to genuine timing before the run ends,
+motivating the steady-state-only convention used throughout this
+subsection). That figure and claim are removed here pending
+re-verification: the operating point used to demonstrate it has changed
+along with everything else in this subsection, and a first check on the
+new fast-timing point found no such transient (steady from the start), so
+the original claim should not be carried forward uncritically. Re-add once
+a current, verified version exists.}
 
 \begin{figure}[t]
   \centering
   \includegraphics[width=0.92\textwidth]{fig_consolidate_sensory_force_stages.png}
   \caption{\textbf{Tag-and-capture consolidation, sensory arm.} Rows: no
-    consolidation; the confirmed working gain ($0.25$/$0.10$); the
-    descending arm's own gain, which synchronizes the legs here instead
-    ($0.20$/$0.15$); a low-threshold setting that stays failsafe-dominated
-    ($0.15$/$0.20$). Columns as in Figure~\ref{fig:ct_all_modes_force}.
-    Panels (a)--(l).}
+    consolidation; the confirmed working gain ($0.25$ genuine / $0.10$
+    forced --- the same setting as the descending arm). Columns as in
+    Figure~\ref{fig:ct_all_modes_force}. Panels (a)--(f).}
   \label{fig:consolidate_sens}
 \end{figure}
 
@@ -540,47 +550,33 @@ comparison for any future tuning of this mechanism.
   \centering
   \includegraphics[width=0.95\textwidth]{fig_consolidate_sensory_weights_grid.png}
   \caption{\textbf{Same layout as Figure~\ref{fig:consolidate_desc_weights},
-    sensory arm, all four settings from Figure~\ref{fig:consolidate_sens}.}
-    The synchronizing (bottom-left) and failsafe-dominated (bottom-right)
-    settings are visually indistinguishable from a healthy capture
-    staircase on the weight trace alone --- the phase and stance-timing
-    diagnostics in Figures~\ref{fig:consolidate_sens} and
-    \ref{fig:consolidate_bouts} are what actually separate them, not the
-    learning curve.}
+    sensory arm.} Left: no consolidation. Right: confirmed gain --- the
+    cutaneous synapse's baseline steps upward and tracks the converged
+    live weight, the same capture behavior seen in the descending arm.}
   \label{fig:consolidate_sens_weights}
 \end{figure}
 
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=0.75\textwidth]{fig_consolidate_bout_timeline.png}
-  \caption{\textbf{An early recovery transient, not a persistent
-    regression.} Each point is one stance stride (green = genuine
-    force-threshold crossing, red $\times$ = failsafe-forced), sensory arm.
-    The shaded band marks the first $30$\,s. Every setting shown, including
-    the confirmed working gain, shows an extended run of failsafe-forced
-    strides early on that fully resolves to genuine, on-threshold timing
-    well before the run ends --- a whole-run average would over-penalize
-    exactly the settling-in behavior this mechanism is meant to produce.}
-  \label{fig:consolidate_bouts}
-\end{figure}
-
-\paragraph{The same gain settings extend to the faster and toe-stepping
-timing points once one further time constant is rescaled.} The gain search
-above was run at the medium-speed timing point; naively applying the same
-settings at the faster point or at toe stepping reproduced the same
-failure signatures documented for the sensory arm above (failsafe
-domination or synchronization) even where the underlying closed-loop
-timing itself was already genuine. The cause was a fixed leak time
-constant governing how quickly an uncaptured tag relaxes back toward its
-baseline: consolidation applies this leak continuously, not only between
-captures, so a value tuned for the medium-speed cycle length actively
-suppressed weight growth at the shorter cycle lengths of the faster and
-toe-stepping points, independently of the gain pair. Rescaling this one
-constant (roughly in proportion to how much faster the local cycle is)
-restores the same $0.20$/$0.15$ and $0.25$/$0.10$ gains to genuine,
-anti-phase operation at both new points, in both architectures, confirmed
-across two seeds (descending arm) and two seeds (sensory arm) --- the
-converged weight trajectories for these two points are the ``fast'' and
+\paragraph{The same gain extends to the faster and toe-stepping timing
+points once one further time constant is rescaled.} The gain search above
+was run at the medium-speed timing point; naively applying the same
+setting at the faster point or at toe stepping reproduced failure
+signatures resembling those first documented for the sensory arm above
+(failsafe domination or synchronization) even where the underlying
+closed-loop timing itself was already genuine. The cause was a fixed leak
+time constant governing how quickly an uncaptured tag relaxes back toward
+its baseline: consolidation applies this leak continuously, not only
+between captures, so a value tuned for the medium-speed cycle length
+actively suppressed weight growth at the shorter cycle lengths of the
+faster and toe-stepping points, independently of the gain. Rescaling this
+one constant (roughly in proportion to how much faster the local cycle
+is) restores the confirmed gain to genuine operation at both new points,
+in both architectures. The three walking speeds are not uniformly clean,
+however: fast reproduces as a near-identical cross-seed match (steady-state
+corr$(F_{E,L},F_{E,R})$ within $0.001$ of itself across seeds), while toe's
+anti-phase signal, though same-signed across seeds, is markedly weaker and
+leaves a small residual failsafe-domination fraction on one leg --- a
+genuine but less robust confirmation than fast's. The converged weight
+trajectories for all three walking speeds are the ``medium'', ``fast'' and
 ``toe'' columns of Figure~\ref{fig:ct_all_modes_weights} above. The slow
 walking point is the one exception found so far: the same rescaling
 narrows but does not eliminate a residual left/right synchronization
@@ -592,22 +588,18 @@ misbehave.
 \paragraph{Scope of this preliminary result.} This subsection now covers
 four of the five locomotion modes under closed-loop timing (slow, medium,
 fast walking and toe stepping), both learning architectures, and
-tag-and-capture consolidation confirmed at two of those four (fast, toe).
-Slow and medium both run consolidation-free: slow by choice (the base
-mechanism is already excellent there on its own, and consolidation was
-found actively harmful across a wide gain/threshold search); medium because
-consolidation was found to interact badly, specifically, with the
-non-leading leg's weaker initial potentiation (see \todo{cite the
-tick-alignment/leading-leg finding} for the full account) --- an open
-problem, not a settled choice, that a future pass should revisit rather
-than a further parameter sweep. Air stepping is deliberately excluded from
-the closed-loop-timing and consolidation results, not because the mechanism
-fails to fit it, but because a genuinely unloaded limb should not produce a
-clean closed-loop rhythm at all --- see the discussion above and
-Section~\ref{sec:results:epidural}. The production-scale confirmatory
-sweep referenced at the top of this subsection covers slow and medium
-speeds, both architectures, full weight-bearing only, and --- following the
-finding above --- runs \emph{without} consolidation at both speeds; a
-follow-on submission extending closed-loop confirmation to the fast and toe
-points, and revisiting consolidation at medium once the leading-leg
-interaction is understood, is planned but not yet run.
+tag-and-capture consolidation confirmed at three of those four (medium,
+fast, toe) with a single shared gain. Slow alone runs consolidation-free,
+by choice: the base mechanism is already excellent there on its own, and
+consolidation was found actively harmful across a wide gain/threshold
+search. Air stepping is deliberately excluded from the closed-loop-timing
+and consolidation results, not because the mechanism fails to fit it, but
+because a genuinely unloaded limb should not produce a clean closed-loop
+rhythm at all --- see the discussion above and
+Section~\ref{sec:results:epidural}. \todo{Revision note: everything in
+this subsection, including the confirmed gain, is currently validated only
+at reduced network size (debug scale); a full-scale confirmatory sweep
+covering medium, fast and toe, both architectures, with consolidation
+enabled at the confirmed gain, is in progress. Update this paragraph and
+the preceding one once it lands --- do not cite the numbers above as
+production-scale confirmed until then.}
