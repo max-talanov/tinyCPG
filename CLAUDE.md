@@ -2,11 +2,43 @@
 
 NEST-based spinal central pattern generator for rat locomotion. Two legs (left/right),
 each with extensor + flexor half-centers, motor pools, muscle proxies, Ia afferents,
-cutaneous afferents, and tonic brainstem drive. Trained with STDP on BS→RG and CUT→RG
-synapses. Production runs on the MN5 supercomputer; this workspace is for fast local
+cutaneous afferents, and tonic brainstem drive. Trained with STDP on BS→RG, CUT→RG and
+Ia→RG synapses. Production runs on the MN5 supercomputer; this workspace is for fast local
 iteration before submitting array jobs.
 
-## Goal of the current debug pass
+## Project goal
+
+**Build and demonstrate a bio-plausible rat spinal CPG model, both intact and after
+spinal cord injury (SCI), whose gradual rehabilitation dynamics come from bio-plausible
+spinal plasticity.**
+
+Three parts of that claim, and what each one means here:
+
+1. **Bio-plausible rat spinal CPG.** Parameters stay within rat physiological ranges (see
+   "Bio-plausibility constraints" below). The circuit follows established spinal
+   architecture: asymmetric reciprocal inhibition (Zhang 2022), tonic reticulospinal
+   drive, Ia/cutaneous closed-loop feedback, and L/R commissural coupling. It should
+   produce clean E/F counter-phase and L/R alternation across locomotion modes (slow,
+   medium and fast walk).
+2. **With and without SCI.** Reduced loading/afferent input (toe and air stepping via
+   `--ia-feedback-gain`/`--cut-feedback-gain`) and reduced or frozen descending drive
+   (`--freeze-bs-rg`, the sensory-learning arm) stand in for the injured cord. The intact
+   and injured conditions should be compared under the same circuit.
+3. **Gradual rehabilitation through bio-plausible spinal plasticity.** Recovery has to
+   emerge from spinal learning over a realistic time course. It should not snap back
+   instantly. Three pathways are plastic: BS→RG, CUT→RG-E and Ia→RG-E/F. Tag-and-capture
+   consolidation (`--consolidate`, grounded in
+   [`spinal_plasticity_as_learning_spec.md`](spinal_plasticity_as_learning_spec.md))
+   adds a retention gate and a settling-in period on top of vanilla STDP. Closed-loop
+   force-triggered stance/swing (`--cut-trigger force`) makes the gait itself emergent,
+   so the learning signal comes from real behavior, not a clock.
+
+Every mechanism, sweep and figure in this workspace should serve one of those three
+parts. Current phase (as of 2026-09-23): confirming the force-trigger + consolidation
+story at production scale on MN5 for all locomotion modes. Air stepping and
+medium+consolidate at production N are still open (see the sections below).
+
+## Original debug-pass goal (historical, superseded by "Project goal" above)
 
 Get cleaner E/F counter-phase and self-sustained rhythm with **reduced BS dependence**.
 Specifically: the model should keep alternating when BS_REGULAR_HZ is dropped from 60 to
