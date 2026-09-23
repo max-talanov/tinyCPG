@@ -1780,6 +1780,73 @@ descending-arm consolidate configs (`0.20`/`0.15` at each) also predate the
 `BS→RG` write-back fix and are stale in the same way medium's was** — not
 yet re-confirmed under the fix, flagged but not yet acted on.
 
+### Medium+consolidate at production scale — one cell back from MN5, genuine but on stale code (2026-09-21)
+
+`results/2026-09-21/` came back with a single file
+(`cpg_consol_sal_medium_desc_full_idx00_mu03.50_cv00.30_seed12345.h5`), not
+the 12-task batch `run_consolidate_speed_arm_loading.sh` currently defines —
+no slurm logs, and the file's own attributes (`consolidate=True`,
+`step_period_ms=520`, gains `0.20`/`0.15`) match the **pre-2026-09-17**
+version of that script, before `--consolidate` was pulled out and the
+520→1000ms step-period bug was fixed. So this tests the old medium+
+consolidate config at production scale (full N, BS=60Hz, 120s), not what the
+script currently ships — a leftover/orphaned run, not part of the 12-cell
+batch.
+
+**Result: genuine, not cap-dominated, anti-phase — the production check this
+file's "Core architecture fix" section had flagged as outstanding.**
+`scripts/cpg_cutforce_diagnostics.py --steady-from-ms 30000`: `frac_at_cap`
+0.00/0.00 both legs, corr(F-E,F-F) −0.67(L)/−0.70(R), corr(F-E_L,F-E_R)
+−0.78, stance 301±16ms. Whole-run numbers (−0.64/−0.69/−0.75) are pulled
+slightly weaker by the first ~20s recovery transient (corr(F-E,F-F) −0.47/
+−0.66 in that window) — same transient this file has documented for every
+other `--consolidate` config, not new.
+
+**Three things worth flagging, none of them a regression:**
+
+1. **Consolidation slows CUT→RG-E's convergence ~5x without changing its
+   plateau.** Reaches 90% of its ~61 pA final value at 28-29s, vs. 5-6s for
+   vanilla STDP on the same operating point (compared directly against
+   `results/2026-09-07/cpg_cutforce6_robustness_idx04_*.h5`, same μ=3.5/
+   CV=0.30 point, old circuit but same plateau). The capture staircase is
+   clearly visible in the weight trace. This is consolidation doing its
+   intended job (a genuine settling-in period instead of instant
+   convergence, the whole point per `spinal_plasticity_as_learning_spec.md`),
+   not a new finding, but it's the first time it's been shown at production
+   N rather than debug-small.
+2. **Captures land almost exactly every 13.6s, both legs, all 8 captures** —
+   because swing always ends on the failsafe (already documented: "Swing has
+   no closed-loop signal at all — it is a pure timer, always"), every cycle
+   contributes the same +0.20 (genuine stance) / −0.15 (forced swing) net
+   push to the PRP pool regardless of bout quality. At this operating point
+   the mechanism is not yet discriminating genuine-vs-forced *quality*, just
+   accumulating a fixed net drift that happens to cross threshold on a
+   metronomic schedule. Worth stating plainly if this operating point is
+   used to illustrate consolidation in the paper.
+3. **Steady-state bout timing is fully quantized by the 100ms production
+   tick** (stance 300±0ms in the 60-80s and 100-120s windows exactly; swing
+   exactly 500ms, the 450ms cap rounded up to the next tick) — `frac_at_cap`
+   is genuinely 0 (300ms is well below the 450ms cap), but the previously-
+   claimed "~9% cycle-to-cycle variability" argument for debug-scale medium
+   doesn't carry over to production resolution: at 100ms ticks this is a
+   locked, deterministic limit cycle, not a jittery one. Steady-state force
+   amplitude is also much lower here than the debug-scale numbers quoted
+   elsewhere in this file (Force-E 99th-percentile ≈5.3, Force-F ≈3.9,
+   troughs ≈0) — but this matches the vanilla-STDP old-circuit run at the
+   same operating point almost exactly (5.3-5.4 / 4.0-4.5), so it's a
+   property of this operating point at production scale generally, not
+   something consolidation changed.
+
+**Consequence: does not confirm or extend the current
+`run_consolidate_speed_arm_loading.sh` scope.** The script now ships medium
+*without* `--consolidate` and at `step-period=1000` (post-2026-09-17); this
+file tests neither. It's supporting evidence that medium+consolidate *can*
+be genuine at production scale in principle, but the actual re-confirmation
+needed before re-enabling it in the script — current code (BS→RG write-back
+fix), current gain (`0.25`/`0.10`), current step-period (1000) — has not
+been run. The other 11 cells of the intended batch (slow, sensory arm,
+seeds 2-3) were also not present in this folder.
+
 ### Sensory-driven mode (`--freeze-bs-rg`, now just freezing BS since Ia→RG is always on — WMAX_IA=10)
 
 Learning shifted from descending (BS) to sensory (muscle-Ia) pathway: BS→RG frozen at
