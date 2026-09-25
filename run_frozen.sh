@@ -5,9 +5,10 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --array=0-9
-#SBATCH --cpus-per-task=64
-#SBATCH --time=03:00:00
-#SBATCH --partition=acc
+#SBATCH --cpus-per-task=16
+#SBATCH --time=01:00:00
+#SBATCH --partition=gp_bsccs
+# CPU nodes; was acc (GPU). Resources revised 2026-09-25, see run_cutforce_sweep6.sh header
 #
 # Frozen-weight control — does the descending-weight DISTRIBUTION (mean +
 # spread), held fixed with plasticity OFF, reproduce the clean plastic

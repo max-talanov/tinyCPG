@@ -5,9 +5,10 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --array=0-8
-#SBATCH --cpus-per-task=64
-#SBATCH --time=03:00:00
-#SBATCH --partition=acc
+#SBATCH --cpus-per-task=16
+#SBATCH --time=01:00:00
+#SBATCH --partition=gp_bsccs
+# CPU nodes; was acc (GPU). Resources revised 2026-09-25, see run_cutforce_sweep6.sh header
 #
 # EXPLORATORY sweep round 2 for MOD_CUT_FORCE_TRIGGER. Round 1
 # (run_cutforce_sweep.sh, results/2026-08-25) swept fatigue-onset-tau {200,400,

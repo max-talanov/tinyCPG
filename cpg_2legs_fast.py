@@ -1598,9 +1598,13 @@ def main():
                     wfull[side][key].append(w)
 
     def new_spikes(rec, last_n):
-        # Fast, constant-memory spike counting
+        # Constant-cost spike counting: read, then clear the recorder. Reading n_events
+        # costs O(events stored so far), so never clearing made per-chunk bookkeeping grow
+        # linearly and total runtime quadratically with sim length (120 s production runs:
+        # ~99% of ~4.8 h wall time). The recorders are only used for these counts.
         cur = int(nest.GetStatus(rec, "n_events")[0])
-        return cur - last_n, cur
+        nest.SetStatus(rec, {"n_events": 0})
+        return cur - last_n, 0
 
     def update_leg(side: str, t_ms: float, dt_ms_actual: float, cut_active_frac: float, do_rate_update: bool):
         dt_s = float(dt_ms_actual) / 1000.0

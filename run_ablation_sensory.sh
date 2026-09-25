@@ -5,9 +5,10 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --array=0-14
-#SBATCH --cpus-per-task=64
-#SBATCH --time=10:00:00
-#SBATCH --partition=acc
+#SBATCH --cpus-per-task=16
+#SBATCH --time=02:00:00
+#SBATCH --partition=gp_bsccs
+# CPU nodes; was acc (GPU). Resources revised 2026-09-25, see run_cutforce_sweep6.sh header
 #
 # Phase B (SENSORY-LEARNING) — graded ablation × STDP λ, but with learning
 # relocated to the sensory pathway (--freeze-bs-rg --stdp-ia-rg --wmax-ia 10).
