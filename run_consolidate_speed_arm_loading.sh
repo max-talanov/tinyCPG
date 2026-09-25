@@ -5,9 +5,10 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --array=0-11
-#SBATCH --cpus-per-task=64
-#SBATCH --time=12:00:00
-#SBATCH --partition=acc
+#SBATCH --cpus-per-task=16
+#SBATCH --time=02:00:00
+#SBATCH --partition=gp_bsccs
+# CPU nodes; was acc (GPU). Resources revised 2026-09-25, see run_cutforce_sweep6.sh header
 #
 # STAGE 4 of ~/.claude/plans/resilient-soaring-flamingo.md -- originally the
 # first MN5 submission for --consolidate under --cut-trigger force.
@@ -123,11 +124,10 @@
 # confirmatory (not exploratory) production submission -- more gait cycles
 # per run than the 60s local tuning rounds used.
 #
-# TIME BUDGET: same 12h precedent as run_cutforce_sweep6.sh (force-trigger
-# + muscle-fatigue bookkeeping is measurably slower per simulated second
-# than the timer-only path -- do not shrink this; consolidate is off in
-# this revision so its own extra overhead no longer applies, but the budget
-# is left unchanged as a safety margin rather than re-measured).
+# TIME BUDGET (revised 2026-09-25): 2h. The old 12h precedent was sized for
+# a bookkeeping bug (uncleared spike recorders, quadratic in sim length) that
+# is now fixed -- see run_cutforce_sweep6.sh header. Consolidate is off in
+# this revision, so 120s runs are expected to take minutes.
 #
 # After completion, run BOTH diagnostics on every output, same as every
 # prior force-trigger round:

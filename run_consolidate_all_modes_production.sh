@@ -5,9 +5,10 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --array=0-23
-#SBATCH --cpus-per-task=64
-#SBATCH --time=12:00:00
-#SBATCH --partition=acc
+#SBATCH --cpus-per-task=16
+#SBATCH --time=04:00:00
+#SBATCH --partition=gp_bsccs
+# CPU nodes; was acc (GPU). Resources revised 2026-09-25, see run_cutforce_sweep6.sh header
 #
 # STAGE 5 -- first production-scale (full N, BS=60Hz) test of --consolidate
 # across medium/fast/toe with a single, uniform descending-arm gain
@@ -77,9 +78,11 @@
 # 120s sim, matching this project's established precedent for a
 # confirmatory (not exploratory) production submission.
 #
-# TIME BUDGET: 12h precedent, unchanged from run_consolidate_speed_arm_loading.sh
-# (force-trigger + muscle-fatigue + consolidate bookkeeping is measurably
-# slower per simulated second than the timer-only path).
+# TIME BUDGET (revised 2026-09-25): 4h. The old 12h precedent was sized for
+# a bookkeeping bug (uncleared spike recorders) that is now fixed -- see
+# run_cutforce_sweep6.sh header. --consolidate adds its own per-tick weight
+# GetStatus/SetStatus cost, not yet re-timed at production N after the fix,
+# so this keeps a wider margin than the 2h used for non-consolidate scripts.
 #
 # After completion, run on every output:
 #   python3 scripts/cpg_cutforce_diagnostics.py --steady-from-ms 30000 results/cpg_consol_all_*.h5

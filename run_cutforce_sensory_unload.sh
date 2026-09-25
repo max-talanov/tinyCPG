@@ -5,9 +5,10 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --array=0-8
-#SBATCH --cpus-per-task=64
-#SBATCH --time=12:00:00
-#SBATCH --partition=acc
+#SBATCH --cpus-per-task=16
+#SBATCH --time=02:00:00
+#SBATCH --partition=gp_bsccs
+# CPU nodes; was acc (GPU). Resources revised 2026-09-25, see run_cutforce_sweep6.sh header
 #
 # EXPLORATORY -- production-scale test of the unloading-rescue mechanism
 # (MOD_IA_RG_LOADING_GAIN), round 1. Not a confirmation -- local debug-scale
