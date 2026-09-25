@@ -85,7 +85,7 @@ sbatch run.sh
 | `run_cutforce_sweep3.sh` | EXPLORATORY MN5 sweep round 3 (9 tasks): fast fatigue-onset-τ {100,150,250} × looser `--cut-force-off-frac` {0.30,0.40,0.50}, cap fixed at 450ms. First round to escape cap-domination (frac_at_cap ~0 across the whole grid) — see "Force-triggered CUT" below. |
 | `run_cutforce_sweep4.sh` | EXPLORATORY MN5 sweep round 4 (9 tasks): narrows around round 3's working region — fatigue-onset-τ {250,300,350} × `--cut-force-off-frac` {0.25,0.30,0.35}, cap still fixed at 450ms. 6/9 configs reverted to cap-domination (incl. the numerically best-looking correlation); best genuine result τ=250/off=0.35 — see "Force-triggered CUT" below. |
 | `run_cutforce_sweep5.sh` | CONFIRMATION refinement (9 tasks, not a new exploration): brackets round 4's τ=250/off=0.35 optimum — fatigue-onset-τ {240,250,260} × `--cut-force-off-frac` {0.35,0.375,0.40}, cap still fixed at 450ms. **Confirmed: frac_at_cap=0.00 on all 9 configs** — best point τ=260/off=0.35, see "Force-triggered CUT" below. |
-| `run_cutforce_sweep6.sh` | PHASE 3 — seed/init robustness (10 tasks, 120s each): holds round 5's winning config fixed (τ=260, off=0.35, cap=450ms), sweeps the same 10-point (μ,CV) STDP-init grid as `run.sh`/paper Algorithm 1. Tests whether the operating point found in rounds 1-5 holds away from μ=3.5. |
+| `run_cutforce_sweep6.sh` | PHASE 3 — seed/init robustness (10 tasks, 120s each): holds round 5's winning config fixed (τ=260, off=0.35, cap=450ms), sweeps the same 10-point (μ,CV) STDP-init grid as `run.sh`/paper Algorithm 1. Tests whether the operating point found in rounds 1-5 holds away from μ=3.5. **Complete: 10/10 genuine** (idx00-07 MN5, idx08-09 local) — see "Round 6" below. Rerun a subset with `sbatch --array=8-9 run_cutforce_sweep6.sh`. |
 | `run_cutforce_sensory_unload.sh` | EXPLORATORY, round 1 (9 tasks, 120s each): production-scale test of the unloading-rescue mechanism (Ia→RG-E/F now loading-dependent, see "Core architecture fix" below) — sensory arm (`--freeze-bs-rg`), 3×3 grid of `--cut-feedback-gain` (loading) × `--ia-feedback-gain` (compensation). Local debug-scale tuning plateaued at weak counter-phase across a wide search; suspected debug-scale population-size ceiling (N_IA_E/F=30 vs 100 production), not a broken mechanism — see "Force-triggered CUT" below. |
 | `run_consolidate_speed_arm_loading.sh` | Stage 4 MN5 array (12 tasks): production sweep, force-trigger mode — 2 confirmed speeds (medium/slow, fast excluded — unresolved, see "Force-trigger speed axis" below) × 2 arms (descending/sensory), full weight-bearing only. **`--consolidate` is OFF for all 4 cells as of 2026-09-17** (revised — see "Medium's tick-alignment fragility and the consolidate leading-leg problem" below): medium+consolidate turned out to have its own unresolved leading-leg asymmetry issue (14 configs tried, none passed), joining slow+consolidate's already-documented failure (Stage 2). Also fixed medium's stale `step-period=520` → `1000` (never the actually-tested value). Toe/air loading is excluded entirely — Stage 3 found the medium timing config fails even without `--consolidate` at reduced loading (cap-domination at toe, tick-floor chattering at air, see "Stage 3" below). Seed/init-robustness (μ:CV grid) is explicitly NOT part of this sweep — see "MN5 readiness verdict" below. Superseded in scope by `run_consolidate_all_modes_production.sh` below for the consolidate-on question; this script's no-consolidate slow cells remain the reference for that speed. |
 | `run_consolidate_all_modes_production.sh` | **STAGE 5, prepared 2026-09-17, not yet submitted.** First production-scale (full N, BS=60Hz) test of `--consolidate` at the new uniform descending-arm gain (`0.25`/`0.10`) confirmed at `--debug-small` across medium/fast/toe (see "Fast/toe re-confirmed under the BS→RG write-back fix" below). 8 cells × 3 seeds = 24 tasks: {medium, fast, toe} × {desc, sens} with `--consolidate` at 0.25/0.10 (mode's own `tau_tag_ms`), plus slow × {desc, sens} without `--consolidate` (unchanged control). Deliberately does **not** apply the debug-small tick-de-alignment fix to medium's timing — at production's 100ms tick those constants are already not exact multiples, so the fix's premise may not transfer; see the script's own header for the full reasoning. Fast/toe's *base* timing (not just the gain) is itself still debug-small-only, flagged explicitly in the script. Flag construction dry-run-verified for all 8 cells; not submitted — `sbatch` is the user's call. |
@@ -295,6 +295,25 @@ timer-based model already shows (paper §4.1): μ=0 (CUT→RG-E starts at 0 pA) 
 (starts ~10-11 pA) converge to the identical ~62 pA plateau. **μ=12 (idx08) and μ=16
 (idx09) — the two highest-weight stress tests — are still pending on MN5; do not
 treat Phase 3 as closed until those land.**
+
+**Round 6 — complete, 10/10 genuine (2026-09-25). Phase 3 closed.** idx08/09 sat in
+PD on MN5 for 7+ days and were run locally instead (`results/2026-09-25/`, production
+N, BS=60 Hz, identical flags to `run_cutforce_sweep6.sh`, 4 threads instead of 64 —
+multi-threaded runs aren't bit-reproducible anyway). Both match idx00-07: μ=12 —
+`frac_at_cap` 0.00/0.00, corr(Force-E,Force-F) −0.65(L)/−0.64(R), corr(Force-E_L,
+Force-E_R) −0.75, bouts 307±29/308±30ms; μ=16 — 0.00/0.00, −0.65/−0.64, −0.75,
+300±23/301±22ms. CUT→RG-E converges to 60-62 pA from every start (first logged sample
+0 pA at μ=0 up to 31-34 pA at μ=16). Across all 10 points: corr(Force-E_L,Force-E_R)
+−0.68 to −0.76, `frac_at_cap` ≤0.01 everywhere — the force-trigger operating point is
+initialization-independent over the full μ=0-16 grid.
+
+**Why 120 s runs took ~4.8 h (fixed 2026-09-25, `a1f66e6` on main, cherry-picked here as `440793b`).** Round 6 tasks logged
+`nest.Simulate` ~135 s vs. bookkeeping ~17000 s (99.2%). `new_spikes()` read
+`n_events` from spike recorders that were never cleared, and that read is O(spikes
+stored so far) → wall time quadratic in sim length. Recorders are now reset after each
+read (bit-identical output at `--threads 1`). The local idx08/09 runs took 11 min
+each. All `run*.sh` also moved from `acc` (GPU partition, 64 cpus, 10-12 h) to
+`gp_bsccs` (16 cpus, 1-2 h; 4 h for `run_consolidate_all_modes_production.sh`, whose `--consolidate` bookkeeping isn't re-timed yet) — the old request is what sat in PD.
 
 **Required workflow from now on**: run `scripts/cpg_cutforce_diagnostics.py` on every
 sweep output before trusting any correlation number. `frac_at_cap` near 1.0 on either
