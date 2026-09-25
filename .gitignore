@@ -224,3 +224,6 @@ tinyCPG_overleaf.zip
 # practice; some historical *.h5 got committed before this rule existed — see
 # the untracking commit that added this line).
 *.h5
+
+# macOS Finder metadata
+.DS_Store
