@@ -5,26 +5,30 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --array=0-9
-#SBATCH --cpus-per-task=64
-#SBATCH --time=12:00:00
-#SBATCH --partition=acc
+#SBATCH --cpus-per-task=16
+#SBATCH --time=02:00:00
+#SBATCH --partition=gp_bsccs
 #
-# TIME BUDGET (calibrated from a real timeout, not guessed): the first
-# submission of this script used --time=03:00:00 and every one of the 10
-# tasks was CANCELLED DUE TO TIME LIMIT at the exact same point -- chunk
-# 800/1200, i.e. 80s of the 120s sim (66.7%), never reaching the final HDF5
-# write (results/2026-09-03: 10 slurmout/slurmerr pairs, zero .h5 files).
-# 180min for 66.7% of the run extrapolates linearly to ~270min (4.5h) for the
-# full 120s under THAT run's load -- this mode's per-chunk bookkeeping
-# (force-threshold gate + muscle-fatigue update every rate-update tick) makes
-# it measurably slower per simulated second than the timer-based paced-gait
-# path. A flat 06:00:00 (~33% margin over 4.5h) was tried next but is still
-# only sized for that one observed load level, and MN5 load varies run to
-# run -- a slower shared node or heavier cluster contention could still burn
-# through it. --time=12:00:00 instead matches run.sh's own precedent (same
-# partition, its 120s/10-task runs already budget 12h despite reportedly
-# finishing in ~2h -- see paper Sec 3.9), which has proven itself against
-# that load variance in practice. Do not drop this below 12:00:00.
+# To (re)run only some tasks, override the array on the command line, e.g.
+# the two round-6 points still missing (mu=12, mu=16):
+#   sbatch --array=8-9 run_cutforce_sweep6.sh
+#
+# RESOURCES (revised 2026-09-25 -- the old 64 cpus / 12h / acc request sat in
+# PD for 7+ days):
+# - Runtime was dominated by a bookkeeping bug, not by simulation: every task
+#   logged "nest.Simulate: ~135s (0.8%) | bookkeeping: ~17000s (99.2%)"
+#   (results/2026-09-07). Cause: new_spikes() read n_events from spike
+#   recorders that were never cleared, and that read costs O(spikes stored so
+#   far), so wall time grew quadratically with sim length (60s runs ~4000s,
+#   120s runs ~17000s). Fixed in cpg_2legs_fast.py (recorder reset after each
+#   read; bit-identical output at --threads 1). Local production-N check,
+#   20s sim, 4 threads: 8m33s -> 51s wall, bookkeeping 476s -> 9.5s.
+#   Expected 120s task now: minutes, not hours -- 02:00:00 is a wide margin.
+# - acc is MN5's GPU partition; this job uses no GPU and the 64 cores sat
+#   idle 99% of the time. gp_bsccs (general-purpose CPU nodes) is what the
+#   memHippo/tinyHippo jobs on the same account use without long PD waits.
+# - Smaller/shorter requests fit into backfill gaps; 16 threads is ample
+#   for the ~135s of NEST time measured at 64 threads.
 #
 # PHASE 3 -- seed/initial-weight ROBUSTNESS check for MOD_CUT_FORCE_TRIGGER.
 # Not a parameter search (that's done -- see rounds 1-5 below); this holds the
