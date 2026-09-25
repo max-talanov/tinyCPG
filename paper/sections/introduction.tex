@@ -87,8 +87,10 @@ force- and length-driven Ia feedback projecting back into the
 reciprocal-inhibition interneurons (InE/InF) that gate the rhythm generators
 (RG-E/RG-F); (3) explicit motoneuron pools (M-E/M-F) and Hill-style muscle
 proxies that turn rhythm-generator output into graded force and length; and
-(4) an externally paced, sequential Ia activation reproducing the
-heel$\to$mid$\to$toe pressure transfer of stance. Rather than prescribing
+(4) closed-loop, force-triggered stance/swing switching, in which each
+leg's paw-contact input is turned on and off by that leg's own extensor
+force rather than by a clock, with a sequential Ia activation reproducing
+the heel$\to$mid$\to$toe pressure transfer within each stance. Rather than prescribing
 the strength of the key sensorimotor pathways, we let them self-organize
 through ongoing activity, and we ask how the resulting locomotor pattern
 degrades as sensory feedback is withdrawn while a reduced, tonic
@@ -109,14 +111,15 @@ could eventually help optimize rehabilitation after neurological injury.
 Section~\ref{sec:acronyms} lists the acronyms used throughout the paper.
 Section~\ref{sec:methods} describes the model architecture, the Izhikevich
 and Hodgkin--Huxley neuron implementations, the STDP rule, the sensory
-pathways, and the paced-gait protocol. Section~\ref{sec:results} reports how
-the plastic synapses converge to a shared set-point independent of
-initialization (\autoref{sec:results:weights}), how that convergence tracks
-rehabilitation-relevant force output (\autoref{sec:results:force}), how
-network activity compares across the $5\times5$ grid of locomotion modes and
-STDP rates (\autoref{sec:results:comparison}), and how a constant cutaneous
-drive rescues stepping under simulated unloading, an epidural-stimulation
-analogue (\autoref{sec:results:epidural}). Section~\ref{sec:discussion}
+pathways, muscle fatigue and the force-triggered stance/swing protocol.
+Section~\ref{sec:results} reports how the plastic synapses converge to a
+shared set-point independent of initialization
+(\autoref{sec:results:robustness}) and of locomotion mode
+(\autoref{sec:results:weights}), how that convergence tracks
+rehabilitation-relevant force output (\autoref{sec:results:force}), and how
+gait quality and network activity compare across the $4\times5$ grid of
+locomotion modes and STDP rates
+(\autoref{sec:results:network}--\autoref{sec:results:comparison}). Section~\ref{sec:discussion}
 relates these findings to the Rybak/Shevtsova/Danner/Zhang lineage and to the
 experimental SCI-rehabilitation literature, and discusses limitations and
 future extensions.

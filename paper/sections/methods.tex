@@ -12,8 +12,10 @@ synapses onto the rhythm generator;
 interneurons;
 (iii) motoneuron pools driving Hill-like muscle proxies with force and
 length dynamics;
-(iv) externally paced sequential Ia activation simulating heel-to-toe
-weight transfer during stance.
+(iv) closed-loop, force-triggered stance/swing switching: each leg's
+cutaneous (paw-contact) input is switched on and off by that leg's own
+extensor force rather than by a clock, with sequential Ia activation
+simulating heel-to-toe weight transfer within each stance.
 The model is implemented in NEST~3.9~\cite{nest2002} and is publicly
 available at \href{https://github.com/max-talanov/tinyCPG}{github.com/max-talanov/tinyCPG}.
 
@@ -135,12 +137,10 @@ and sign preserved), since biological synaptic weights are lognormally
 distributed rather than uniform~\cite{song2005,buzsaki2014}. The mean
 preserves the designed balance---in particular the asymmetric reciprocal
 inhibition (InF$\to$RG-E $=-48$\,pA, InE$\to$RG-F $=-8$\,pA) reproduces the
-Zhang~6:1 ratio exactly. The plastic projections (CUT$\to$RG-E in both
-arms, BS$\to$RG in the descending arm, Ia$\to$RG in the sensory arm) carry
-lognormal weight distributions from STDP: the table reports their
-\emph{converged} mean$\pm$s.d.\ (CUT$\to$RG-E and Ia$\to$RG at their
-learned load set-points, BS$\to$RG frozen at weak init in the sensory
-arm). The cutaneous input to RG-E is a single plastic projection. Conduction delays follow the rat
+Zhang~6:1 ratio exactly. The plastic projections (CUT$\to$RG-E and
+BS$\to$RG-\{E,F\}) start from a lognormal distribution and are reported
+both as initialised and after learning (Fig.~\ref{fig:connectivity}a,b;
+Table~\ref{tab:delays}). The cutaneous input to RG-E is a single plastic projection. Conduction delays follow the rat
 \texttt{length\_velocity} preset (brainstem pathways $\approx 3.0$\,ms,
 reciprocal and motor pathways $\approx 1.8$\,ms, commissural
 $\approx 2.2$\,ms) with $0.2$\,ms across-connection jitter. The
@@ -153,12 +153,14 @@ Figure~\ref{fig:connectivity} shows the weight and delay distributions.
 \begin{figure}[t]
   \centering
   \includegraphics[width=0.8\textwidth]{fig_connectivity.png}
-  \caption{Distribution of synaptic weights and conduction delays along
-  every projection (sensory-arm configuration: frozen BS$\to$RG, plastic
-  Ia$\to$RG). \textbf{(a)} Weight histograms for the plastic / learned
-  projections (STDP + lognormal init). \textbf{(b)} Synaptic weight per
-  projection (mean $\pm$ per-connection s.d.; green excitatory, red
-  inhibitory) --- all projections are heterogeneous (lognormal, CV$\approx
+  \caption{\textbf{Synaptic weights and conduction delays along every
+  projection, before and after learning.} \textbf{(a)} Weight histograms of
+  the three plastic projections, leg L: as initialised (grey, lognormal
+  $\mu=3.5$\,pA, CV$=0.3$) and after 120\,s of learning (orange; medium walk,
+  $\lambda=10^{-3}$). \textbf{(b)} Synaptic weight per projection (mean $\pm$
+  per-connection s.d.; green excitatory, red inhibitory); plastic
+  projections are shown at their learned values (open circle = initial
+  mean). All static projections are heterogeneous (lognormal, CV$\approx
   0.5$), with the asymmetric reciprocal inhibition InF$\to$RG-E $=-48$\,pA
   versus InE$\to$RG-F $=-8$\,pA preserving the Zhang~6:1 ratio in the mean.
   \textbf{(c)} Conduction~+~synaptic delay per projection (mean $\pm$
@@ -173,8 +175,10 @@ $BS_{\text{regular}}=60$\,Hz with $\sigma=0.25$\,Hz noise, identical for
 both legs. The 60\,Hz value sits in the
 middle of the rat reticulospinal range
 (20--80\,Hz)~\cite{drew1986,brocard2010}. In contrast to~\cite{zhang2022},
-who vary tonic drive $\alpha$ to vary gait speed, we hold BS tonic and
-pace the rhythm via sensory feedback (see \autoref{sec:methods:paced}).
+who vary tonic drive $\alpha$ to vary gait speed, we hold the BS firing
+rate tonic and let the stance/swing timing emerge from sensory feedback
+(see \autoref{sec:methods:paced}); the \emph{strength} of the BS$\to$RG
+synapses is learned (\autoref{sec:methods:stdp}).
 
 \subsection{Spike-timing-dependent plasticity}\label{sec:methods:stdp}
 Two projections --- cutaneous CUT$\to$RG-E and brainstem
@@ -183,11 +187,14 @@ BS$\to$RG-\{E,F\} --- carry multiplicative STDP synapses (NEST
 $\alpha=0.95$, $\mu_+=\mu_-=0.4$, $w_{\max}=120$\,pA for CUT and
 $w_{\max}=30$\,pA for BS)~\cite{biPoo1998,morrison2007}. Initial
 weights are drawn from a lognormal distribution with mean $\mu$ and
-coefficient of variation CV. We swept $(\mu,\text{CV})$ across ten
-diagnostic points (the ten $(\mu,\mathrm{CV})$ initialisation points) spanning four orders of
-magnitude to verify that the post-training weight distribution
-converges to the same plateau regardless of initialisation (see
-Section~\ref{sec:results:weights}).
+coefficient of variation CV ($\mu=3.5$\,pA, CV$=0.30$ unless stated
+otherwise). We swept $(\mu,\text{CV})$ across ten diagnostic points
+($\mu$ from $0$ to $16$\,pA) to verify that the learned weights converge
+to the same plateau regardless of initialisation (see
+Section~\ref{sec:results:robustness}). The proprioceptive
+Ia$\to$RG projections are not plastic in this configuration; Ia
+feedback acts through the static reciprocal-interneuron and
+Ia-interneuron pathways only.
 
 \paragraph{Extensor-biased plasticity and stance/swing asymmetry.}
 The plastic and paced drives are deliberately extensor-weighted, mirroring
@@ -196,8 +203,8 @@ afferent --- the only projection with the large ($w_{\max}=120$\,pA)
 plasticity ceiling --- targets the extensor (CUT$\to$RG-E) and has no
 flexor counterpart, reflecting that paw-contact cutaneous feedback fires
 during weight-bearing stance and reinforces the load-bearing
-extensor~\cite{pearson1995,rossignol2006}. Likewise the paced
-heel$\to$toe Ia-E ramp clocks the extensor during stance, whereas the
+extensor~\cite{pearson1995,rossignol2006}. Likewise the sequential
+heel$\to$toe Ia-E drive reinforces the extensor within each stance, whereas the
 flexor receives no external pacing and is generated intrinsically ---
 by the persistent-sodium-like bursting of the RG-F units and by release
 from reciprocal inhibition during swing. As a consequence the extensor
@@ -208,16 +215,14 @@ strengthens the descending drive asymmetrically, in favour of the
 extensor (analysed in Section~\ref{sec:results:force}).
 
 \paragraph{Learning-rate variation.}
-For the speed-by-STDP and graded-ablation matrices
+For the locomotion-mode $\times$ learning-rate grid
 (\autoref{sec:methods:protocols}), the STDP learning rate $\lambda$ was
-varied across three values spanning two decades at and below the
-cortical bio-plausible STDP rate~\cite{biPoo1998,morrison2007}:
-$\lambda \in \{1{\times}10^{-5},\,1{\times}10^{-4},\,1{\times}10^{-3}\}$.
-We refer to these as \emph{slow}, \emph{intermediate}, and
-\emph{baseline} STDP, respectively. With a 120\,s run the slow rate does
-not fully converge (time constant $\approx 250$\,s), which lets us probe
-the regime of weak, still-developing descending weights. The parameter
-is recorded to the simulation output for every run.
+varied across five decades around the cortical bio-plausible STDP
+rate~\cite{biPoo1998,morrison2007}:
+$\lambda \in \{10^{-2},10^{-3},10^{-4},10^{-5},10^{-6}\}$. With a
+120\,s run the two slowest rates do not converge, which lets us probe the
+regime of weak, still-developing learned weights. The parameter is
+recorded to the simulation output for every run.
 
 \subsection{Sensory feedback and Ia rate coding}\label{sec:methods:ia}
 Ia afferent firing rate $r_{\text{Ia}}$ is updated every 100\,ms as a
@@ -239,14 +244,18 @@ used in rat SCI rehabilitation
 experiments~\cite{lavrov2008,courtine2009,edgerton2008}, we expose a
 multiplicative Ia-feedback gain $G_{\text{Ia}} \in [0, 1]$, applied
 after Eq.~\ref{eq:ia}:
-$\tilde{r}_{\text{Ia}} = G_{\text{Ia}}\cdot r_{\text{Ia}}$. The three
-operating regimes used in Section~\ref{sec:results:epidural} are:
-$G_{\text{Ia}}=1.0$ (\emph{baseline}, full weight-bearing);
-$G_{\text{Ia}}=0.5$ (\emph{toe stepping}, partial weight); and
-$G_{\text{Ia}}=0.1$ (\emph{air stepping}, limb unloaded, residual
-spindle background only). The classical Ia-INT$\to$antagonist pathway
-inherits the same gain, so the manipulation reduces \emph{all} Ia
-output uniformly.
+$\tilde{r}_{\text{Ia}} = G_{\text{Ia}}\cdot r_{\text{Ia}}$, and a matching
+cutaneous gain $G_{\text{CUT}}$ that scales the stance-phase paw-contact
+rate. Full weight-bearing uses $G_{\text{Ia}}=G_{\text{CUT}}=1.0$;
+\emph{toe stepping} (partial weight-bearing) uses
+$G_{\text{Ia}}=G_{\text{CUT}}=0.5$. The classical Ia-INT$\to$antagonist
+pathway inherits the same gain, so the manipulation reduces \emph{all} Ia
+output uniformly; the sequential heel$\to$toe Ia-E drive is not scaled.
+Full unloading (\emph{air stepping}, $G=0.1$) is not reported: in pilot
+simulations the extensor force at that loading was too small for the
+force-triggered stance detector (\autoref{sec:methods:paced}) to separate
+stance from fluctuations, and stance collapsed to single update steps, so
+no closed-loop gait exists to analyse.
 
 \subsection{Activation and force dynamics}\label{sec:methods:muscle}
 The muscle relay rate $r_{\text{mus}}$ is mapped to activation $a$
@@ -273,10 +282,29 @@ function of activation:
   F_{\text{tgt}} &= F_{\max} \, \bigl(1 - \exp(-k_F \, a)\bigr),\\
   F(t+\Delta t) &= F(t) + \bigl(1 - e^{-\Delta t/\tau_F}\bigr)\bigl(F_{\text{tgt}} - F(t)\bigr).
 \end{align}
-Under the paced-gait protocol (\autoref{sec:methods:paced}) the time
-constants are overridden: $\tau_a=40$\,ms, $\tau_F=80$\,ms. The latter
+Under the gait protocol (\autoref{sec:methods:paced}) the time
+constants are set to $\tau_a=40$\,ms, $\tau_F=80$\,ms. The latter
 sits within the rat fast-twitch fibre rise-time
 range~\cite{zajac1989,winters1995}.
+
+\paragraph{Muscle fatigue.}
+Each muscle carries a slow activity-dependent fatigue state
+$\phi\in[0,\phi_{\max}]$ that scales its force ceiling,
+$F_{\text{tgt}} = F_{\max}(1-\phi)\bigl(1-\exp(-k_F a)\bigr)$, and evolves as
+\begin{equation}
+  \frac{d\phi}{dt} = \frac{a}{a_{\max}}\,\frac{\phi_{\max}-\phi}{\tau_{\text{on}}}
+    - \Bigl(1-\frac{a}{a_{\max}}\Bigr)\frac{\phi}{\tau_{\text{rec}}},
+  \label{eq:fatigue}
+\end{equation}
+building up while the muscle is active and clearing while it is silent
+($\phi_{\max}=0.95$; $\tau_{\text{on}}$ and $\tau_{\text{rec}}$ per
+locomotion mode, Table~\ref{tab:modes}). Fatigue is what lets extensor force
+decline during a sustained stance so that the force-triggered stance
+detector can end it: the extensor rhythm generator has no intrinsic
+burst-termination mechanism (only RG-F is intrinsically bursting), so
+without fatigue the CUT$\to$RG-E$\to$force$\to$CUT loop holds force at its
+ceiling indefinitely. It is the closest local analogue of
+persistent-sodium-driven burst termination in this reduced model.
 
 \paragraph{Force units and SI calibration.}
 Force is reported in arbitrary units (a.u.). The dimensionless ceiling
@@ -293,78 +321,116 @@ tetanic force gives a conversion of $1$\,a.u.\ $\approx$
 $0.30$--$0.40$\,N. Nothing in the model dynamics depends on this
 choice of units; we use a.u.\ throughout for transparency.
 
-\subsection{Paced gait protocol}\label{sec:methods:paced}
-Each step period (default 1000\,ms) is divided
-into two 500\,ms half-cycles. During the stance half of leg L, the L
-cutaneous generator fires at $CUT_{\text{on}}=100$\,Hz, and three
-sequential Ia-E sub-groups fire at 60, 80, and 100\,Hz over consecutive
-$\sim$167\,ms windows, emulating heel$\to$mid$\to$toe pressure transfer
-during stance~\cite{loebDuysens2018}. During swing, all CUT and Ia-E
-drive is silenced. The contralateral leg R follows the 180\,$^{\circ}$
-mirror schedule (trot pattern). Reciprocal inhibition and the RGF
-intrinsic-bursting dynamics maintain the swing-leg flexor burst without
-external pacing.
+\subsection{Force-triggered stance/swing protocol}\label{sec:methods:paced}
+Stance and swing are not imposed by a clock. Each leg carries a stance
+detector --- a Schmitt trigger on its own extensor force $F_E$ ---
+evaluated every 100\,ms. During stance the detector tracks the running peak
+$\hat F$ of the current bout; stance ends (``foot lifts'') when $F_E$ falls
+below $\theta_{\text{off}}\hat F$, and the next stance begins (``foot
+touches down'') when $F_E$ rises above $\theta_{\text{on}}\hat F$
+($\theta_{\text{on}}=0.80$; $\theta_{\text{off}}$ per mode,
+Table~\ref{tab:modes}). $\hat F$ is reset at each stance onset, so the
+thresholds are relative to the leg's own current force scale. During
+stance the cutaneous generator of that leg fires at
+$G_{\text{CUT}}\cdot CUT_{\text{on}}$ ($CUT_{\text{on}}=100$\,Hz) and three
+sequential Ia-E sub-groups fire at 60, 80 and 100\,Hz over consecutive
+thirds of a nominal stance window, emulating heel$\to$mid$\to$toe pressure
+transfer~\cite{loebDuysens2018}; during swing all CUT and Ia-E drive is
+silenced and an 80\,Hz flexor afferent (hip/flexor stretch) drives RG-F.
+Stance termination is therefore produced by the closed loop
+CUT$\to$RG-E$\to$force, together with muscle fatigue
+(Eq.~\ref{eq:fatigue}), which lets force decline within a bout.
+
+Two timeouts bound each phase ($T_{\max}$, Table~\ref{tab:modes}), as an
+endogenous-timer backstop analogous to the hip-extension limit that
+triggers swing even under continued loading~\cite{grillnerRossignol1978}.
+For stance this is a safeguard only: we report the fraction of stance
+bouts that end at the timeout (``at cap'') and treat a condition as a
+genuine closed loop only when this fraction is near zero. Swing, in
+contrast, has no sensory termination signal in the model (there is no
+hip-position feedback), so swing always lasts $T_{\max}$; cycle-to-cycle
+variability and speed differences therefore arise from stance.
+
+Left--right symmetry is broken at $t=0$ by starting the right leg in
+stance; both legs' cutaneous input is on for an initial priming window
+$T_{\text{lead}}$ so that both CUT$\to$RG-E synapses receive their first
+potentiation. At the fast and toe-stepping operating points the two legs
+otherwise settle into a phase relation that depends on spike-timing noise
+(sometimes in-phase); there, a small persistent asymmetry in fatigue onset
+($\tau_{\text{on}}(1\mp\epsilon)$ for the leading/lagging leg) keeps them
+in alternation, reflecting that real limbs are not identical.
+
+\begin{table}[t]
+  \centering
+  \footnotesize
+  \caption{Force-triggered operating point per locomotion mode. $P$ sets
+    the nominal stance window of the heel$\to$toe Ia-E sequence only; the
+    actual stride is emergent. $G$: Ia and cutaneous feedback gain.
+    Common to all modes: $\theta_{\text{on}}=0.80$, $\phi_{\max}=0.95$,
+    100\,ms detector update. Slow walk is medium walk with all
+    fatigue/timeout constants scaled by $1.3$. Values were screened at the
+    production network size for a genuine closed loop (no stance bouts at
+    the timeout) and L/R alternation.}
+  \label{tab:modes}
+  \begin{tabular}{l r r r r r r r r}
+    \toprule
+    Mode & $G$ & $P$ (ms) & $\tau_{\text{on}}$ (ms) & $\tau_{\text{rec}}$ (ms)
+      & $\theta_{\text{off}}$ & $T_{\max}$ (ms) & $T_{\text{lead}}$ (ms) & $\epsilon$ \\
+    \midrule
+    slow walk     & 1.0 & 1200 & 340 & 780 & 0.35 & 585 & 150 & 0    \\
+    medium walk   & 1.0 &  520 & 260 & 600 & 0.35 & 450 & 150 & 0    \\
+    fast walk     & 1.0 &  600 & 156 & 360 & 0.30 & 380 &  90 & 0.04 \\
+    toe stepping  & 0.5 &  730 & 260 & 438 & 0.35 & 450 & 110 & 0.12 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
 \subsection{Simulation setup}\label{sec:methods:sim}
 All simulations were performed with NEST~3.9~\cite{nest2002} using a
-kernel resolution of 0.2\,ms, simulation chunks of 100\,ms, and 64
-OpenMP threads per task on a single AMD EPYC node (MN5 system,
-Barcelona Supercomputing Center). Initial-weight sweeps were run as
-10-task SLURM job arrays; ablation and speed-sweep experiments used
-5-task arrays. A 30\,s simulation completes in $\sim$30\,min wall-clock;
-a 120\,s simulation in $\sim$2\,h.
+kernel resolution of 0.2\,ms and simulation chunks of 100\,ms, at the full
+network size (Table~\ref{tab:delays}) with tonic BS at 60\,Hz. Grid runs
+used 16 OpenMP threads per task on the MN5 general-purpose partition
+(Barcelona Supercomputing Center) or 2--4 threads on a workstation; a
+120\,s simulation completes in $\approx$10--25\,min wall-clock.
+Multi-threaded NEST runs are not bit-reproducible across thread counts
+(spike-delivery order varies), so results are reported as single runs per
+condition with the initialisation sweep (\autoref{sec:results:robustness})
+standing in for replication.
 
 \subsection{Experimental protocols}\label{sec:methods:protocols}
-Three classes of in-silico experiments are reported in this paper. Each
-is encoded as a stand-alone shell script that submits a single
-multi-task SLURM array and writes one HDF5 file per array task.
-Pseudocode for all three is given in the Supplementary material (Algorithms~\ref{alg:main}--\ref{alg:ablgrad}).
+Two in-silico experiments are reported. Each is encoded as a stand-alone
+shell script that submits one SLURM job array (or runs locally) and writes
+one HDF5 file per task. Pseudocode is given in the Supplementary material
+(Algorithms~\ref{alg:main}--\ref{alg:grid}).
 
-\paragraph{Main experiment: long-term self-organisation.}
-A 10-point sweep over the initial-weight distribution $(\mu,\mathrm{CV})$
-for the STDP synapses, run as a SLURM job array. Each task simulates
-\SI{120}{\second} of paced locomotion at $\mu, \mathrm{CV}$ drawn from
-the ten $(\mu,\mathrm{CV})$ initialisation points. Used in Section~\ref{sec:results:weights}.
+\paragraph{Initialisation robustness.}
+Ten 120\,s runs of medium walk at $\lambda=10^{-3}$, one per STDP
+initial-weight distribution $(\mu,\mathrm{CV})$ from the ten
+initialisation points ($\mu=0$--$16$\,pA), seed $12345+10007\,i$
+(\texttt{run\_cutforce\_sweep6.sh}). Used in
+Section~\ref{sec:results:robustness}.
 
-
-\paragraph{Phase A --- speed-by-STDP matrix.}
-Nine 120\,s runs spanning three walking speeds (rat locomotor range,
-\cite{lavrov2008,courtine2009}) crossed with three bio-plausible STDP
-learning rates. Used in Section~\ref{sec:results:force}.
-
-
-\paragraph{Phase B --- graded sensory ablation by STDP matrix
-(Courtine/Lavrov SCI paradigm).}
-Nine 120\,s runs at the medium-walk anchor ($P=520$\,ms) crossing three
-Ia feedback gains with three STDP rates. Used in
-Section~\ref{sec:results:epidural}.
-
-
-\paragraph{Legacy ablation experiment (supplementary).}
-For completeness we retain the earlier 5-condition ablation experiment
-(\emph{baseline}, \emph{noIa}, \emph{symInh}, \emph{noComm},
-\emph{noPaced}) that demonstrated which architectural components are
-load-bearing. The Phase B graded ablation is the principal ablation
-result of the paper; the binary ablation is reported in supplementary
-Fig.~S1.
-
-\noindent All three scripts (\texttt{run.sh}, \texttt{run\_ablation.sh},
-\texttt{run\_speed.sh}) are publicly available in the repository. Each
-single 30\,s task runs in $\sim$30\,min wall-clock on a 64-thread MN5
-node; the 120\,s task takes $\sim$2\,h. Total compute for all three
-experiments: $\sim$60 core-hours.
+\paragraph{Locomotion-mode $\times$ learning-rate grid.}
+Twenty 120\,s runs crossing the four locomotion modes of
+Table~\ref{tab:modes} with the five learning rates, all at
+$(\mu,\mathrm{CV})=(3.5,0.30)$, seed $12345$
+(\texttt{run\_forcetrig\_grid.sh}). Used in
+Sections~\ref{sec:results:weights}--\ref{sec:results:comparison}.
 
 \subsection{Data analysis}\label{sec:methods:analysis}
-Cycle period was computed as the Force-E peak-to-peak interval over the
-last 20\,s, using a 5\,a.u.\ minimum peak height and a 300\,ms minimum
-inter-peak gap. Counter-phase strength was reported as Pearson's
-correlation between Force-E and Force-F over the same window. Peak
-force amplitude was reported as the 95th percentile to avoid outlier
-sensitivity. STDP convergence was reported as the per-projection mean
-$\pm$ standard deviation of synaptic weights sampled every 1\,s. No
-formal statistical tests are reported: simulations are deterministic with
-a fixed seed (12345 + 10007$\times$idx for sweep tasks); reproducibility
-is therefore exact, and uncertainty is captured by the $(\mu,\text{CV})$
-initialisation sweep rather than by stochastic repetition.
+Stance and swing bouts were taken from the logged per-step stance-detector
+state. A condition's stance timing is \emph{genuine} (closed-loop) when the
+fraction of stance bouts that end at the timeout $T_{\max}$ (``frac.\
+stance at cap'', worst leg) is near zero; a high fraction means the timeout,
+not the force threshold, is setting the rhythm. Counter-phase strength was
+reported as Pearson's correlation between Force-E and Force-F of the same
+leg, and left--right alternation as the correlation between the two legs'
+Force-E. Peak force was reported as the 95th percentile to avoid outlier
+sensitivity. Unless stated otherwise, metrics are computed over the last
+20\,s of the run (Figs.~\ref{fig:mode_lambda_heat}--\ref{fig:mode_lambda_trend})
+or from $t\ge30$\,s (initialisation sweep), after the learned weights have
+converged. STDP convergence was reported as the per-projection mean
+$\pm$ standard deviation of synaptic weights sampled every 1\,s. No formal
+statistical tests are reported.
 
 % --- Parameter tables go in supplementary ---
