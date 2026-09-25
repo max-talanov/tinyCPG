@@ -602,6 +602,24 @@ def main():
                          "activation ~1.2) against an off-threshold of ~1.9 and never "
                          "crossed it. 0.95 leaves a floor of ~0.9, safely below a "
                          "typical off-threshold even for a modest bout peak.")
+    ap.add_argument("--leg-fatigue-asym-frac", type=float, default=0.0,
+                    help="MOD_LEG_ASYM: persistent (not just at-priming) L/R asymmetry "
+                         "in --fatigue-tau-onset-ms, as a fraction of the base value -- "
+                         "the leading leg (--leading-leg) gets tau*(1-frac) (fatigues "
+                         "faster), the other leg tau*(1+frac). 0 (default) = symmetric, "
+                         "matches every prior run exactly. Motivation: several "
+                         "force-trigger operating points with short/weak bouts (fast "
+                         "speed, reduced loading) reach genuine (non-cap-dominated) "
+                         "timing but the L/R phase relationship becomes seed-dependent "
+                         "(bistable) -- --leading-leg/--lead-offset-ms only break "
+                         "symmetry at t=0, and by steady state nothing distinguishes "
+                         "the legs anymore. A small persistent asymmetry (real limbs "
+                         "are not identical either) is confirmed (2 seeds) to fix this "
+                         "at both a fast-speed and a toe-loading operating point -- see "
+                         "CLAUDE.md 'Persistent leg asymmetry breaks the fast/toe "
+                         "bistability'. Working magnitude is config-dependent (0.04-0.12 "
+                         "tested); too small still flips sign, too large cap-dominates "
+                         "the slower-fatiguing leg.")
     # ---- ablation flags (paper Figure: necessity of each component) ----
     ap.add_argument("--ablate-ia-loop", action="store_true",
                     help="ABLATION: zero Ia→InE/InF closed-loop (W_IA2IN=0). Tests "
@@ -680,6 +698,14 @@ def main():
     FATIGUE_MAX_FRAC = float(args.fatigue_max_frac)
     if not (0.0 <= FATIGUE_MAX_FRAC <= 1.0):
         raise ValueError(f"--fatigue-max-frac ({FATIGUE_MAX_FRAC}) must be in [0,1].")
+    # MOD_LEG_ASYM: persistent per-leg fatigue-onset asymmetry (0 = symmetric, exact
+    # no-op match to every prior run). Leading leg fatigues faster (shorter tau).
+    LEG_FATIGUE_ASYM_FRAC = float(getattr(args, "leg_fatigue_asym_frac", 0.0))
+    FATIGUE_TAU_ONSET_MS_BY_SIDE = {
+        side: FATIGUE_TAU_ONSET_MS * (1.0 - LEG_FATIGUE_ASYM_FRAC if side == LEADING_LEG
+                                       else 1.0 + LEG_FATIGUE_ASYM_FRAC)
+        for side in LEGS
+    }
     # ---- sweep mode (Option C): run one (mu, CV) pair per Slurm array task ----
     def _parse_pairs(s: str):
         s = (s or "").strip()
@@ -1694,7 +1720,7 @@ def main():
         if MUSCLE_FATIGUE:
             drive_e = S["act_e"] / max(1e-9, ACT_MAX)
             drive_f = S["act_f"] / max(1e-9, ACT_MAX)
-            tau_on_s = FATIGUE_TAU_ONSET_MS / 1000.0
+            tau_on_s = FATIGUE_TAU_ONSET_MS_BY_SIDE[side] / 1000.0
             tau_rec_s = FATIGUE_TAU_RECOVERY_MS / 1000.0
             S["fatigue_e"] += dt_s * (drive_e * (FATIGUE_MAX_FRAC - S["fatigue_e"]) / tau_on_s
                                        - (1.0 - drive_e) * S["fatigue_e"] / tau_rec_s)
@@ -2146,6 +2172,7 @@ def main():
         h5.attrs["muscle_fatigue"] = bool(MUSCLE_FATIGUE)
         if MUSCLE_FATIGUE:
             h5.attrs["fatigue_tau_onset_ms"] = float(FATIGUE_TAU_ONSET_MS)
+            h5.attrs["leg_fatigue_asym_frac"] = float(LEG_FATIGUE_ASYM_FRAC)
             h5.attrs["fatigue_tau_recovery_ms"] = float(FATIGUE_TAU_RECOVERY_MS)
             h5.attrs["fatigue_max_frac"] = float(FATIGUE_MAX_FRAC)
         h5.attrs["ablate_ia_loop"] = bool(args.ablate_ia_loop)

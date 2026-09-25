@@ -54,6 +54,9 @@ sbatch run.sh
 | `run_cutforce_sweep4.sh` | EXPLORATORY MN5 sweep round 4 (9 tasks): narrows around round 3's working region — fatigue-onset-τ {250,300,350} × `--cut-force-off-frac` {0.25,0.30,0.35}, cap still fixed at 450ms. 6/9 configs reverted to cap-domination (incl. the numerically best-looking correlation); best genuine result τ=250/off=0.35 — see "Force-triggered CUT" below. |
 | `run_cutforce_sweep5.sh` | CONFIRMATION refinement (9 tasks, not a new exploration): brackets round 4's τ=250/off=0.35 optimum — fatigue-onset-τ {240,250,260} × `--cut-force-off-frac` {0.35,0.375,0.40}, cap still fixed at 450ms. **Confirmed: frac_at_cap=0.00 on all 9 configs** — best point τ=260/off=0.35, see "Force-triggered CUT" below. |
 | `run_cutforce_sweep6.sh` | PHASE 3 — seed/init robustness (10 tasks, 120s each): holds round 5's winning config fixed (τ=260, off=0.35, cap=450ms), sweeps the same 10-point (μ,CV) STDP-init grid as `run.sh`/paper Algorithm 1. **Complete: 10/10 genuine** (idx00-07 MN5, idx08-09 local) — see "Round 6" below. Rerun a subset with `sbatch --array=8-9 run_cutforce_sweep6.sh`. |
+| `run_forcetrig_grid.sh` | **Paper main result (2026-09-25).** Force-triggered, descending arm, 4 modes (slow/medium/fast/toe) × 5 λ {1e-2..1e-6} = 20 tasks, μ=3.5/CV=0.30, 120 s. Per-mode operating points in the script header (toe retuned to τ=260/cap=450 — the debug τ=100/cap=330 flickered at the 100 ms production tick). Runs locally too: `TASK=<0-19> THREADS=2 OUTDIR=... bash run_forcetrig_grid.sh`. Results in `results/2026-09-25_ftgrid`, see "Force-triggered 4×5 grid" below. |
+| `scripts/paper_grid.py` | Shared mode/stem/weight-key definitions for the paper figure scripts; each takes `--grid ftgrid` (default, current paper) or `--grid timer` (old clock-paced sensory-arm grid, `results/2026-07-07`). |
+| `scripts/cpg_init_robustness.py` | Round-6 figure (`fig_init_robustness.png`): weights of all 10 (μ,CV) inits + steady-state gait metrics vs μ. |
 | `CLAUDE.md` | This file. |
 
 ## Frozen-weight control (`run_frozen.sh`)
@@ -278,6 +281,33 @@ stored so far) → wall time quadratic in sim length. Recorders are now reset af
 read (bit-identical output at `--threads 1`). The local idx08/09 runs took 11 min
 each. All `run*.sh` also moved from `acc` (GPU partition, 64 cpus, 10-12 h) to
 `gp_bsccs` (16 cpus, 1-2 h) — the old request is what sat in PD.
+
+### Force-triggered 4×5 grid — the paper's main result (2026-09-25)
+
+The paper (`paper/`, on `main`) was switched from the timer-based sensory-arm 5×5 grid to
+force-triggered stepping in the **descending arm** (CUT→RG-E and BS→RG plastic, no Ia→RG
+plasticity — main's circuit), 4 modes × 5 λ, `run_forcetrig_grid.sh`. Air stepping has no
+genuine force-triggered operating point and is excluded. Epidural section (old Fig 17) and all
+consolidation material removed; old Fig 3 (weight matrix) moved to the supplementary; new Fig 2
+shows initial vs learned weights; new round-6 robustness figure. Regenerate with
+`cd paper && make figures`.
+
+Findings (last 20 s / steady state t≥30 s, `scripts/cpg_cutforce_diagnostics.py`):
+- λ=1e-2..1e-4: genuine in all modes (frac_at_cap 0 over last 20 s, ≤0.07 from 30 s),
+  corr(F-E,F-F) −0.65..−0.75 slow/medium, −0.55..−0.71 toe, −0.47..−0.57 fast; L/R −0.55..−0.81
+  (fast λ=1e-2 −0.32). CUT→RG-E converges to 61–63 pA, BS→RG to 15–16 pA in every mode.
+- λ=1e-5: loop closed in walking modes but worst coordination of the grid (partially learned
+  CUT ≈7–14 pA); toe already timer-driven (frac_at_cap 1.00).
+- λ=1e-6: no learning, timer takes over everywhere (frac_at_cap 0.41–0.95) — its good-looking
+  corr(F-E,F-F) (−0.79 slow) is a disguised clock.
+- Stride at λ=1e-3: slow 1016, medium 812, fast 594, toe 845 ms. **Swing always ends on its
+  timeout** (no hip-position signal) — only stance is force-triggered; stated in Methods/Limitations.
+- Peak Force-E only ≈4–7 a.u. (fatigue ends stance before saturation), not the ≈17 of timer mode.
+
+**Citation caveat:** the "rat" locomotor-cycle (400–700 ms) and trot-speed rows in the
+bio-plausibility table below cite Bellardita & Kiehn 2015 and Lemieux et al. 2016 — both are
+**mouse** studies (bib key also misspelt `bellaritakiehn2015`). Not cited in the paper text; find a
+rat source before using that bound in the paper.
 
 **Required workflow from now on**: run `scripts/cpg_cutforce_diagnostics.py` on every
 sweep output before trusting any correlation number. `frac_at_cap` near 1.0 on either

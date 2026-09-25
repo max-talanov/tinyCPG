@@ -1,33 +1,21 @@
 #!/usr/bin/env python3
 """
 cpg_stdp_weights_grid.py  (Results figure #2)
-Combined STDP weight trajectories of all three plastic projections
-(CUT->RG-E, Ia-E->RG-E, Ia-F->RG-F) across the 15 rehabilitation modes:
-5 locomotion modes (rows) x 3 STDP rates lambda (columns). Leg L, canonical
-sensory model. CUT on the left axis (pA), the two Ia projections on the right
-axis (pA, low set-point). Large fonts; every axis labelled with units.
+Combined STDP weight trajectories of all three plastic projections across the
+locomotion modes (rows) x STDP rates lambda (columns) of the chosen --grid
+(see scripts/paper_grid.py). Leg L. The primary projection (CUT->RG-E) on the
+left axis (pA), the two auxiliary projections (BS->RG or Ia->RG) on the right
+axis. Large fonts; every axis labelled with units.
 """
 import argparse, glob, os
 import h5py, numpy as np
 import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-MODES = [
-    ("slow walk\n6 cm/s",                     "cpg_sensory_stdp_06cms"),
-    ("medium / plantar\n13.5 cm/s (baseline)", "cpg_sensory_stdp_13_5cms"),
-    ("fast walk\n21 cm/s",                    "cpg_sensory_stdp_21cms"),
-    ("toe stepping\npartial unloading",       "cpg_ablsens_toe"),
-    ("air stepping\nfull unloading",          "cpg_ablsens_air"),
-]
-LAMBDAS = [("lam1em2", "λ = 10⁻²"), ("lam1em3", "λ = 10⁻³"), ("lam1em4", "λ = 10⁻⁴"),
-           ("lam1em5", "λ = 10⁻⁵"), ("lam1em6", "λ = 10⁻⁶")]
-CUT = ("cut->rge_mean", "CUT→RG-E", "#c1440e")
-IAS = [("ia->rge_mean", "Ia-E→RG-E", "#1f77b4"), ("ia->rgf_mean", "Ia-F→RG-F", "#2ca02c")]
+from paper_grid import GRIDS, LAMBDAS, add_grid_arg, find as _find
 
-
-def _find(indir, stem, lam):
-    h = sorted(glob.glob(os.path.join(indir, f"{stem}_{lam}_*.h5")))
-    return h[0] if h else None
+PRIMARY_COLOR = "#c1440e"
+AUX_COLORS = ["#1f77b4", "#2ca02c"]
 
 
 def main():
@@ -35,7 +23,13 @@ def main():
     ap.add_argument("--indir", required=True)
     ap.add_argument("--out", default="paper/figures/fig_stdp_weights_grid.png")
     ap.add_argument("--dpi", type=int, default=170)
+    add_grid_arg(ap)
     args = ap.parse_args()
+    G = GRIDS[args.grid]
+    MODES = [(lab, stem) for lab, stem, _w in G["modes"]]
+    CUT = (G["primary"][0], G["primary"][1], PRIMARY_COLOR)
+    IAS = [(k, lab, col) for (k, lab, _ym), col in zip(G["aux"], AUX_COLORS)]
+    ymax_l, ymax_r = G["primary"][2], max(ym for _k, _l, ym in G["aux"])
     os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
     plt.rcParams.update({"font.size": 12, "axes.titlesize": 13, "axes.labelsize": 12})
 
@@ -56,16 +50,16 @@ def main():
                         if f"leg_L/weights/{key}" in h:
                             axr.plot(t, np.asarray(h[f"leg_L/weights/{key}"]),
                                      color=col, lw=1.6, ls="--", label=name)
-            ax.set_xlim(0, 120); ax.set_ylim(0, 72); axr.set_ylim(0, 12)
+            ax.set_xlim(0, 120); ax.set_ylim(0, ymax_l); axr.set_ylim(0, ymax_r)
             ax.grid(alpha=0.2); ax.tick_params(labelsize=9); axr.tick_params(labelsize=9)
             if r == 0:
                 ax.set_title(llab, fontsize=14, fontweight="bold")
             if c == 0:
-                ax.set_ylabel(mlabel + "\n\nCUT→RG-E weight (pA)", fontsize=11)
+                ax.set_ylabel(mlabel + f"\n\n{CUT[1]} weight (pA)", fontsize=11)
             else:
-                ax.set_ylabel("CUT→RG-E weight (pA)", fontsize=10)
+                ax.set_ylabel(f"{CUT[1]} weight (pA)", fontsize=10)
             if c == nc - 1:
-                axr.set_ylabel("Ia→RG weight (pA)", fontsize=11, color="0.35")
+                axr.set_ylabel(G["aux_axis"], fontsize=11, color="0.35")
             axr.tick_params(axis="y", labelcolor="0.35")
             if r == nr - 1:
                 ax.set_xlabel("time (s)", fontsize=12)

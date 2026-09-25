@@ -23,9 +23,15 @@ on the threshold chosen (a fixed absolute threshold also silently misdetects
 bouts across runs with very different force amplitudes). Trust 'exact' rows;
 treat 'recon' rows as indicative only.
 
+Steady-state window (--steady-from-ms): whole-run frac_at_cap/corr numbers
+conflate the settling-in transient (STDP still growing, early bouts often
+failsafe-capped) with converged behavior. Pass --steady-from-ms to also report
+metrics restricted to t>=that value.
+
 Usage:
   python3 cpg_cutforce_diagnostics.py results/2026-08-25/*.h5
   python3 cpg_cutforce_diagnostics.py --stance-thresh-frac 0.4 results/2026-*/*.h5
+  python3 cpg_cutforce_diagnostics.py --steady-from-ms 30000 results/2026-09-25/*.h5
 """
 
 import argparse
@@ -90,6 +96,10 @@ def main():
                      help="tolerance (ms) above cap_ms still counted as 'at cap' -- "
                           "should be >= the run's --rate-update-ms, since the cap "
                           "check only fires at that granularity (default 110)")
+    ap.add_argument("--steady-from-ms", type=float, default=None,
+                     help="also report frac_at_cap/corr restricted to t >= this "
+                          "value, alongside the whole-run numbers -- see module "
+                          "docstring.")
     args = ap.parse_args()
 
     header = (f"{'file':45s} {'corrL':>7s} {'corrR':>7s} {'corrLR':>7s} "
@@ -127,6 +137,26 @@ def main():
             print(f"{fn:45s} {corr['L']:7.3f} {corr['R']:7.3f} {corr_lr:7.3f} "
                   f"{mode:>6s} {cap_stance:5.0f} {fmt_dur(bouts['L']):>13s} {bouts['L']['frac_at_cap']:7.2f} "
                   f"{fmt_dur(bouts['R']):>13s} {bouts['R']['frac_at_cap']:7.2f}")
+
+            if args.steady_from_ms is not None:
+                lo = args.steady_from_ms
+                sm = t >= lo
+                s_fe = {side: fe[side][sm] for side in ("L", "R")}
+                s_ff = {side: np.asarray(f[f"leg_{side}/force_f"])[sm] for side in ("L", "R")}
+                s_corr = {side: float(np.corrcoef(s_fe[side], s_ff[side])[0, 1]) for side in ("L", "R")}
+                s_corr_lr = float(np.corrcoef(s_fe["L"], s_fe["R"])[0, 1])
+                s_bouts = {}
+                for side in ("L", "R"):
+                    cut_on_key = f"leg_{side}/cut_on"
+                    if cut_on_key in f and np.asarray(f[cut_on_key]).size > 0:
+                        c_full = np.asarray(f[cut_on_key])
+                        s_bouts[side] = bouts_from_cut_on(t[sm], c_full[sm], cap_stance, args.cap_tol_ms)
+                    else:
+                        s_bouts[side] = bouts_from_force_recon(t[sm], s_fe[side], args.stance_thresh_frac, cap_stance)
+                print(f"    [steady t>={lo:.0f}ms] corrL={s_corr['L']:+.3f} corrR={s_corr['R']:+.3f} "
+                      f"corrLR={s_corr_lr:+.3f} atCapL={s_bouts['L']['frac_at_cap']:.2f} "
+                      f"atCapR={s_bouts['R']['frac_at_cap']:.2f} "
+                      f"durL={fmt_dur(s_bouts['L'])} durR={fmt_dur(s_bouts['R'])}")
 
     print("\nfrac_at_cap close to 1.0 means the failsafe timer is doing the work, not "
           "a genuine force-threshold crossing. 'recon' rows (no cut_on array in the "

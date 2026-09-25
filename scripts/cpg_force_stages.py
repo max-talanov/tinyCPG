@@ -2,34 +2,20 @@
 """
 cpg_force_stages.py
 Force profiles at three stages of STDP learning (beginning / middle / end),
-one row per locomotion mode (canonical sensory model). Shows how the
+one row per locomotion mode of the chosen --grid (see scripts/paper_grid.py). Shows how the
 counter-phase force pattern sharpens as the plastic weights converge over the
 120 s run. Each panel is annotated with the mean CUT->RG-E weight in the window
 and the in-window corr(F_E,F_F).
-
-Modes: slow / medium=plantar=baseline / fast walk, toe / air stepping.
 """
 import argparse, glob, os
 import h5py, numpy as np
 import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-# (row label, filename glob stem, [(weight-key, short-name), ...] to annotate)
-# The five locomotion modes of the canonical sensory model.
-MODES = [
-    ("slow walk\n6 cm/s",            "cpg_sensory_stdp_06cms",   [("cut->rge_mean", "CUT")]),
-    ("medium / plantar\n13.5 cm/s",  "cpg_sensory_stdp_13_5cms", [("cut->rge_mean", "CUT")]),
-    ("fast walk\n21 cm/s",           "cpg_sensory_stdp_21cms",   [("cut->rge_mean", "CUT")]),
-    ("toe stepping\npartial unload", "cpg_ablsens_toe",          [("cut->rge_mean", "CUT")]),
-    ("air stepping\nfull unload",    "cpg_ablsens_air",          [("cut->rge_mean", "CUT")]),
-]
+from paper_grid import GRIDS, add_grid_arg, find as _find
+
 STAGES = [("beginning", (4000, 9000)), ("middle", (40000, 45000)), ("end", (115000, 120000))]
 WIN_LABEL = {"beginning": "early learning", "middle": "converging", "end": "converged"}
-
-
-def _find(indir, stem, lam):
-    h = sorted(glob.glob(os.path.join(indir, f"{stem}_{lam}_*.h5")))
-    return h[0] if h else None
 
 
 def _win(t, y, lo, hi):
@@ -45,7 +31,11 @@ def main():
                          "three stages are distinct (at lam1em3 CUT->RG-E converges by ~8 s).")
     ap.add_argument("--out", default="plots/paper/fig_force_stages.png")
     ap.add_argument("--dpi", type=int, default=200)
+    add_grid_arg(ap)
     args = ap.parse_args()
+    G = GRIDS[args.grid]
+    # (row label, filename stem, [(weight-key, short-name), ...] to annotate)
+    MODES = [(lab, stem, [(G["primary"][0], "CUT")]) for lab, stem, _w in G["modes"]]
     os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
 
     nr, nc = len(MODES), len(STAGES)

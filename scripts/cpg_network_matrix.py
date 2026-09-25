@@ -1,24 +1,18 @@
 #!/usr/bin/env python3
 """
 cpg_network_matrix.py
-Full-circuit population activity of the canonical (sensory) model on the unified
-five-mode locomotion matrix: slow / medium=plantar=baseline / fast walk, toe /
-air stepping. Rows = both legs' RG, reciprocal-inhibition (In), Ia interneurons
-and motor pools (16 populations). No in-figure title (info -> LaTeX caption).
+Full-circuit population activity over the locomotion modes of the chosen --grid
+(see scripts/paper_grid.py), last few seconds of the run. Rows = both legs' RG,
+reciprocal-inhibition (In), Ia interneurons and motor pools (16 populations).
+No in-figure title (info -> LaTeX caption).
 """
 import argparse, glob, os
 import h5py, numpy as np
 import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-# the five locomotion modes (canonical sensory arm): (label, filename stem, cycle period ms)
-COLS = [
-    ("slow walk\n6 cm/s",                    "cpg_sensory_stdp_06cms",   1200),
-    ("medium walk / plantar\n13.5 cm/s (baseline)", "cpg_sensory_stdp_13_5cms", 520),
-    ("fast walk\n21 cm/s",                   "cpg_sensory_stdp_21cms",    350),
-    ("toe stepping\npartial unloading",      "cpg_ablsens_toe",           520),
-    ("air stepping\nfull unloading",         "cpg_ablsens_air",           520),
-]
+from paper_grid import GRIDS, add_grid_arg, find as _find
+
 ROWS = [
     ("leg_L/rgf", "L RG-F"), ("leg_L/rge", "L RG-E"),
     ("leg_L/inf", "L InF"),  ("leg_L/ine", "L InE"),
@@ -31,19 +25,16 @@ ROWS = [
 ]
 
 
-def _find(indir, stem, lam):
-    h = sorted(glob.glob(os.path.join(indir, f"{stem}_{lam}_*.h5")))
-    return h[0] if h else None
-
-
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--indir", required=True)
     ap.add_argument("--lambda-tag", default="lam1em3")
-    ap.add_argument("--n-cycles", type=int, default=5)
     ap.add_argument("--out", default="paper/figures/fig_network_matrix.png")
     ap.add_argument("--dpi", type=int, default=170)
+    add_grid_arg(ap)
     args = ap.parse_args()
+    # columns: (label, filename stem, display window ms = the last N ms of the run)
+    COLS = list(GRIDS[args.grid]["modes"])
     os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
 
     files = {c[1]: _find(args.indir, c[1], args.lambda_tag) for c in COLS}
@@ -63,7 +54,7 @@ def main():
                     continue
                 t = np.asarray(h["times_ms"]); y = np.asarray(h[key])
                 sim = float(h.attrs.get("sim_ms", t.max()))
-            z = max(0.0, sim - args.n_cycles * per)
+            z = max(0.0, sim - per)
             m = t >= z
             series[stem] = (t[m] - z, y[m], per)
             ymax = max(ymax, float(np.nanpercentile(y[m], 99)) * 1.1)
@@ -72,7 +63,7 @@ def main():
             if stem in series:
                 tt, yy, per = series[stem]
                 ax.plot(tt, yy, color="#27408b", linewidth=0.9)
-                ax.set_xlim(0, args.n_cycles * per)
+                ax.set_xlim(0, per)
             ax.set_ylim(0, ymax); ax.set_yticks([0, round(ymax)])
             if rlabel.startswith("R "):
                 ax.set_facecolor("#f3f6fb")
