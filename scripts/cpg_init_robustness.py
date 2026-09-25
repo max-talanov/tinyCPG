@@ -56,15 +56,16 @@ def main():
     cmap = plt.cm.viridis
     col = lambda mu: cmap(mu / max(mus.max(), 1e-9))
 
-    plt.rcParams.update({"font.size": 12})
-    fig, axes = plt.subplots(1, 4, figsize=(20, 4.4))
+    plt.rcParams.update({"font.size": 13})
+    fig, axes2 = plt.subplots(2, 2, figsize=(12, 8.4), layout="constrained")
+    axes = [axes2[0][0], axes2[0][1], axes2[1][0], axes2[1][1]]
     for ax, (k, lab, ymax) in zip(axes[:3], PROJ):
         for r in runs:
             ax.plot(r["t"], r["w"][k], color=col(r["mu"]), lw=1.4)
         ax.set_xlim(0, 120); ax.set_ylim(0, ymax); ax.grid(alpha=0.2)
         ax.set_xlabel("time (s)"); ax.set_ylabel(f"{lab} weight (pA)")
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(0, mus.max()))
-    fig.colorbar(sm, ax=axes[2], fraction=0.05, pad=0.02).set_label("initial mean μ (pA)")
+    fig.colorbar(sm, ax=list(axes2[0]), fraction=0.04, pad=0.02).set_label("initial mean μ (pA)")
 
     ax = axes[3]
     ax.plot(mus, [r["corrF"]["L"] for r in runs], "o-", color="#c1440e", label="corr($F_E,F_F$), leg L")
@@ -74,11 +75,10 @@ def main():
     ax.axhline(0, color="black", lw=0.6)
     ax.set_ylim(-1, 1); ax.grid(alpha=0.2)
     ax.set_xlabel("initial mean μ (pA)"); ax.set_ylabel("steady-state metric")
-    ax.legend(fontsize=9, loc="upper right")
+    ax.legend(fontsize=11, loc="upper right")
     for i, ax in enumerate(axes):
         ax.text(0.02, 0.97, f"({chr(97 + i)})", transform=ax.transAxes, fontsize=13,
                 fontweight="bold", va="top")
-    fig.tight_layout()
     fig.savefig(args.out, dpi=args.dpi, bbox_inches="tight"); plt.close(fig)
     print(f"[init-robustness] {len(runs)} runs -> {args.out}")
     for r in runs:

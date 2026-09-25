@@ -1,36 +1,35 @@
-% Abstract — write last. Target 200-250 words for PLOS Comp Bio,
-% up to 350 for Frontiers in Comp Neuro.
+% Abstract — target 200-250 words for PLOS Comp Bio, up to 350 for Frontiers
+% in Comp Neuro. Numbers from results/2026-09-25_ftgrid and round 6.
 
 \begin{abstract}
 \noindent
-\todo{Write last. Suggested structure:}
-\begin{itemize}
-  \item[(1)] \textbf{Context.} Computational spinal CPG models in the
-        Rybak/Danner/Zhang lineage capture central interlimb coordination
-        in fine detail but, by the authors' own account, omit motoneurons,
-        muscle dynamics, sensory feedback, and synaptic plasticity.
-  \item[(2)] \textbf{Question.} Can a computational sCPG self-organise its
-        descending and cutaneous afferent weights through STDP while
-        being closed-loop with biomechanical output?
-  \item[(3)] \textbf{Approach.} Two-leg NEST model of a rat spinal CPG
-        with Izhikevich neurons, STDP on BS$\to$RG and CUT$\to$RG synapses,
-        closed-loop Ia$\to$reciprocal-inhibition feedback, motoneuron pools,
-        Hill-like force/length proxies, and externally paced heel$\to$toe
-        Ia activation.
-  \item[(4)] \textbf{Results.} Stable counter-phase locomotion for
-        \SI{120}{\second} (120 cycles), peak force 17.4\,a.u., E/F
-        correlation $-0.91$. Cycle period tracks commanded step period
-        across \SIrange{600}{1400}{\milli\second} (rat walk$\to$trot range)
-        with $<\SI{0.5}{\milli\second}$ error. Ablation reveals that
-        commissural inhibition and paced descending drive are necessary;
-        the Ia loop and asymmetric reciprocal inhibition are redundant
-        under paced drive.
-  \item[(5)] \textbf{Implications.} Locomotor patterns can self-organise
-        from STDP given paced sensory drive, extending the Rybak central
-        architecture below the rhythm generator and into the closed loop.
-\end{itemize}
+Computational models of the spinal central pattern generator (CPG) in the
+Rybak/Danner/Zhang lineage capture interlimb coordination in detail but, by
+their authors' own account, omit motoneurons, muscle dynamics, sensory
+feedback and synaptic plasticity, and prescribe every synaptic weight by
+hand. We asked whether a spinal CPG closed in a loop with its periphery can
+tune its own synapses to a working gait. We built a two-leg spiking model of
+the rat lumbar CPG in NEST: Izhikevich rhythm-generator half-centres with
+asymmetric reciprocal inhibition, motoneuron pools driving muscle proxies with
+force, length and fatigue, Ia feedback into the reciprocal-inhibition core, and
+spike-timing-dependent plasticity (STDP) on the cutaneous and brainstem inputs
+to the rhythm generators. Stance is not ended by a clock: each leg's stance
+ends when its own extensor force falls. From ten initial weight distributions
+($0$--$16$\,pA) the plastic synapses converge to the same values (cutaneous
+$\approx61$\,pA, brainstem $\approx16$\,pA) and produce the same alternating
+gait. Across four locomotion modes --- slow, medium and fast walk, and toe
+stepping under partial unloading --- and five learning rates, learning that
+converges within the session yields force-triggered, alternating stepping in
+every mode (extensor--flexor force correlation $-0.47$ to $-0.75$;
+left--right $-0.32$ to $-0.81$). Without learning the rhythm falls back on a
+safety timer, and a partially learned synapse produces the least coordinated
+gait of all. Partial unloading slows learning without abolishing the gait.
+The sensorimotor gains of a spinal CPG can thus be learned rather than
+prescribed, and whether the closed loop takes over depends on how much
+plasticity is available --- a mechanistic account relevant to activity-based
+rehabilitation after incomplete spinal cord injury.
 \end{abstract}
 
 \noindent\textbf{Keywords:} spinal central pattern generator, STDP,
-locomotion, sensory feedback, Ia afferent, NEST simulator, computational
-neuroscience.
+locomotion, sensory feedback, force-triggered stepping, spinal cord injury,
+rehabilitation, NEST simulator.

@@ -122,9 +122,7 @@ def main():
         ax.set_xticks(x); ax.set_xticklabels(mode_short, fontsize=8, rotation=20, ha="right")
         ax.set_ylabel(mlab, fontsize=11); ax.grid(alpha=0.25)
     axes[0][0].legend(fontsize=8, ncol=2, title="STDP rate")
-    fig.suptitle("Metric trends across locomotion modes, one line per STDP rate λ",
-                 fontsize=13, fontweight="bold")
-    fig.tight_layout(rect=(0, 0, 1, 0.97))
+    fig.tight_layout()
     fig.savefig(args.out + "_trends.png", dpi=170, bbox_inches="tight"); plt.close(fig)
 
     # (c) table (CSV + LaTeX)

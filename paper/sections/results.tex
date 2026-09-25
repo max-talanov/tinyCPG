@@ -14,10 +14,10 @@ two-legged spinal CPG: a spiking network that, driven by a weak tonic brainstem
 input and sensory feedback, produces the alternating extensor/flexor muscle
 activity of walking. Each leg contains two mutually-inhibiting neuron pools ---
 an \emph{extensor} and a \emph{flexor} rhythm generator (RG-E and RG-F) --- that
-drive motor neurons and simple muscle models. Stance and swing are not imposed
-by a clock: each leg's paw-contact (cutaneous) input is switched on when its own
-extensor force rises and off when that force falls
-(\autoref{sec:methods:paced}). A good walking rhythm is one in which extensor
+drive motor neurons and simple muscle models. Stance is not ended by a clock:
+each leg's stance, and with it its paw-contact (cutaneous) input, ends when
+that leg's own extensor force falls below a threshold; swing then lasts a
+fixed time (\autoref{sec:methods:paced}). A good walking rhythm is one in which extensor
 and flexor are active in strict alternation (``counter-phase''); we measure this
 by the Pearson correlation between the two muscle forces, which is $-1$ for
 perfect alternation and $0$ for none, and measure left--right alternation the
@@ -48,13 +48,13 @@ corr$(F_{E,L},F_{E,R})$ between $-0.77$ and $-0.79$.
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=\textwidth]{fig_init_robustness.png}
+  \includegraphics[width=0.85\textwidth]{fig_init_robustness.png}
   \caption{\textbf{Initialisation robustness of force-triggered stepping.}
     Medium walk, $\lambda=10^{-3}$, ten STDP initial-weight distributions
     ($\mu=0$--$16$\,pA; colour). \textbf{(a--c)} Weight trajectories of
     CUT$\to$RG-E, BS$\to$RG-E and BS$\to$RG-F (leg L, pA) versus time (s).
     \textbf{(d)} Steady-state ($t\ge30$\,s) gait metrics versus initial mean
-    weight: extensor/flexor force correlation per leg, left/right extensor
+    weight $\mu$: extensor/flexor force correlation per leg, left/right extensor
     force correlation, and the fraction of stance bouts ended by the timeout.}
   \label{fig:init_robustness}
 \end{figure}
@@ -122,8 +122,8 @@ fall. Under partial unloading the gait visibly sharpens as the weight grows
 the last). Extensor force peaks at $\approx4$--$7$\,a.u.: stance now ends when
 fatigue has pulled force below the threshold, before it saturates.
 
-At the two slowest rates the gait does not form. At $\lambda=10^{-5}$ the loop
-still switches on the force threshold, but with the cutaneous synapse still
+At the two slowest rates the gait does not form. At $\lambda=10^{-5}$ stance
+still ends on the force threshold, but with the cutaneous synapse still
 weak the alternation degrades (corr$(F_E,F_F)$ $-0.18$ to $-0.49$ in the walking
 modes), and in toe stepping stance already runs to the timeout. At
 $\lambda=10^{-6}$ the synapses stay at their initial values and, in every mode,
