@@ -53,7 +53,7 @@ sbatch run.sh
 | `run_cutforce_sweep3.sh` | EXPLORATORY MN5 sweep round 3 (9 tasks): fast fatigue-onset-τ {100,150,250} × looser `--cut-force-off-frac` {0.30,0.40,0.50}, cap fixed at 450ms. First round to escape cap-domination (frac_at_cap ~0 across the whole grid) — see "Force-triggered CUT" below. |
 | `run_cutforce_sweep4.sh` | EXPLORATORY MN5 sweep round 4 (9 tasks): narrows around round 3's working region — fatigue-onset-τ {250,300,350} × `--cut-force-off-frac` {0.25,0.30,0.35}, cap still fixed at 450ms. 6/9 configs reverted to cap-domination (incl. the numerically best-looking correlation); best genuine result τ=250/off=0.35 — see "Force-triggered CUT" below. |
 | `run_cutforce_sweep5.sh` | CONFIRMATION refinement (9 tasks, not a new exploration): brackets round 4's τ=250/off=0.35 optimum — fatigue-onset-τ {240,250,260} × `--cut-force-off-frac` {0.35,0.375,0.40}, cap still fixed at 450ms. **Confirmed: frac_at_cap=0.00 on all 9 configs** — best point τ=260/off=0.35, see "Force-triggered CUT" below. |
-| `run_cutforce_sweep6.sh` | PHASE 3 — seed/init robustness (10 tasks, 120s each): holds round 5's winning config fixed (τ=260, off=0.35, cap=450ms), sweeps the same 10-point (μ,CV) STDP-init grid as `run.sh`/paper Algorithm 1. Tests whether the operating point found in rounds 1-5 holds away from μ=3.5. |
+| `run_cutforce_sweep6.sh` | PHASE 3 — seed/init robustness (10 tasks, 120s each): holds round 5's winning config fixed (τ=260, off=0.35, cap=450ms), sweeps the same 10-point (μ,CV) STDP-init grid as `run.sh`/paper Algorithm 1. **Complete: 10/10 genuine** (idx00-07 MN5, idx08-09 local) — see "Round 6" below. Rerun a subset with `sbatch --array=8-9 run_cutforce_sweep6.sh`. |
 | `CLAUDE.md` | This file. |
 
 ## Frozen-weight control (`run_frozen.sh`)
@@ -259,6 +259,25 @@ timer-based model already shows (paper §4.1): μ=0 (CUT→RG-E starts at 0 pA) 
 (starts ~10-11 pA) converge to the identical ~62 pA plateau. **μ=12 (idx08) and μ=16
 (idx09) — the two highest-weight stress tests — are still pending on MN5; do not
 treat Phase 3 as closed until those land.**
+
+**Round 6 — complete, 10/10 genuine (2026-09-25). Phase 3 closed.** idx08/09 sat in
+PD on MN5 for 7+ days and were run locally instead (`results/2026-09-25/`, production
+N, BS=60 Hz, identical flags to `run_cutforce_sweep6.sh`, 4 threads instead of 64 —
+multi-threaded runs aren't bit-reproducible anyway). Both match idx00-07: μ=12 —
+`frac_at_cap` 0.00/0.00, corr(Force-E,Force-F) −0.65(L)/−0.64(R), corr(Force-E_L,
+Force-E_R) −0.75, bouts 307±29/308±30ms; μ=16 — 0.00/0.00, −0.65/−0.64, −0.75,
+300±23/301±22ms. CUT→RG-E converges to 60-62 pA from every start (first logged sample
+0 pA at μ=0 up to 31-34 pA at μ=16). Across all 10 points: corr(Force-E_L,Force-E_R)
+−0.68 to −0.76, `frac_at_cap` ≤0.01 everywhere — the force-trigger operating point is
+initialization-independent over the full μ=0-16 grid.
+
+**Why 120 s runs took ~4.8 h (fixed 2026-09-25, `a1f66e6`).** Round 6 tasks logged
+`nest.Simulate` ~135 s vs. bookkeeping ~17000 s (99.2%). `new_spikes()` read
+`n_events` from spike recorders that were never cleared, and that read is O(spikes
+stored so far) → wall time quadratic in sim length. Recorders are now reset after each
+read (bit-identical output at `--threads 1`). The local idx08/09 runs took 11 min
+each. All `run*.sh` also moved from `acc` (GPU partition, 64 cpus, 10-12 h) to
+`gp_bsccs` (16 cpus, 1-2 h) — the old request is what sat in PD.
 
 **Required workflow from now on**: run `scripts/cpg_cutforce_diagnostics.py` on every
 sweep output before trusting any correlation number. `frac_at_cap` near 1.0 on either
