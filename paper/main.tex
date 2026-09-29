@@ -85,9 +85,39 @@
 
 % --- Data, code, reproducibility ---
 \section*{Code and data availability}
-All source code and the raw HDF5 simulation outputs underlying the figures in
-this paper are available at
+All source code --- the model (\texttt{cpg\_2legs\_fast.py}), the simulation
+scripts (\texttt{run\_forcetrig\_grid.sh}, \texttt{run\_cutforce\_sweep6.sh}) and
+the figure scripts (\texttt{scripts/}; \texttt{make figures} in \texttt{paper/})
+--- is available at
 \href{https://github.com/max-talanov/tinyCPG}{github.com/max-talanov/tinyCPG}.
+The raw simulation outputs underlying the figures are 31 HDF5 files
+($\approx360$\,MB), one per simulation run, listed below.%
+\todo{The HDF5 files are not in the GitHub repository (\texttt{.h5} is
+gitignored). Deposit them (e.g.\ Zenodo) and cite the DOI here.}
+
+\begin{itemize}[leftmargin=*,itemsep=2pt]
+  \item \textbf{Locomotion-mode $\times$ learning-rate grid} (Figs.~\ref{fig:weights_grid}--\ref{fig:mode_lambda_trend},
+    Fig.~\ref{fig:weight_matrix}, Table~\ref{tab:mode_lambda}):
+    20 files \texttt{cpg\_ftgrid\_<mode>\_<lam>\_idx00\_mu03.50\_cv00.30\_seed12345.h5},
+    $\texttt{<mode>}\in\{\texttt{slow},\texttt{medium},\texttt{fast},\texttt{toe}\}$,
+    $\texttt{<lam>}\in\{\texttt{lam1em2},\dots,\texttt{lam1em6}\}$
+    ($\lambda=10^{-2},\dots,10^{-6}$). The medium-walk, $\lambda=10^{-3}$ file also
+    provides the learned weights in Fig.~\ref{fig:connectivity} and Table~\ref{tab:delays}.
+  \item \textbf{Initialisation robustness} (Fig.~\ref{fig:init_robustness}): 10 files
+    \texttt{cpg\_cutforce6\_robustness\_idx<NN>\_mu<$\mu$>\_cv<CV>\_seed<seed>.h5},
+    $NN=00,\dots,09$, with $(\mu,\mathrm{CV})$ $=(0,0)$, $(0.5,0.80)$, $(1.0,0.60)$,
+    $(2.0,0.45)$, $(3.5,0.30)$, $(5.0,0.20)$, $(7.0,0.15)$, $(9.0,0.10)$,
+    $(12.0,0.08)$, $(16.0,0.05)$ and seed $12345+10007\,NN$.
+  \item \textbf{Connectivity at construction} (Fig.~\ref{fig:connectivity},
+    Table~\ref{tab:delays}): \texttt{conn\_dump\_descending.h5}, the weight and delay
+    of every connection in the network as built at $t=0$.
+\end{itemize}
+
+\noindent Each simulation file stores population rates, forces, activations,
+fatigue, the per-step stance-detector state, plastic-weight trajectories and
+snapshots, and the full run configuration as attributes. The screening runs used
+to select the per-mode operating points (Table~\ref{tab:modes}) are not shown in
+any figure and are kept with the raw data.
 
 % --- Bibliography ---
 \bibliographystyle{unsrt}   % switch to PLOS or Frontiers style at submission
